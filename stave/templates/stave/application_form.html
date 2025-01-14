@@ -1,0 +1,46 @@
+{% load markdownify %}
+
+{{ form.intro_text|markdownify }}
+
+<hr>
+
+<form>
+
+{% if form.requires_profile_fields %}
+This application will receive data from your profile:
+<ul>
+{% for profile_field in form.requires_profile_fields %}
+<li>{{ profile_field }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% for question in form.form_questions.all %}
+
+<div class="question"
+<label for="{{question.id}}">{{ question.content }}</label>
+{% if question.kind == question.QuestionKind.SHORT_TEXT %}
+<input type="text" id="{{question.id}}">
+{% elif question.kind == question.QuestionKind.LONG_TEXT %}
+<input type="textarea" id="{{question.id}}">
+{% elif question.kind == question.QuestionKind.SELECT_ONE %}
+{% for option in question.options %}
+<input type="radio" name="{{question.id}}" value="{{question.id}}-{{forloop.counter0}}" id="{{question.id}}-{{forloop.counter0}}">
+<label for="{{question.id}}-{{forloop.counter0}}">{{option}}</label>
+{% endfor %}
+{% elif question.kind == question.QuestionKind.SELECT_MANY %}
+{% for option in question.options %}
+<input type="checkbox" name="{{question.id}}" value="{{question.id}}-{{forloop.counter0}}" id="{{question.id}}-{{forloop.counter0}}">
+<label for="{{question.id}}-{{forloop.counter0}}">{{option}}</label>
+{% endfor %}
+{% if question.allow_other %}
+<input type="checkbox" name="{{question.id}}" value="{{question.id}}-other" id="{{question.id}}-other">
+<label for="{{question.id}}-other">Other</label>
+<input type="text" name="{{question.id}}-other">
+{% endif %}
+{% endif %}
+</div>
+{% endfor %}
+
+<input type="submit">
+</form>

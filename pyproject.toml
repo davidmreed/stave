@@ -1,0 +1,15 @@
+[project]
+name = "stave"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "django>=5.1.4",
+    "django-allauth[mfa,socialaccount]>=65.3.1",
+    "django-extensions>=3.2.3",
+    "django-htmx>=1.21.0",
+    "ruff>=0.9.1",
+    "pillow>=11.1.0",
+    "django-markdownify>=0.9.5",
+]
