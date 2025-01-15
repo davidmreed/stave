@@ -13,9 +13,10 @@ for model in [
         models.ApplicationForm,
         models.ApplicationFormTemplate,
         models.Role,
-        models.EventRole,
         models.Question,
-        models.RoleStructure,
-        models.RoleGroup
+        models.RoleGroup,
+        models.Application,
+        models.ApplicationResponse,
+        models.RoleAssignment,
     ]:
     admin.site.register(model)
