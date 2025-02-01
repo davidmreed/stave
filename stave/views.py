@@ -25,6 +25,9 @@ class EventDetailView(generic.DetailView):
     template_name = "stave/event_detail.html"
     model = models.Event
 
+    def get_object(self) -> models.Event:
+        return get_object_or_404(models.Event, league__slug=self.kwargs.get("league"), slug=self.kwargs.get("event"))
+
 class LeagueDetailView(generic.DetailView):
     template_name = "stave/league_detail.html"
     model = models.League
@@ -165,10 +168,19 @@ class CrewBuilderDetailView(views.View):
 
 
 class ApplicationFormView(views.View):
-    def get(self, request: HttpRequest, application_form: str, league: str) -> HttpResponse:
-        form = get_object_or_404(models.ApplicationForm, slug=application_form, event__league__slug=league)
+    def get(self, request: HttpRequest, application_form: str, event: str, league: str) -> HttpResponse:
+        form = get_object_or_404(models.ApplicationForm, slug=application_form, event__slug=event, event__league__slug=league)
 
-        return render(request, "stave/application_form.html", {"form": form})
+        context =   ViewApplicationContext(
+                application = None,
+                form = form,
+                user_data = { key: str(getattr(request.user, key)) for key in form.requires_profile_fields } if request.user.is_authenticated else {},
+                responses_by_id = { },
+                editable= request.user.is_authenticated
+                )
+
+
+        return render(request, "stave/view_application.html", asdict(context))
 
     def post(self, request: HttpRequest, application_form: str, league: str) -> HttpResponse:
         # TODO: if this is an edit to an existing application, replace data.

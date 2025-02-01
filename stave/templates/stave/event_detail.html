@@ -12,7 +12,7 @@ Hosted by <a href="{% url 'league-detail' event.league.slug %}">{{ event.league.
 <p>
 {{ event.start_date }}
 {% if event.end_date != event.start_date %}
-{{ event.end_date }}
+&ndash;{{ event.end_date }}
 {% endif %}
 </p>
 <p>
@@ -22,7 +22,7 @@ Hosted by <a href="{% url 'league-detail' event.league.slug %}">{{ event.league.
 <ul>
 {% for form in event.application_forms.all %}
 <li>
-    <a href="{% url 'application-form' event.league.slug form.slug %}">{{ form.role_groups.all|commalist }}</a>
+    <a href="{% url 'application-form' event.league.slug event.slug form.slug %}">{{ form.role_groups.all|commalist }}</a>
 </li>
 {% endfor %}
 </ul>

@@ -24,6 +24,8 @@ class RoleGroup(models.Model):
     def __str__(self) -> str:
         return self.name
 
+
+
 class Role(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     role_group = models.ForeignKey(RoleGroup, related_name="roles", on_delete=models.CASCADE)
@@ -272,6 +274,9 @@ class Application(models.Model):
     def __str__(self) -> str:
         return f"{self.form}: {self.user}"
 
+    def role_names(self) -> set[str]:
+        return set(r.name for r in self.roles.all())
+
 class ApplicationResponse(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     application = models.ForeignKey(Application, related_name="responses", on_delete=models.CASCADE)
@@ -290,3 +295,4 @@ class ApplicationResponse(models.Model):
                 return others[0]
 
         return ""
+    # TODO: one response per question per application

@@ -5,14 +5,14 @@
 
 {% block content %}
 
-<h1>{{ form.event.name }}</h1>
+<h1><a href="{% url 'event-detail' form.event.league.slug form.event.slug %}">{{ form.event.name }}</a></h1>
 <p>
-    Hosted by {{ form.event.league.name }}.
+Hosted by <a href="{% url 'league-detail' form.event.league.slug %}">{{ form.event.league.name }}</a>.
 </p>
 <p>
 {{ form.event.start_date }}
 {% if form.event.end_date != form.event.start_date %}
-{{ form.event.end_date }}
+&ndash;{{ form.event.end_date }}
 {% endif %}
 </p>
 <p>
@@ -22,7 +22,13 @@
 {{ form.intro_text|markdownify }}
 
 <hr>
-<form action="{% url 'application-form' form.event.league.slug form.slug %}" method="post">
+
+{% if not request.user.is_authenticated %}
+<p>You need to <a href="{% url 'account_login' %}">log in</a> to complete this application.</p>
+<hr>
+{% endif %}
+
+<form action="{% url 'application-form' form.event.league.slug form.event.slug form.slug %}" method="post">
 {% csrf_token %}
 
 {% if application %}
@@ -36,18 +42,18 @@ The status of this application is {{ application.get_status_display }}.
 This application includes information from your profile:
 <ul>
 {% for profile_field in form.requires_profile_fields %}
-<li>{{ profile_field }} ({{ user_data|get:profile_field }})</li>
+<li>{{ profile_field }} {% if request.user.is_authenticated %}({{ user_data|get:profile_field }}){% endif %}</li>
 {% endfor %}
 </ul>
 <hr>
 {% endif %}
 
 {# Availability #}
-{% if form.event.application_availability_kind == form.event.ApplicationAvailabilityKind.WHOLE_EVENT %}
+{% if form.application_availability_kind == form.ApplicationAvailabilityKind.WHOLE_EVENT %}
 
 <p>This application covers the entire event, from {{ form.event.start_date }} to {{ form.event.end_date }}.</p>
 
-{% elif form.event.application_availability_kind == form.event.ApplicationAvailabilityKind.BY_DAY %}
+{% elif form.application_availability_kind == form.ApplicationAvailabilityKind.BY_DAY %}
 
 This application covers the following days:
 
@@ -61,15 +67,9 @@ This application covers the following days:
 <label for="day-{{day}}">{{day}}</label>
 {% endfor %}
 
-{% elif form.event.application_availability_kind == form.event.ApplicationAvailabilityKind.BY_GAME %}
+{% elif form.application_availability_kind == form.ApplicationAvailabilityKind.BY_GAME %}
 
 This application covers the following games:
-
-<ul>
-{% for game in application.availability_by_game.all %}
-<li> {{ game }}: {{ game.start_time }} to {{ game.end_time }}.</li>
-{% endfor %}
-</ul>
 
 {% for game in form.event.games %}
 <input type="checkbox"
@@ -78,7 +78,7 @@ This application covers the following games:
        {% if not editable %} disabled {% endif %}
        {% if application and game in application.games.all %} checked {% endif %}
 >
-<label for="game-{{game.id}}">{{game}}</label>
+<label for="game-{{game.id}}">{{game}} ({{ game.start_time }} to {{ game.end_time }})</label>
 {% endfor %}
 {% endif %}
 
@@ -87,15 +87,16 @@ This application covers the following games:
 {% for role_group in form.role_groups.all %}
 <fieldset>
     <legend>{{role_group.name}}</legend>
-{% for role in role_group.roles.all %}
+{% regroup role_group.roles.all by name as role_sets %}
+{% for role in role_sets %}
 <div class="role">
 <input type="checkbox"
-       name="role-{{role.id}}"
-       id="role-{{role.id}}"
+       name="role-{{role.list.0.id}}"
+       id="role-{{role.list.0.id}}"
        {% if not editable %} disabled {% endif %}
-       {% if application and role in application.roles.all %} checked {% endif %}
+       {% if application and role in application.role_names %} checked {% endif %}
        >
-<label for="role-{{role.id}}">{{role.name}}</label>
+<label for="role-{{role.list.0.id}}">{{role.grouper}}</label>
 <div>
 {% endfor %}
 </fieldset>
