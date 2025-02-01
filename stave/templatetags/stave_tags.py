@@ -4,6 +4,7 @@ from typing import Any
 
 register = template.Library()
 
+
 @register.filter
 def get(d: Mapping[Any, Any], key: Any) -> Any | None:
     return d.get(key)

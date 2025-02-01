@@ -5,15 +5,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0001_initial'),
+        ("stave", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='rolegroupcrewassignment',
-            name='crew',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='role_group_assignments', to='stave.crew'),
+            model_name="rolegroupcrewassignment",
+            name="crew",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="role_group_assignments",
+                to="stave.crew",
+            ),
         ),
     ]
