@@ -195,6 +195,31 @@ wheels = [
 ]
 
 [[package]]
+name = "django-stubs-ext"
+version = "5.1.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ed/83/b673bf5131c61949f7840b70f9d25a52d90d27416fe2692f13ade14496f1/django_stubs_ext-5.1.2.tar.gz", hash = "sha256:421c0c3025a68e3ab8e16f065fad9ba93335ecefe2dd92a0cff97a665680266c", size = 9629 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/73/c1/5df5231c5db00e3981e71f295c7e5269cbddb0a2c666b3a6f03831b24bd1/django_stubs_ext-5.1.2-py3-none-any.whl", hash = "sha256:6c559214538d6a26f631ca638ddc3251a0a891d607de8ce01d23d3201ad8ad6c", size = 9032 },
+]
+
+[[package]]
+name = "django-types"
+version = "0.20.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "types-psycopg2" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/12/a1/a17e5d2222f963fd1714325c2869adf27fab1299f1430d8913bfecc6e5c0/django_types-0.20.0.tar.gz", hash = "sha256:4e55d2c56155e3d69d75def9eb1d95a891303f2ac19fccf6fe8056da4293fae7", size = 178278 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/44/ee/d4cd24637f31cb131e629df64133f7960fcdc48a183918a352f02db0cd6f/django_types-0.20.0-py3-none-any.whl", hash = "sha256:a0b5c2c9a1e591684bb21a93b64e50ca6cb2d3eab48f49faff1eac706bd3a9c7", size = 374226 },
+]
+
+[[package]]
 name = "fido2"
 version = "1.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -367,6 +392,8 @@ dependencies = [
     { name = "django-extensions" },
     { name = "django-htmx" },
     { name = "django-markdownify" },
+    { name = "django-stubs-ext" },
+    { name = "django-types" },
     { name = "pillow" },
     { name = "ruff" },
 ]
@@ -378,6 +405,8 @@ requires-dist = [
     { name = "django-extensions", specifier = ">=3.2.3" },
     { name = "django-htmx", specifier = ">=1.21.0" },
     { name = "django-markdownify", specifier = ">=0.9.5" },
+    { name = "django-stubs-ext", specifier = ">=5.1.2" },
+    { name = "django-types", specifier = ">=0.20.0" },
     { name = "pillow", specifier = ">=11.1.0" },
     { name = "ruff", specifier = ">=0.9.1" },
 ]
@@ -392,6 +421,24 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/7a/fd/7a5ee21fd08ff70d3d33a5781c255cbe779659bd03278feb98b19ee550f4/tinycss2-1.4.0.tar.gz", hash = "sha256:10c0972f6fc0fbee87c3edb76549357415e94548c1ae10ebccdea16fb404a9b7", size = 87085 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e6/34/ebdc18bae6aa14fbee1a08b63c015c72b64868ff7dae68808ab500c492e2/tinycss2-1.4.0-py3-none-any.whl", hash = "sha256:3a49cf47b7675da0b15d0c6e1df8df4ebd96e9394bb905a5775adb0d884c5289", size = 26610 },
+]
+
+[[package]]
+name = "types-psycopg2"
+version = "2.9.21.20241019"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/60/ca/81a545e0e005c062fddbc36ac6159838b3eec63199a62b2c3ed5360fc9cf/types-psycopg2-2.9.21.20241019.tar.gz", hash = "sha256:bca89b988d2ebd19bcd08b177d22a877ea8b841decb10ed130afcf39404612fa", size = 21626 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ef/ca/c29b9411d2e025bad0b9964404baa8f4ff20d1dc351e92b31d9bc371ed26/types_psycopg2-2.9.21.20241019-py3-none-any.whl", hash = "sha256:44d091e67732d16a941baae48cd7b53bf91911bc36888652447cf1ef0c1fb3f6", size = 20088 },
+]
+
+[[package]]
+name = "typing-extensions"
+version = "4.12.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/df/db/f35a00659bc03fec321ba8bce9420de607a1d37f8342eee1863174c69557/typing_extensions-4.12.2.tar.gz", hash = "sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8", size = 85321 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/26/9f/ad63fc0248c5379346306f8668cda6e2e2e9c95e01216d2b8ffd9ff037d0/typing_extensions-4.12.2-py3-none-any.whl", hash = "sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d", size = 37438 },
 ]
 
 [[package]]

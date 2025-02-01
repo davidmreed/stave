@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% load markdownify %}
+{% load stave_tags %}
+
+{% block content %}
+
+<h1>{{ league.name }}</h1>
+
+<ul>
+{% for event in league.events.all %}
+<li>
+    <a href="{% url 'event-detail' league.slug event.slug %}">{{ event.name }}</a>
+</li>
+{% endfor %}
+</ul>
+{% endblock %}

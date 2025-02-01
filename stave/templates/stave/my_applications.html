@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>My Applications</h2>
+
+<ul>
+    {% for application in application_list %}
+    <li><a href="{% url 'view-application' application.id %}">{{ application.form.event.name }}</a></li>
+    {% endfor %}
+</ul>
+
+{% endblock %}

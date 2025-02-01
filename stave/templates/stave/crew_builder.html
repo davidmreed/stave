@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{# Parameters: form, role_group_crew_assignments #}
+{# The latter may be a subset of the total role_group_crew_assignments for a given game #}
+
+{% for role_group_assignment in role_group_crew_assignments.all %}
+<h2>{{role_group_assignment.role_group.name}}</h2>
+
+<table>
+
+{% for role_assignment in role_group_assignment.effective_crew %}
+<thead>
+    <th>Role Name</th>
+    <th>Assignment</th>
+    <th>Actions</th>
+</thead>
+<tbody>
+<tr>
+    <td>{{role_assignment.role.name}}</td>
+    <td>{% if role_assignment.user %}{{ role_assignment.user }}{% endif %}</td>
+    <td><a href="{% url 'crew-builder-detail' form.event.league.slug form.slug role_assignment.id %}">Assign</a></td>
+</tr>
+</tbody>
+
+{% endfor %}
+
+</table>
+
+{% endfor %}
+
+{% if applications and role_id %}
+
+<table>
+    <thead>
+        <th></th>
+        <th>Preferred Name</th>
+        <th>Legal Name</th>
+        <th>Pronouns</th>
+        <th>Application</th>
+    </thead>
+    <tbody>
+        {% for application in applications %}
+        <tr>
+            <td>
+
+                <form action="POST" href="{{ request.path }}">
+                    {% csrf_token %}
+                    <input type="hidden" value="{{ application.id }}" id="application" name="application">
+                    <input type="hidden" value="{{ role_id }}" id="role_id" name="role_id">
+                    <input type="submit" value="Select">
+                </form>
+            </td>
+            <td>{{ application.user.preferred_name }}</td>
+            <td>{{ application.user.legal_name }}</td>
+            <td>{{ application.user.pronouns }}</td>
+            <td>
+                <a href="{% url 'view-application' application.id %}">View</a></td>
+            </td>
+
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}

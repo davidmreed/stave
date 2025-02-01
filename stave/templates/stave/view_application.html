@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% load markdownify %}
+{% load stave_tags %}
+
+{% block content %}
+
+<h1>{{ form.event.name }}</h1>
+<p>
+    Hosted by {{ form.event.league.name }}.
+</p>
+<p>
+{{ form.event.start_date }}
+{% if form.event.end_date != form.event.start_date %}
+{{ form.event.end_date }}
+{% endif %}
+</p>
+<p>
+{{ form.event.location }}
+</p>
+
+{{ form.intro_text|markdownify }}
+
+<hr>
+<form action="{% url 'application-form' form.event.league.slug form.slug %}" method="post">
+{% csrf_token %}
+
+{% if application %}
+The status of this application is {{ application.get_status_display }}.
+
+<hr>
+{% endif %}
+
+{% if form.requires_profile_fields %}
+
+This application includes information from your profile:
+<ul>
+{% for profile_field in form.requires_profile_fields %}
+<li>{{ profile_field }} ({{ user_data|get:profile_field }})</li>
+{% endfor %}
+</ul>
+<hr>
+{% endif %}
+
+{# Availability #}
+{% if form.event.application_availability_kind == form.event.ApplicationAvailabilityKind.WHOLE_EVENT %}
+
+<p>This application covers the entire event, from {{ form.event.start_date }} to {{ form.event.end_date }}.</p>
+
+{% elif form.event.application_availability_kind == form.event.ApplicationAvailabilityKind.BY_DAY %}
+
+This application covers the following days:
+
+{% for day in form.event.days %}
+<input type="checkbox"
+       name="day-{{day}}"
+       id="day-{{day}}"
+       {% if not editable %} disabled {% endif %}
+       {% if application and day in application.availability_by_day %} checked {% endif %}
+>
+<label for="day-{{day}}">{{day}}</label>
+{% endfor %}
+
+{% elif form.event.application_availability_kind == form.event.ApplicationAvailabilityKind.BY_GAME %}
+
+This application covers the following games:
+
+<ul>
+{% for game in application.availability_by_game.all %}
+<li> {{ game }}: {{ game.start_time }} to {{ game.end_time }}.</li>
+{% endfor %}
+</ul>
+
+{% for game in form.event.games %}
+<input type="checkbox"
+       name="game-{{game.id}}"
+       id="game-{{game.id}}"
+       {% if not editable %} disabled {% endif %}
+       {% if application and game in application.games.all %} checked {% endif %}
+>
+<label for="game-{{game.id}}">{{game}}</label>
+{% endfor %}
+{% endif %}
+
+<hr>
+
+{% for role_group in form.role_groups.all %}
+<fieldset>
+    <legend>{{role_group.name}}</legend>
+{% for role in role_group.roles.all %}
+<div class="role">
+<input type="checkbox"
+       name="role-{{role.id}}"
+       id="role-{{role.id}}"
+       {% if not editable %} disabled {% endif %}
+       {% if application and role in application.roles.all %} checked {% endif %}
+       >
+<label for="role-{{role.id}}">{{role.name}}</label>
+<div>
+{% endfor %}
+</fieldset>
+{% endfor %}
+
+<hr>
+
+{% for question in form.form_questions.all %}
+<div class="question">
+{% with response=responses_by_id|get:question.id %}
+<label for="{{question.id}}">{{ question.content }}</label>
+{% if question.kind == question.QuestionKind.SHORT_TEXT %}
+<input type="text"
+       id="{{question.id}}"
+       name="{{question.id}}"
+       value="{% if application %}{{ response.content }}{% endif %}"
+       {% if not editable %} disabled {% endif %}
+>
+{% elif question.kind == question.QuestionKind.LONG_TEXT %}
+<textarea
+    id="{{question.id}}"
+    name="{{question.id}}"
+    {% if not editable %} disabled {% endif %}
+>
+    {% if application %}{{ response.content }}{% endif %}
+</textarea>
+{% elif question.kind == question.QuestionKind.SELECT_ONE %}
+{% for option in question.options %}
+<input type="radio"
+       name="{{question.id}}"
+       value="{{forloop.counter0}}"
+       id="{{question.id}}-{{forloop.counter0}}"
+       {% if not editable %} disabled {% endif %}
+       {% if option == response.content %} checked {% endif %}
+       >
+<label for="{{question.id}}-{{forloop.counter0}}">{{option}}</label>
+{% endfor %}
+{% elif question.kind == question.QuestionKind.SELECT_MANY %}
+{% for option in question.options %}
+<input type="checkbox"
+       name="{{question.id}}"
+       value="{{forloop.counter0}}"
+       id="{{question.id}}-{{forloop.counter0}}"
+       {% if not editable %} disabled {% endif %}
+       {% if option in response.content %} checked {% endif %}
+>
+<label for="{{question.id}}-{{forloop.counter0}}">{{option}}</label>
+{% endfor %}
+
+{% if question.allow_other %}
+<input type="checkbox"
+       name="{{question.id}}-other"
+       value="{{question.id}}-other"
+       id="{{question.id}}-other"
+       {% if not editable %} disabled {% endif %}
+       {% if application and response.get_other_response %} checked {% endif %}
+>
+<label for="{{question.id}}-other">Other</label>
+<input type="text"
+       name="{{question.id}}-other-value"
+       value="{% if application %}{{ response.get_other_response }}{% endif %}"
+       {% if not editable %} disabled {% endif %}
+>
+{% endif %}
+{% endif %}
+{% endwith %}
+</div>
+{% endfor %}
+{% if editable %}
+<input type="submit">
+{% endif %}
+</form>
+{% endblock %}

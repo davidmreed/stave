@@ -12,4 +12,14 @@ dependencies = [
     "ruff>=0.9.1",
     "pillow>=11.1.0",
     "django-markdownify>=0.9.5",
+    "django-types>=0.20.0",
+    "django-stubs-ext>=5.1.2",
 ]
+
+
+[tool.basedpyright]
+venv = ".venv"
+reportUnannotatedClassAttribute = false
+reportImplicitOverride = false
+reportUninitializedInstanceVariable = false
+reportExplicitAny = false

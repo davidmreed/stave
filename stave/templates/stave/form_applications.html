@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+    APPLIED = 1, _("Applied")
+    INVITED = 2, _("Invited")
+    CONFIRMED = 3, _("Confirmed")
+    DECLINED = 4, _("Declined")
+    REJECTED = 5, _("Rejected")
+
+<h2>Applications</h2>
+
+<h3>Accepted</h3>
+
+<a href="">Go to crew builder</a>
+
+<ul>
+    {% for application in applications["accepted"] %}
+    <li>{{ application.user.username }}</li>
+    {% endfor %}
+</ul>
+<h3>Open</h3>
+
+<ul>
+    {% for application in applications[1] %}
+    <li>{{ application.user.username }} <a href="{% url 'view-application' application.id %}">View</a></li>
+    {% endfor %}
+</ul>
+
+<h3>Declined</h3>
+
+<ul>
+    {% for application in applications[1] %}
+    <li>{{ application.user.username }}</li>
+    {% endfor %}
+</ul>
+
+{% endblock %}

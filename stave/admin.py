@@ -17,6 +17,6 @@ for model in [
         models.RoleGroup,
         models.Application,
         models.ApplicationResponse,
-        models.RoleAssignment,
+        models.CrewAssignment,
     ]:
     admin.site.register(model)

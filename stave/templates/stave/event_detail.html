@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% load markdownify %}
+{% load stave_tags %}
+
+{% block content %}
+
+<h1>{{ event.name }}</h1>
+<p>
+Hosted by <a href="{% url 'league-detail' event.league.slug %}">{{ event.league.name }}</a>.
+</p>
+<p>
+{{ event.start_date }}
+{% if event.end_date != event.start_date %}
+{{ event.end_date }}
+{% endif %}
+</p>
+<p>
+{{ event.location }}
+</p>
+
+<ul>
+{% for form in event.application_forms.all %}
+<li>
+    <a href="{% url 'application-form' event.league.slug form.slug %}">{{ form.role_groups.all|commalist }}</a>
+</li>
+{% endfor %}
+</ul>
+{% endblock %}

@@ -1,92 +1,241 @@
+from django.db.models import QuerySet
 from django.shortcuts import render, get_object_or_404
 from django.db import transaction
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
-
+from django.views import generic
+from django import views
+from django.urls import reverse
+from typing import Any, TYPE_CHECKING
+from collections.abc import Mapping
+import itertools
+from uuid import UUID
 from . import models
+from dataclasses import dataclass, asdict, is_dataclass
+if TYPE_CHECKING:
+    from _typeshed import DataclassInstance
 
-def application_form(request: HttpRequest, league: str, application_form: str) -> HttpResponse:
-    if request.method == 'GET':
-        league = get_object_or_404(models.League, slug=league)
-        form = get_object_or_404(models.ApplicationForm, slug=application_form, event__league=league)
+class MyApplicationsView(generic.ListView):
+    template_name = "stave/my_applications.html"
+    model = models.Application
+
+    def get_queryset(self):
+        return super().get_queryset().filter(user=self.request.user)
+
+class EventDetailView(generic.DetailView):
+    template_name = "stave/event_detail.html"
+    model = models.Event
+
+class LeagueDetailView(generic.DetailView):
+    template_name = "stave/league_detail.html"
+    model = models.League
+
+
+class LeagueListView(generic.ListView):
+    template_name = "stave/league_list.html"
+    model = models.League
+
+class EventListView(generic.ListView):
+    template_name = "stave/event_list.html"
+    model = models.Event
+
+class ProfileView(generic.TemplateView):
+    template_name = "stave/profile.html"
+
+class TypedContextView[T: Mapping[str, Any] | DataclassInstance](generic.DetailView):
+    def get_context(self) -> T:
+        ...
+
+    def get_context_data(self, **kwargs: dict[str, Any]) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+
+        typed_context = self.get_context()
+        if is_dataclass(typed_context):
+            context.update(asdict(typed_context))
+        else:
+            context.update(typed_context)
+
+        return context
+
+@dataclass
+class ViewApplicationContext:
+    form: models.ApplicationForm
+    application: models.Application | None
+    user_data: dict[str, str]
+    responses_by_id: dict[UUID, models.ApplicationResponse]
+    editable: bool
+
+class SingleApplicationView(TypedContextView[ViewApplicationContext]):
+    template_name = "stave/view_application.html"
+    model = models.Application
+
+    def get_context(self) -> ViewApplicationContext:
+        application: models.Application = self.get_object()
+        return ViewApplicationContext(
+                application = application,
+                form = application.form,
+                user_data = { key: str(getattr(application.user, key)) for key in application.form.requires_profile_fields },
+                responses_by_id = { response.question.id: response for response in application.responses.all() },
+                editable= False
+                )
+
+
+class FormApplicationsView(generic.ListView):
+    template_name = "stave/form_applications.html"
+    model = models.Application
+
+    def get_context_data(self, **kwargs: dict[str, Any]):
+        context = super().get_context_data(**kwargs)
+        form = get_object_or_404(models.ApplicationForm, slug=self.kwargs["application_form"], event__league__slug=self.kwargs["league"])
+        context["form"] = form
+        context["applications"] = dict(
+                itertools.groupby(
+                    self.get_queryset().order_by("status"),
+                    lambda i: i.status
+                  )
+                )
+        return context
+
+    def get_queryset(self) -> QuerySet[models.Application]:
+        form = get_object_or_404(models.ApplicationForm, slug=self.kwargs["application_form"], event__league__slug=self.kwargs["league"])
+        return super().get_queryset().filter(form=form)
+
+class CrewBuilderView(views.View):
+    template_name = "stave/crew_builder.html"
+
+
+    def get(self, request: HttpRequest, league: str, application_form_slug: str) -> HttpResponse:
+        application_form = get_object_or_404(models.ApplicationForm, slug=application_form_slug, event__league__slug=league)
+        game = application_form.event.games.first() # TODO
+        role_group_crew_assignments = models.RoleGroupCrewAssignment.objects.filter(
+            game=game,
+            role_group__in=application_form.role_groups.all()
+        )
+
+        return render(request, "stave/crew_builder.html", {
+            "form": application_form,  "role_group_crew_assignments": role_group_crew_assignments
+            })
+
+class CrewBuilderDetailView(views.View):
+    """A view rendering the Crew Builder with a list of applications for a given position. On GET, renders the view.
+    On POST, assigns a role and returns to CrewBuilderView."""
+
+    def get(self, request: HttpRequest, league: str, application_form_slug: str, role_assignment_id: UUID) -> HttpResponse:
+        application_form = get_object_or_404(models.ApplicationForm, slug=application_form_slug, event__league__slug=league)
+        role_assignment = get_object_or_404(models.CrewAssignment, pk = role_assignment_id)
+        game = application_form.event.games.first() # TODO
+        role_group_crew_assignments = models.RoleGroupCrewAssignment.objects.filter(
+            game=game,
+            role_group__in=application_form.role_groups.all()
+        )
+        applications = application_form.applications.filter(
+            roles__name=role_assignment.role.name, roles__role_group__id=role_assignment.role.role_group.id
+        )
+
+        return render(request, "stave/crew_builder.html", {
+            "form": application_form,  "role_group_crew_assignments": role_group_crew_assignments, "applications": applications
+            })
+
+    def post(self, request: HttpRequest, league: str, form: str) -> HttpResponse:
+        application_id = request.POST.get("application_id")
+        role_id = request.POST.get("role_id")
+        if not application_id or not role_id:
+            return HttpResponse(400)
+
+        application_form = get_object_or_404(models.ApplicationForm, slug=form, event__league__slug=league)
+        game = application_form.event.games.first() # TODO
+        applications = application_form.applications.filter(
+            id=application_id,
+            roles__id=role_id,
+        )
+        if len(applications) != 1:
+            return HttpResponse(400)
+
+        role_assignment = models.CrewAssignment.objects.filter(
+            role=role_id,
+            game=game,
+        )
+        if len(role_assignment) != 1:
+            return HttpResponse(400)
+
+        role_assignment[0].user = applications[0].user
+        role_assignment[0].save()
+
+        # Redirect the user to the base Crew Builder for this crew
+        return HttpResponseRedirect(reverse('crew-builder', args=[league, form]))
+
+
+class ApplicationFormView(views.View):
+    def get(self, request: HttpRequest, application_form: str, league: str) -> HttpResponse:
+        form = get_object_or_404(models.ApplicationForm, slug=application_form, event__league__slug=league)
 
         return render(request, "stave/application_form.html", {"form": form})
-    elif request.method == 'POST':
-        user_input = request.POST
-        #with transaction.atomic():
-        league = get_object_or_404(models.League, slug=league)
-        form = get_object_or_404(models.ApplicationForm, slug=application_form, event__league=league)
 
-        print(request.POST)
+    def post(self, request: HttpRequest, application_form: str, league: str) -> HttpResponse:
+        # TODO: if this is an edit to an existing application, replace data.
+        app = None
 
-        # Construct and persist an Application, ApplicationResponse, and RoleAssignments
+        with transaction.atomic():
+            form = get_object_or_404(models.ApplicationForm, slug=application_form, event__league__slug=league)
 
-        app = models.Application(form=form, user=request.user, status=models.ApplicationStatus.APPLIED)
+            # Construct and persist an Application, ApplicationResponse, and RoleAssignments
 
-        # Pull out Availability information
-        if form.application_availability_kind == models.ApplicationAvailabilityKind.BY_DAY:
-            app.availability = [
-                f"day-{day}" in request.POST
-                for day in form.event.days()
-            ]
-        elif form.application_availability_kind == models.ApplicationAvailabilityKind.BY_GAME:
-            app.availability = [
-                f"game-{game.id}" in request.POST
-                for game in form.event.games.all()
-            ]
+            app = models.Application(form=form, user=request.user, status=models.ApplicationStatus.APPLIED)
 
-        app.save()
+            # Pull out Availability information
+            if form.application_availability_kind == models.ApplicationAvailabilityKind.BY_DAY:
+                app.availability_by_day = [
+                    day for day in form.event.days()
+                    if f"day-{day}" in request.POST
+                ]
+            elif form.application_availability_kind == models.ApplicationAvailabilityKind.BY_GAME:
+                app.availability_by_game = [ # TODO
+                    game                     for game in form.event.games.all()
+                                            if f"game-{game.id}" in request.POST
 
-        # Pull out Roles
-        for role_group in form.role_groups.all():
-            for role in role_group.roles.all():
-                if f"role-{role.id}" in request.POST:
-                    role_assignment = models.RoleAssignment(
-                        role = role,
-                        user = request.user,
-                        status = models.ApplicationStatus.APPLIED,
-                        application = app
-                    )
-                    role_assignment.save()
+                ]
+            app.roles.set([
+                    role for role in models.Role.objects.filter(role_group__in=form.role_groups.all())
+                    if f"role-{role.id}" in request.POST
+            ])
+            app.save()
 
 
-        # Question answers
-        for question in form.form_questions.all():
-            if str(question.id) in request.POST:
-                values = request.POST.getlist(str(question.id))
-                if not values or (
-                    len(values) != 1 and question.kind != question.QuestionKind.SELECT_MANY
-                    ):
-                    return HttpResponse(400)
-                if question.kind in (models.QuestionKind.SHORT_TEXT, models.QuestionKind.LONG_TEXT):
-                    content = values[0]
-                else:
-                    # The content of `values` should be indices into the `options` array
-                    # for this question
-                    try:
-                        answers = [question.options[int(v)] for v in values]
-                    except (ValueError, IndexError):
+            # Question answers
+            for question in form.form_questions.all():
+                if str(question.id) in request.POST:
+                    values = request.POST.getlist(str(question.id))
+                    if not values or (
+                        len(values) != 1 and question.kind != question.QuestionKind.SELECT_MANY
+                        ):
                         return HttpResponse(400)
+                    if question.kind in (models.QuestionKind.SHORT_TEXT, models.QuestionKind.LONG_TEXT):
+                        content = values[0]
+                    else:
+                        # The content of `values` should be indices into the `options` array
+                        # for this question
+                        try:
+                            answers = [question.options[int(v)] for v in values]
+                        except (ValueError, IndexError):
+                            return HttpResponse(400)
 
-                    if f"{question.id}-other" in request.POST:
-                        if not question.allow_other or not request.POST.get(f"{question.id}-other-value"):
-                            return HttpResponse("bad other")
-                        else:
-                            answers.append(request.POST[f"{question.id}-other-value"])
+                        if f"{question.id}-other" in request.POST:
+                            if not question.allow_other or not request.POST.get(f"{question.id}-other-value"):
+                                return HttpResponse("bad other")
+                            else:
+                                answers.append(request.POST[f"{question.id}-other-value"])
 
-                    content=(answers if len(answers) > 1 else answers[0])
+                        content=(answers if len(answers) > 1 else answers[0])
 
-                if question.required and not content:
-                    return HttpResponse("Missing content")
+                    if question.required and not content:
+                        return HttpResponse("Missing content")
 
-                response = models.ApplicationResponse(
-                    application=app,
-                    question=question,
-                    content=content
-                )
-                response.save()
-            else:
-                return HttpResponse(f"missing question {question.content}")
+                    response = models.ApplicationResponse(
+                        application=app,
+                        question=question,
+                        content=content
+                    )
+                    response.save()
+                else:
+                    return HttpResponse(f"missing question {question.content}")
 
-        return HttpResponseRedirect(reverse("home"))
-
-    return HttpResponse(405)
+            return HttpResponseRedirect(reverse("view-application", args=[app.id]))
