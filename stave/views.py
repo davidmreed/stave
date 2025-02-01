@@ -1,7 +1,12 @@
 from django.db.models import QuerySet
 from django.shortcuts import render, get_object_or_404
 from django.db import transaction
-from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.http import (
+    HttpRequest,
+    HttpResponse,
+    HttpResponseRedirect,
+    HttpResponseBadRequest,
+)
 from django.views import generic
 from django import views
 from django.urls import reverse
@@ -129,98 +134,117 @@ class FormApplicationsView(generic.ListView):
 
 
 class CrewBuilderView(views.View):
-    template_name = "stave/crew_builder.html"
-
     def get(
-        self, request: HttpRequest, league: str, application_form_slug: str
+        self,
+        request: HttpRequest,
+        league: str,
+        event_slug: str,
+        application_form_slug: str,
     ) -> HttpResponse:
+        print("foo")
         application_form = get_object_or_404(
             models.ApplicationForm,
             slug=application_form_slug,
+            event__slug=event_slug,
             event__league__slug=league,
         )
         game = application_form.event.games.first()  # TODO
         role_group_crew_assignments = models.RoleGroupCrewAssignment.objects.filter(
             game=game, role_group__in=application_form.role_groups.all()
         )
+        effective_assignments_by_role_id = {}
+        for rgca in role_group_crew_assignments:
+            for crew_assignment in rgca.effective_crew():
+                effective_assignments_by_role_id[crew_assignment.role_id] = (
+                    crew_assignment
+                )
 
         return render(
             request,
             "stave/crew_builder.html",
             {
                 "form": application_form,
-                "role_group_crew_assignments": role_group_crew_assignments,
+                "crew_assignments": effective_assignments_by_role_id,
             },
         )
 
 
 class CrewBuilderDetailView(views.View):
-    """A view rendering the Crew Builder with a list of applications for a given position. On GET, renders the view.
+    """A view rendering the Crew Builder with a list of applications for a given position.
+    On GET, renders the view.
     On POST, assigns a role and returns to CrewBuilderView."""
 
     def get(
         self,
         request: HttpRequest,
         league: str,
+        event_slug: str,
         application_form_slug: str,
-        role_assignment_id: UUID,
+        pk: UUID,
     ) -> HttpResponse:
         application_form = get_object_or_404(
             models.ApplicationForm,
             slug=application_form_slug,
+            event__slug=event_slug,
             event__league__slug=league,
         )
-        role_assignment = get_object_or_404(
-            models.CrewAssignment, pk=role_assignment_id
-        )
+        role = get_object_or_404(models.Role, pk=pk)
         game = application_form.event.games.first()  # TODO
-        role_group_crew_assignments = models.RoleGroupCrewAssignment.objects.filter(
-            game=game, role_group__in=application_form.role_groups.all()
-        )
         applications = application_form.applications.filter(
-            roles__name=role_assignment.role.name,
-            roles__role_group__id=role_assignment.role.role_group.id,
+            roles__name=role.name,
+            roles__role_group_id=role.role_group.id,
         )
+        # TODO: filter for availability.
+        # - Avail for this day or game
+        # - Not already assigned.
+        # - Accepted, if appropriate.
 
         return render(
             request,
             "stave/crew_builder.html",
-            {
-                "form": application_form,
-                "role_group_crew_assignments": role_group_crew_assignments,
-                "applications": applications,
-            },
+            {"form": application_form, "applications": applications, "role_id": pk},
         )
 
-    def post(self, request: HttpRequest, league: str, form: str) -> HttpResponse:
+    def post(
+        self,
+        request: HttpRequest,
+        league: str,
+        event_slug: str,
+        application_form_slug: str,
+        pk: UUID,
+    ) -> HttpResponse:
         application_id = request.POST.get("application_id")
-        role_id = request.POST.get("role_id")
-        if not application_id or not role_id:
-            return HttpResponse(400)
+        if not application_id:
+            return HttpResponseBadRequest("invalid application id")
 
         application_form = get_object_or_404(
-            models.ApplicationForm, slug=form, event__league__slug=league
+            models.ApplicationForm,
+            slug=application_form_slug,
+            event__slug=event_slug,
+            event__league__slug=league,
         )
         game = application_form.event.games.first()  # TODO
         applications = application_form.applications.filter(
             id=application_id,
-            roles__id=role_id,
+            roles__id=pk,
         )
         if len(applications) != 1:
-            return HttpResponse(400)
+            return HttpResponseBadRequest("multiple matching applications")
 
-        role_assignment = models.CrewAssignment.objects.filter(
-            role=role_id,
-            game=game,
+        role_assignment, _ = models.CrewAssignment.objects.get_or_create(
+            role_id=pk,
+            crew=game.role_group_crew_assignments.filter(role_group__roles__id=pk)[
+                0
+            ].crew_overrides,
         )
-        if len(role_assignment) != 1:
-            return HttpResponse(400)
 
-        role_assignment[0].user = applications[0].user
-        role_assignment[0].save()
+        role_assignment.user = applications[0].user
+        role_assignment.save()
 
         # Redirect the user to the base Crew Builder for this crew
-        return HttpResponseRedirect(reverse("crew-builder", args=[league, form]))
+        return HttpResponseRedirect(
+            reverse("crew-builder", args=[league, event_slug, application_form_slug])
+        )
 
 
 class ApplicationFormView(views.View):
@@ -238,7 +262,9 @@ class ApplicationFormView(views.View):
             application=None,
             form=form,
             user_data={
-                key: str(getattr(request.user, key))
+                models.User._meta.get_field(key).verbose_name.title(): str(
+                    getattr(request.user, key)
+                )
                 for key in form.requires_profile_fields
             }
             if request.user.is_authenticated
@@ -250,7 +276,7 @@ class ApplicationFormView(views.View):
         return render(request, "stave/view_application.html", asdict(context))
 
     def post(
-        self, request: HttpRequest, application_form: str, league: str
+        self, request: HttpRequest, application_form: str, event: str, league: str
     ) -> HttpResponse:
         # TODO: if this is an edit to an existing application, replace data.
         app = None
@@ -259,6 +285,7 @@ class ApplicationFormView(views.View):
             form = get_object_or_404(
                 models.ApplicationForm,
                 slug=application_form,
+                event__slug=event,
                 event__league__slug=league,
             )
 

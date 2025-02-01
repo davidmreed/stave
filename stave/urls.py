@@ -33,12 +33,12 @@ urlpatterns = [
     ),
     # Crew Builder urls
     path(
-        "_/<slug:league>/<slug:application_form_slug>/builder/",
+        "_/<slug:league>/<slug:event_slug>/<slug:application_form_slug>/builder/",
         views.CrewBuilderView.as_view(),
         name="crew-builder",
     ),
     path(
-        "_/<slug:league>/<slug:application_form_slug>/builder/<uuid:pk>/",
+        "_/<slug:league>/<slug:event_slug>/<slug:application_form_slug>/builder/<uuid:pk>/",
         views.CrewBuilderDetailView.as_view(),
         name="crew-builder-detail",
     ),

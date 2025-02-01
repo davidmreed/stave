@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from stave import models
 from datetime import datetime, date, time
+from allauth.account.models import EmailAddress
 
 
 class Command(BaseCommand):
@@ -229,21 +230,44 @@ class Command(BaseCommand):
         )
         admin.set_password("root")
         admin.save()
+        _ = EmailAddress.objects.create(
+            user=admin, email="admin@example.com", verified=True, primary=True
+        )
         drummer = models.User.objects.create(
             username="drummer",
             preferred_name="bossmang",
             pronouns="she/they",
         )
+        drummer.set_password("drummer")
+        drummer.save()
+        _ = EmailAddress.objects.create(
+            user=drummer, email="drummer@medina.station", verified=True, primary=True
+        )
         josep = models.User.objects.create(
             username="josep", preferred_name="sasaje", pronouns="he/him"
         )
+        josep.set_password("josep")
+        josep.save()
+        _ = EmailAddress.objects.create(
+            user=josep, email="josep@medina.station", verified=True, primary=True
+        )
         michio = models.User.objects.create(
             username="michio", preferred_name="Michmuch", pronouns="she/her"
+        )
+        michio.set_password("michio")
+        michio.save()
+        _ = EmailAddress.objects.create(
+            user=michio, email="michio@medina.station", verified=True, primary=True
         )
         rosenfeld = models.User.objects.create(
             username="rosenfeld",
             preferred_name="Go-long",
             pronouns="they/them",
+        )
+        rosenfeld.set_password("rosenfeld")
+        rosenfeld.save()
+        _ = EmailAddress.objects.create(
+            user=rosenfeld, email="rguoliang@freenavy.belt", verified=True, primary=True
         )
 
         # And applications
@@ -265,6 +289,7 @@ class Command(BaseCommand):
         josep_app.roles.set(
             [role_hnso, role_jt, role_plt, role_sbo, role_pbm, role_sk, role_pbt]
         )
+        josep_app.availability_by_day = [d for d in app_form.event.days()]
         _ = models.ApplicationResponse(
             application=josep_app,
             question=app_form_question_faction,

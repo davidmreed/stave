@@ -5,19 +5,33 @@
 
 {% block content %}
 
-<h1><a href="{% url 'event-detail' form.event.league.slug form.event.slug %}">{{ form.event.name }}</a></h1>
+<h1><a href="{% url 'event-detail' form.event.league.slug form.event.slug %}">{{ form.event.name }}</a><span style="text-align:right; text-transform: capitalize;">{{ application.get_status_display }}</span></h1>
 <p>
-Hosted by <a href="{% url 'league-detail' form.event.league.slug %}">{{ form.event.league.name }}</a>.
-</p>
-<p>
-{{ form.event.start_date }}
-{% if form.event.end_date != form.event.start_date %}
-&ndash;{{ form.event.end_date }}
-{% endif %}
-</p>
-<p>
-{{ form.event.location }}
-</p>
+<dl>
+    <div>
+      <dt>Host</dt>
+      <dd><a href="{% url 'league-detail' form.event.league.slug %}">{{ form.event.league.name }}</a>.</dd>
+    </div>
+    {% if form.event.end_date != form.event.start_date %}
+    <div>
+        <dt>Start Date</dt>
+        <dd>{{ form.event.start_date }}</dd>
+    </div>
+    <div>
+        <dt>End Date</dt>
+        <dd>{{ form.event.end_date }}</dd>
+    </div>
+    {% else %}
+    <div>
+        <dt>Date</dt>
+        <dd>{{ form.event.start_date }}</dd>
+    </div>
+    {% endif %}
+    <div>
+        <dt>Location</dt>
+        <dd>{{ form.event.location }}</dd>
+    </div>
+</dl>
 
 {{ form.intro_text|markdownify }}
 
@@ -94,7 +108,7 @@ This application covers the following games:
        name="role-{{role.list.0.id}}"
        id="role-{{role.list.0.id}}"
        {% if not editable %} disabled {% endif %}
-       {% if application and role in application.role_names %} checked {% endif %}
+       {% if application and role.grouper in application.role_names %} checked {% endif %}
        >
 <label for="role-{{role.list.0.id}}">{{role.grouper}}</label>
 <div>

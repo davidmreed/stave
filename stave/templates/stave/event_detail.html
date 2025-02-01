@@ -6,24 +6,38 @@
 {% block content %}
 
 <h1>{{ event.name }}</h1>
-<p>
-Hosted by <a href="{% url 'league-detail' event.league.slug %}">{{ event.league.name }}</a>.
-</p>
-<p>
-{{ event.start_date }}
-{% if event.end_date != event.start_date %}
-&ndash;{{ event.end_date }}
-{% endif %}
-</p>
-<p>
-{{ event.location }}
-</p>
-
-<ul>
+<dl>
+    <div>
+      <dt>Host</dt>
+      <dd><a href="{% url 'league-detail' event.league.slug %}">{{ event.league.name }}</a>.</dd>
+    </div>
+    {% if event.end_date != event.start_date %}
+    <div>
+        <dt>Start Date</dt>
+        <dd>{{ event.start_date }}</dd>
+    </div>
+    <div>
+        <dt>End Date</dt>
+        <dd>{{ event.end_date }}</dd>
+    </div>
+    {% else %}
+    <div>
+        <dt>Date</dt>
+        <dd>{{ event.start_date }}</dd>
+    </div>
+    {% endif %}
+    <div>
+        <dt>Location</dt>
+        <dd>{{ event.location }}</dd>
+    </div>
+</dl>
 {% for form in event.application_forms.all %}
-<li>
-    <a href="{% url 'application-form' event.league.slug event.slug form.slug %}">{{ form.role_groups.all|commalist }}</a>
-</li>
+<article>
+    <h3>{{ form.role_groups.all|commalist }}</h3>
+    <a href="{% url 'application-form' event.league.slug event.slug form.slug %}">View Form</a>
+    <a href="{% url 'form-applications' event.league.slug event.slug form.slug %}">View Applications</a>
+    <a href="{% url 'crew-builder' event.league.slug event.slug form.slug %}">Crew Builder</a>
+</article>
 {% endfor %}
 </ul>
 {% endblock %}

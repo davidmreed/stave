@@ -135,9 +135,9 @@ class Event(models.Model):
             )
         ]
 
-    def days(self) -> list[date]:
+    def days(self) -> list[str]:
         return [
-            self.start_date + timedelta(days=i)
+            str(self.start_date + timedelta(days=i))
             for i in range((self.end_date - self.start_date).days)
         ]
 
