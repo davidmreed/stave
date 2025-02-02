@@ -3,8 +3,7 @@
 {% load stave_tags %}
 {% block content %}
 
-{# Parameters: form, role_group_crew_assignments #}
-{# The latter may be a subset of the total role_group_crew_assignments for a given game #}
+{# Parameters: form, crew_assignments #}
 {% for role_group in form.role_groups.all %}
 <h2>{{ role_group.name }}</h2>
 

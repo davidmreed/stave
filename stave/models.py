@@ -1,5 +1,6 @@
 import uuid
-from datetime import date, timedelta
+from collections.abc import Iterable
+from datetime import timedelta
 import json
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -19,9 +20,6 @@ class User(AbstractUser):
 class RoleGroup(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=256)
-    requires_profile_fields: models.JSONField[list[str]] = models.JSONField(
-        default=list, blank=True
-    )  # TODO: this field's probably in the wrong place.
 
     roles: models.Manager["Role"]
 
@@ -96,9 +94,7 @@ class Crew(models.Model):
 class CrewAssignment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     crew = models.ForeignKey(Crew, related_name="assignments", on_delete=models.CASCADE)
-    user = models.ForeignKey(
-        User, related_name="crews", null=True, on_delete=models.CASCADE
-    )
+    user = models.ForeignKey(User, related_name="crews", on_delete=models.CASCADE)
     role = models.ForeignKey(
         Role, related_name="crew_assignments", on_delete=models.CASCADE
     )
@@ -138,7 +134,7 @@ class Event(models.Model):
     def days(self) -> list[str]:
         return [
             str(self.start_date + timedelta(days=i))
-            for i in range((self.end_date - self.start_date).days)
+            for i in range((self.end_date - self.start_date).days + 1)
         ]
 
 
@@ -154,24 +150,23 @@ class RoleGroupCrewAssignment(models.Model):
         null=True,
         on_delete=models.SET_NULL,
     )
-    crew_overrides = models.ForeignKey(Crew, null=True, on_delete=models.CASCADE)
+    crew_overrides = models.ForeignKey(
+        Crew,
+        null=True,
+        related_name="role_group_override_assignments",
+        on_delete=models.CASCADE,
+    )
 
     # TODO: constrain crew_overrides to have is_override=True
     def effective_crew(self) -> list[CrewAssignment]:
-        if not self.crew_overrides:  # FIXME: not a good pattern
-            self.crew_overrides = Crew(
-                is_override=True, event=self.game.event, role_group=self.role_group
-            )
-            self.crew_overrides.save()
-            self.save()
-
         crew_assignments_by_role: dict[uuid.UUID, CrewAssignment] = {}
+
         if self.crew:
             for assignment in self.crew.assignments.all():
                 crew_assignments_by_role[assignment.role.id] = assignment
-
-        for assignment in self.crew_overrides.assignments.all():
-            crew_assignments_by_role[assignment.role.id] = assignment
+        if self.crew_overrides:
+            for assignment in self.crew_overrides.assignments.all():
+                crew_assignments_by_role[assignment.role.id] = assignment
 
         return list(crew_assignments_by_role.values())
 
@@ -323,10 +318,56 @@ class ApplicationForm(models.Model):
 
     form_questions: models.Manager["Question"]
     applications: models.Manager["Application"]
+    role_groups: models.Manager[RoleGroup]
 
     def __str__(self) -> str:
         role_group_names = [rg.name for rg in self.role_groups.all()]
         return f"{self.event.name} ({', '.join(role_group_names)})"
+
+    def get_applications_for_role(
+        self, role: Role, game: Game
+    ) -> Iterable["Application"]:
+        applications = self.applications.filter(
+            roles__name=role.name, roles__role_group_id=role.role_group.id
+        )
+
+        # Filter based on our application model.
+        if self.application_kind == ApplicationKind.CONFIRM_ONLY:
+            applications = applications.filter(
+                status__in=[
+                    ApplicationStatus.APPLIED,
+                    ApplicationStatus.INVITED,
+                    ApplicationStatus.CONFIRMED,
+                ]
+            )
+        elif self.application_kind == ApplicationKind.CONFIRM_THEN_ASSIGN:
+            applications = applications.filter(status=ApplicationStatus.INVITED)
+
+        # Exclude already-assigned users (to any Role in this Game)
+        # TODO: profile this heinous query
+        applications = applications.exclude(
+            user__in=User.objects.filter(crews__crew__role_group_assignments__game=game)
+        )
+        applications = applications.exclude(
+            user__in=User.objects.filter(
+                crews__crew__role_group_override_assignments__game=game
+            )
+        )
+
+        # Predicate for availability.
+        if self.application_availability_kind == ApplicationAvailabilityKind.BY_DAY:
+            # TODO: can we do this with __contains on Postgres?
+            # It's not available on SQLite
+            applications = [
+                app
+                for app in applications
+                if str(game.start_time.date()) in app.availability_by_day
+            ]
+
+        elif self.application_availability_kind == ApplicationAvailabilityKind.BY_GAME:
+            applications = applications.filter(availability_by_game__includes=game)
+
+        return applications
 
 
 class QuestionKind(models.IntegerChoices):

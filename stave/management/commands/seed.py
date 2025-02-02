@@ -225,90 +225,194 @@ class Command(BaseCommand):
         singleheader_app_form.role_groups.set([role_group_so, role_group_nso])
 
         # Create some users
-        admin = models.User.objects.create(
-            username="admin", preferred_name="admin", is_staff=True, is_superuser=True
-        )
-        admin.set_password("root")
-        admin.save()
-        _ = EmailAddress.objects.create(
-            user=admin, email="admin@example.com", verified=True, primary=True
-        )
-        drummer = models.User.objects.create(
-            username="drummer",
-            preferred_name="bossmang",
-            pronouns="she/they",
-        )
-        drummer.set_password("drummer")
-        drummer.save()
-        _ = EmailAddress.objects.create(
-            user=drummer, email="drummer@medina.station", verified=True, primary=True
-        )
-        josep = models.User.objects.create(
-            username="josep", preferred_name="sasaje", pronouns="he/him"
-        )
-        josep.set_password("josep")
-        josep.save()
-        _ = EmailAddress.objects.create(
-            user=josep, email="josep@medina.station", verified=True, primary=True
-        )
-        michio = models.User.objects.create(
-            username="michio", preferred_name="Michmuch", pronouns="she/her"
-        )
-        michio.set_password("michio")
-        michio.save()
-        _ = EmailAddress.objects.create(
-            user=michio, email="michio@medina.station", verified=True, primary=True
-        )
-        rosenfeld = models.User.objects.create(
+        def create_user(
+            username: str, preferred_name: str, admin: bool, pronouns: str
+        ) -> models.User:
+            user = models.User.objects.create(
+                username=username,
+                preferred_name=preferred_name,
+                pronouns=pronouns,
+                is_staff=admin,
+                is_superuser=admin,
+            )
+            user.set_password(username)
+            user.save()
+            _ = EmailAddress.objects.create(
+                user=user, email=f"{username}@example.com", verified=True, primary=True
+            )
+            return user
+
+        _ = create_user("admin", "admin", True, "he/him")
+        drummer = create_user("drummer", "bossmang", False, "she/they")
+        josep = create_user("josep", "sasaje", False, "he/him")
+        michio = create_user("michio", "Michmuch", False, "she/her")
+        rosenfeld = create_user(
             username="rosenfeld",
             preferred_name="Go-long",
+            admin=False,
             pronouns="they/them",
         )
-        rosenfeld.set_password("rosenfeld")
-        rosenfeld.save()
-        _ = EmailAddress.objects.create(
-            user=rosenfeld, email="rguoliang@freenavy.belt", verified=True, primary=True
+        dawes = create_user(
+            username="dawes", preferred_name="anderson", admin=False, pronouns="he/him"
+        )
+        johnson = create_user(
+            username="johnson",
+            preferred_name="tychoman",
+            admin=False,
+            pronouns="he/him",
+        )
+        miller = create_user(
+            username="miller", preferred_name="joe", admin=False, pronouns="he/him"
+        )
+        bull = create_user(
+            username="cdebaca", preferred_name="Bull", admin=False, pronouns="he/him"
+        )
+        liang = create_user(
+            username="liang", preferred_name="walker", admin=False, pronouns="he/him"
+        )
+        oksana = create_user(
+            username="oksana", preferred_name="oksana", admin=False, pronouns="she/her"
         )
 
         # And applications
-        drummer_app = models.Application.objects.create(
+        drummer_app_tho = models.Application.objects.create(
             form=app_form_tho, user=drummer, status=models.ApplicationStatus.APPLIED
         )
-        drummer_app.roles.set([role_thnso])
+        drummer_app_tho.roles.set([role_thnso])
         _ = models.ApplicationResponse(
-            application=drummer_app,
+            application=drummer_app_tho,
             question=app_form_tho_question,
             content="Live shamed and die empty",
         )
 
-        josep_app = models.Application.objects.create(
-            form=app_form,
-            user=josep,
-            status=models.ApplicationStatus.APPLIED,
-        )
-        josep_app.roles.set(
-            [role_hnso, role_jt, role_plt, role_sbo, role_pbm, role_sk, role_pbt]
-        )
-        josep_app.availability_by_day = [d for d in app_form.event.days()]
-        _ = models.ApplicationResponse(
-            application=josep_app,
-            question=app_form_question_faction,
-            content="OPA",
+        def create_tournament_app(
+            user: models.User,
+            roles: list[models.Role],
+            avail: list[str],
+            faction: str,
+            kibble: list[str],
+            skills: str,
+            marco: str,
+        ):
+            app = models.Application.objects.create(
+                form=app_form,
+                user=user,
+                status=models.ApplicationStatus.INVITED,
+                availability_by_day=avail,
+            )
+            app.roles.set(roles)
+            _ = models.ApplicationResponse.objects.create(
+                application=app,
+                question=app_form_question_faction,
+                content=faction,
+            )
+
+            _ = models.ApplicationResponse.objects.create(
+                application=app,
+                question=app_form_question_kibble,
+                content=kibble,
+            )
+            _ = models.ApplicationResponse.objects.create(
+                application=app,
+                question=app_form_question_skills,
+                content=skills,
+            )
+            _ = models.ApplicationResponse.objects.create(
+                application=app,
+                question=app_form_question_marco,
+                content=marco,
+            )
+
+        create_tournament_app(
+            josep,
+            [role_hnso, role_jt, role_plt, role_sbo, role_pbm, role_sk, role_pbt],
+            [d for d in app_form.event.days()],
+            "OPA",
+            ["red", "blue"],
+            "Piloting",
+            "Hate that guy",
         )
 
-        _ = models.ApplicationResponse(
-            application=josep_app,
-            question=app_form_question_kibble,
-            content=["red", "blue"],
+        create_tournament_app(
+            drummer,
+            [role_hnso, role_jt, role_plt, role_sbo, role_pbm, role_sk, role_pbt],
+            [d for d in app_form.event.days()],
+            "OPA",
+            ["red", "blue"],
+            "Piloting",
+            "The worst",
         )
-        _ = models.ApplicationResponse(
-            application=josep_app,
-            question=app_form_question_skills,
-            content="Piloting",
+        create_tournament_app(
+            michio,
+            [role_jt, role_plt, role_sk, role_pbt],
+            [d for d in app_form.event.days()],
+            "OPA",
+            ["red", "green"],
+            "Piloting",
+            "Scary",
         )
-        _ = models.ApplicationResponse(
-            application=josep_app,
-            question=app_form_question_marco,
-            content="I hate that guy",
+        create_tournament_app(
+            rosenfeld,
+            [role_jt, role_plt, role_pbm, role_sbo, role_sk, role_pbt],
+            [d for d in app_form.event.days()],
+            "Free Navy",
+            ["red", "green"],
+            "Administration",
+            "Well-intentioned",
         )
+        create_tournament_app(
+            miller,
+            [role_pbm, role_pbt],
+            [d for d in app_form.event.days()],
+            "OPA",
+            ["red"],
+            "detecting",
+            "evil SOB",
+        )
+        create_tournament_app(
+            dawes,
+            [role_hnso, role_plt, role_jt],
+            [d for d in app_form.event.days()],
+            "OPA",
+            ["red"],
+            "leadership",
+            "useful",
+        )
+        create_tournament_app(
+            johnson,
+            [role_hnso, role_jt, role_plt, role_sbo, role_pbm, role_sk, role_pbt],
+            [d for d in app_form.event.days()],
+            "OPA",
+            ["red"],
+            "starship construction",
+            "useful",
+        )
+        create_tournament_app(
+            bull,
+            [role_sbo, role_sk],
+            [d for d in app_form.event.days()],
+            "OPA",
+            ["red", "blue"],
+            "security",
+            "evil",
+        )
+        create_tournament_app(
+            liang,
+            [role_sk, role_pbt],
+            [d for d in app_form.event.days()],
+            "OPA",
+            ["red", "blue"],
+            "piracy",
+            "evil",
+        )
+        create_tournament_app(
+            oksana,
+            [role_jt, role_sk, role_pbt],
+            [d for d in app_form.event.days()],
+            "OPA",
+            ["red", "blue"],
+            "navigation",
+            "evil",
+        )
+
         self.stdout.write("done.")
