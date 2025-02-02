@@ -149,23 +149,23 @@ class CrewBuilderView(views.View):
             event__slug=event_slug,
             event__league__slug=league,
         )
-        game = application_form.event.games.first()  # TODO
-        role_group_crew_assignments = models.RoleGroupCrewAssignment.objects.filter(
-            game=game, role_group__in=application_form.role_groups.all()
-        )
-        effective_assignments_by_role_id = {}
-        for rgca in role_group_crew_assignments:
-            for crew_assignment in rgca.effective_crew():
-                effective_assignments_by_role_id[crew_assignment.role_id] = (
-                    crew_assignment
-                )
+        effective_assignments_by_game_by_role_id = {}
+        for game in application_form.event.games.all():
+            effective_assignments_by_game_by_role_id[game.id] = {}
+            for rgca in game.role_group_crew_assignments.filter(
+                role_group__in=application_form.role_groups.all()
+            ):
+                for crew_assignment in rgca.effective_crew():
+                    effective_assignments_by_game_by_role_id[game.id][
+                        crew_assignment.role_id
+                    ] = crew_assignment
 
         return render(
             request,
             "stave/crew_builder.html",
             {
                 "form": application_form,
-                "crew_assignments": effective_assignments_by_role_id,
+                "crew_assignments": effective_assignments_by_game_by_role_id,
             },
         )
 
@@ -181,7 +181,8 @@ class CrewBuilderDetailView(views.View):
         league: str,
         event_slug: str,
         application_form_slug: str,
-        pk: UUID,
+        game_id: UUID,
+        role_id: UUID,
     ) -> HttpResponse:
         application_form = get_object_or_404(
             models.ApplicationForm,
@@ -189,26 +190,18 @@ class CrewBuilderDetailView(views.View):
             event__slug=event_slug,
             event__league__slug=league,
         )
-        role = get_object_or_404(models.Role, pk=pk)
-        game = application_form.event.games.first()  # TODO
-        role_group_crew_assignments = models.RoleGroupCrewAssignment.objects.filter(
-            game=game, role_group__in=application_form.role_groups.all()
-        )
-        effective_assignments_by_role_id = {}
-        for rgca in role_group_crew_assignments:
-            for crew_assignment in rgca.effective_crew():
-                effective_assignments_by_role_id[crew_assignment.role_id] = (
-                    crew_assignment
-                )
+        role = get_object_or_404(models.Role, pk=role_id)
+        game = get_object_or_404(models.Game, pk=game_id)
+        # TODO: verification
         applications = list(application_form.get_applications_for_role(role, game))
         return render(
             request,
-            "stave/crew_builder.html",
+            "stave/crew_builder_detail.html",
             {
                 "form": application_form,
-                "crew_assignments": effective_assignments_by_role_id,
                 "applications": applications,
-                "role_id": pk,
+                "game": game,
+                "role": role,
             },
         )
 
@@ -218,7 +211,8 @@ class CrewBuilderDetailView(views.View):
         league: str,
         event_slug: str,
         application_form_slug: str,
-        pk: UUID,
+        game_id: UUID,
+        role_id: UUID,
     ) -> HttpResponse:
         application_id = request.POST.get("application_id")
         if not application_id:
@@ -230,8 +224,9 @@ class CrewBuilderDetailView(views.View):
             event__slug=event_slug,
             event__league__slug=league,
         )
-        game = application_form.event.games.first()  # TODO
-        role = get_object_or_404(models.Role, pk=pk)
+        role = get_object_or_404(models.Role, pk=role_id)
+        game = get_object_or_404(models.Game, pk=game_id)
+        # TODO: verification
         applications = application_form.applications.filter(
             id=application_id,
             roles__name=role.name,
@@ -240,7 +235,7 @@ class CrewBuilderDetailView(views.View):
             return HttpResponseBadRequest("multiple matching applications")
 
         role_group_crew_assignment = game.role_group_crew_assignments.filter(
-            role_group__roles__id=pk
+            role_group__roles__id=role_id
         ).first()
         if not role_group_crew_assignment.crew_overrides:
             role_group_crew_assignment.crew_overrides = models.Crew.objects.create(
@@ -250,8 +245,8 @@ class CrewBuilderDetailView(views.View):
             )
             role_group_crew_assignment.save()
 
-        role_assignment, _ = models.CrewAssignment.objects.get_or_create(
-            role_id=pk,
+        _ = models.CrewAssignment.objects.get_or_create(
+            role_id=role_id,
             crew=role_group_crew_assignment.crew_overrides,
             user=applications[0].user,
         )

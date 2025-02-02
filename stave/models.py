@@ -324,6 +324,8 @@ class ApplicationForm(models.Model):
         role_group_names = [rg.name for rg in self.role_groups.all()]
         return f"{self.event.name} ({', '.join(role_group_names)})"
 
+    # TODO: make it possible to get applications that would otherwise match
+    # but are either un-accepted or assigned to other roles.
     def get_applications_for_role(
         self, role: Role, game: Game
     ) -> Iterable["Application"]:
@@ -346,11 +348,15 @@ class ApplicationForm(models.Model):
         # Exclude already-assigned users (to any Role in this Game)
         # TODO: profile this heinous query
         applications = applications.exclude(
-            user__in=User.objects.filter(crews__crew__role_group_assignments__game=game)
+            user__in=User.objects.filter(
+                crews__role__nonexclusive=False,
+                crews__crew__role_group_assignments__game=game,
+            )
         )
         applications = applications.exclude(
             user__in=User.objects.filter(
-                crews__crew__role_group_override_assignments__game=game
+                crews__role__nonexclusive=False,
+                crews__crew__role_group_override_assignments__game=game,
             )
         )
 

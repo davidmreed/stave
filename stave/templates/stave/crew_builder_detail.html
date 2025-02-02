@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% load stave_tags %}
+{% block content %}
+<h1>Assigning {{ role.name }} for {{ game }}</h1>
+
+<table>
+    <thead>
+        <th>Action</th>
+        <th>Preferred Name</th>
+        <th>Pronouns</th>
+        <th>Application</th>
+    </thead>
+    <tbody>
+        {% for application in applications %}
+        <tr>
+            <td>
+
+                <form method="POST" action="{{ request.path }}">
+                    {% csrf_token %}
+                    <input type="hidden" value="{{ game_id }}" id="game_id" name="game_id">
+                    <input type="hidden" value="{{ application.id }}" id="application_id" name="application_id">
+                    <input type="submit" value="Select">
+                </form>
+            </td>
+            <td>{{ application.user.preferred_name }}</td>
+            <td>{{ application.user.pronouns }}</td>
+            <td>
+                <a href="{% url 'view-application' application.id %}">View</a></td>
+            </td>
+
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
