@@ -86,9 +86,9 @@ class Command(BaseCommand):
 
         # Create a 2-day, 5-game tournament event.
         tournament = models.Event.objects.create(
-            name="Belt Bowl",
+            name="Outer Planets Throwdown",
             league=league,
-            slug="belt-bowl",
+            slug="outer-planets-throwdown",
             start_date=date(2218, 5, 25),
             end_date=date(2218, 5, 26),
             location="Ceres Station Level 6",
@@ -159,6 +159,7 @@ class Command(BaseCommand):
             kind=models.QuestionKind.SELECT_ONE,
             options=["Loca Griega", "Golden Bough", "OPA", "Free Navy"],
             required=True,
+            order_key=1,
         )
         app_form_question_kibble = models.Question.objects.create(
             application_form=app_form,
@@ -167,16 +168,19 @@ class Command(BaseCommand):
             options=["red", "blue", "green"],
             allow_other=True,
             required=True,
+            order_key=2
         )
         app_form_question_skills = models.Question.objects.create(
             application_form=app_form,
             content="What are your special skills?",
             kind=models.QuestionKind.LONG_TEXT,
+            order_key=3
         )
         app_form_question_marco = models.Question.objects.create(
             application_form=app_form,
             content="What do you think of Marco Inaros?",
             kind=models.QuestionKind.SHORT_TEXT,
+            order_key=4
         )
 
         app_form_tho = models.ApplicationForm.objects.create(
@@ -194,6 +198,7 @@ class Command(BaseCommand):
             content="What do you want to do?",
             kind=models.QuestionKind.LONG_TEXT,
             required=True,
+            order_key=1,
         )
 
         # Create a single-game event.
@@ -279,10 +284,11 @@ class Command(BaseCommand):
             form=app_form_tho, user=drummer, status=models.ApplicationStatus.APPLIED
         )
         drummer_app_tho.roles.set([role_thnso])
-        _ = models.ApplicationResponse(
+
+        _ = models.ApplicationResponse.objects.create(
             application=drummer_app_tho,
             question=app_form_tho_question,
-            content="Live shamed and die empty",
+            content=["Live shamed and die empty"],
         )
 
         def create_tournament_app(
@@ -304,7 +310,7 @@ class Command(BaseCommand):
             _ = models.ApplicationResponse.objects.create(
                 application=app,
                 question=app_form_question_faction,
-                content=faction,
+                content=[faction],
             )
 
             _ = models.ApplicationResponse.objects.create(
@@ -315,12 +321,12 @@ class Command(BaseCommand):
             _ = models.ApplicationResponse.objects.create(
                 application=app,
                 question=app_form_question_skills,
-                content=skills,
+                content=[skills],
             )
             _ = models.ApplicationResponse.objects.create(
                 application=app,
                 question=app_form_question_marco,
-                content=marco,
+                content=[marco],
             )
 
         create_tournament_app(

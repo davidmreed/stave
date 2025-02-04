@@ -21,7 +21,7 @@ urlpatterns = [
         name="application-form",
     ),
     path(
-        "_/<slug:league>/<slug:event>/<slug:application_form>/applications/",
+        "_/<slug:league_slug>/<slug:event_slug>/<slug:application_form_slug>/applications/",
         views.FormApplicationsView.as_view(),
         name="form-applications",
     ),
@@ -30,6 +30,11 @@ urlpatterns = [
         "application/<uuid:pk>/",
         view=views.SingleApplicationView.as_view(),
         name="view-application",
+    ),
+    path(
+        "application/<uuid:pk>/<int:status>",
+        view=views.ApplicationStatusView.as_view(),
+        name="application-status",
     ),
     # Crew Builder urls
     path(

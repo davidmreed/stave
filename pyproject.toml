@@ -14,6 +14,7 @@ dependencies = [
     "django-markdownify>=0.9.5",
     "django-types>=0.20.0",
     "django-stubs-ext>=5.1.2",
+    "django-template-partials>=24.4",
 ]
 
 

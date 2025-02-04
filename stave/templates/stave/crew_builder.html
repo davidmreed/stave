@@ -4,24 +4,26 @@
 {% block content %}
 
 {# Parameters: form, crew_assignments #}
-
+<h1>Staffing for {{ form.event.name }}, {{ form.role_groups.all|commalist }}</h1>
+<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 6rem;">
 {% for day in form.event.days %}
-
+<div style="flex: 1fr;">
 {% if form.event.days|length > 1 %}
-<h1>{{ day }}</h1>
+<h2>{{ day }}</h2>
 {% endif %}
 
 {% for game in form.event.games.all %}
-
+<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 4rem;">
 {% if form.event.games.all|length > 1 %}
-<h2>Game {{ game.order_key }} ({{ game.start_time.time }}&ndash;{{ game.end_time.time }})</h2>
+<div style="flex: 1fr;">
+<h3>Game {{ game.order_key }} ({{ game.start_time.time }}&ndash;{{ game.end_time.time }})</h3>
 {% endif %}
 
 {% with crew_assignments|get:game.id as game_assignments %}
-
+<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 2rem;">
 {% for role_group in form.role_groups.all %}
-<div style="display: inline;">
-<h3>{{ role_group.name }}</h3>
+<div style="flex: 1fr;">
+<h4>{{ role_group.name }}</h4>
 
 <table>
 <thead>
@@ -45,14 +47,15 @@
     <td><a href="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug game.id role.id %}">Assign</a></td>
 </tr>
 </tbody>
-
 {% endfor %}
-
 </table>
 </div>
 {% endfor %}
+</div>
 {% endwith %}
 {% endfor %}
+</div>
 {% endfor %}
+</div>
 
 {% endblock %}

@@ -1,38 +1,129 @@
 {% extends "base.html" %}
+{% load stave_tags %}
+{% load partials %}
 
 {% block content %}
 
-    APPLIED = 1, _("Applied")
-    INVITED = 2, _("Invited")
-    CONFIRMED = 3, _("Confirmed")
-    DECLINED = 4, _("Declined")
-    REJECTED = 5, _("Rejected")
+<nav style="float: right;" aria-label="breadcrumb">
+    <ul>
+        <li><a href="{% url 'league-detail' form.event.league.slug %}">{{ form.event.league }}</a></li>
+        <li><a href="{% url 'event-detail' form.event.league.slug form.event.slug %}">{{ form.event }}</a></li>
+        <li>{{ form }}</li>
+        <li><a href="{{ request.path }}">Applications</a></li>
+    </ul>
+</nav>
+<nav>
+    <li>
+        <a href="{% url 'crew-builder' form.event.league.slug form.event.slug form.slug %}">Crew Builder</a>
+    </li>
+</nav>
+
+<form method="POST" action="{{ request.path }}">
+{% csrf_token %}
+<input type="hidden" name="redirect_url" id="redirect_url" value="{{ request.path }}">
+
+{% partialdef application-table %}
+<table>
+    <thead>
+        <th>Action</th>
+        {# Profile fields #}
+        {% for field in form.requires_profile_fields %}
+        <th>{{ field }}</th>
+        {% endfor %}
+        {# Roles per Role Group #}
+        {% for role_group in form.role_groups.all %}
+        <th>{{ role_group.name }}</th>
+        {% endfor %}
+        {# Availability #}
+        {# Application questions #}
+        {% for question in form.form_questions.all %}
+        <th>{{ question.content }}</th>
+        {% endfor %}
+    </thead>
+    <tbody>
+        {% for application in applications %}
+        <tr>
+            <td>
+                <div role="group">
+                    <a role="button" href="{% url 'view-application' application.id %}">View</a>
+                    {% if application.status == ApplicationStatus.APPLIED %}
+                    <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.INVITED %}" value="Accept">
+                    <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.REJECTED %}" value="Reject">
+                    {% elif application.status == ApplicationStatus.INVITED %}
+                    <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.CONFIRMED %}" value="Confirm">
+                    <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.DECLINED %}" value="Decline">
+                    {% elif application.status == ApplicationStatus.CONFIRMED %}
+                    <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.DECLINED %}" value="Decline">
+                    {% elif application.status == ApplicationStatus.DECLINED %}
+                    <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.APPLIED %}" value="Reopen">
+                    {% elif application.status == ApplicationStatus.REJECTED %}
+                    <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.APPLIED %}" value="Reopen">
+                    {% endif %}
+                </div>
+            </td>
+            {# Profile fields #}
+            {% for field in application.form.requires_profile_fields %}
+            <td>{{ application.get_user_data|get:field }}</td>
+            {% endfor %}
+            {# Roles #}
+            {% for role_group in form.role_groups.all %}
+            <td>
+                {% for role in application.roles.all %}
+                {% if role.role_group == role_group %}
+                {{ role }}
+                {% endif %}
+                {% endfor %}
+            </td>
+            {% endfor %}
+            {# Availability #}
+        {# Application questions #}
+        {% for question in form.form_questions.all %}
+        {% with application.responses_by_question|get:question as response %}
+        <td>{{ response.content|commalist }}</td>
+        {% endwith %}
+        {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endpartialdef application-table %}
 
 <h2>Applications</h2>
 
-<h3>Accepted</h3>
+{% with applications|get:ApplicationStatus.APPLIED as applications %}
+{% if applications %}
+<h3>Open ({{ applications|length }})</h3>
+{% partial application-table %}
+{% endif %}
+{% endwith %}
 
-<a href="">Go to crew builder</a>
+{% with applications|get:ApplicationStatus.INVITED as applications %}
+{% if applications %}
+<h3>Invited ({{ applications|length }})</h3>
+{% partial application-table %}
+{% endif %}
+{% endwith %}
 
-<ul>
-    {% for application in applications["accepted"] %}
-    <li>{{ application.user.username }}</li>
-    {% endfor %}
-</ul>
-<h3>Open</h3>
+{% with applications|get:ApplicationStatus.CONFIRMED as applications %}
+{% if applications %}
+<h3>Confirmed ({{ applications|length }})</h3>
+{% partial application-table %}
+{% endif %}
+{% endwith %}
 
-<ul>
-    {% for application in applications[1] %}
-    <li>{{ application.user.username }} <a href="{% url 'view-application' application.id %}">View</a></li>
-    {% endfor %}
-</ul>
+{% with applications|get:ApplicationStatus.DECLINED as applications %}
+{% if applications %}
+<h3>Declined ({{ applications|length }})</h3>
+{% partial application-table %}
+{% endif %}
+{% endwith %}
 
-<h3>Declined</h3>
-
-<ul>
-    {% for application in applications[1] %}
-    <li>{{ application.user.username }}</li>
-    {% endfor %}
-</ul>
+{% with applications|get:ApplicationStatus.REJECTED as applications %}
+{% if applications %}
+<h3>Rejected ({{ applications|length }})</h3>
+{% partial application-table %}
+{% endif %}
+{% endwith %}
+</form>
 
 {% endblock %}

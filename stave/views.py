@@ -10,11 +10,12 @@ from django.http import (
 from django.views import generic
 from django import views
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from typing import Any, TYPE_CHECKING
 from collections.abc import Mapping
 import itertools
 from uuid import UUID
-from . import models
+from . import models, settings
 from dataclasses import dataclass, asdict, is_dataclass
 
 if TYPE_CHECKING:
@@ -113,26 +114,39 @@ class FormApplicationsView(generic.ListView):
         context = super().get_context_data(**kwargs)
         form = get_object_or_404(
             models.ApplicationForm,
-            slug=self.kwargs["application_form"],
-            event__league__slug=self.kwargs["league"],
+            slug=self.kwargs["application_form_slug"],
+            event__slug=self.kwargs["event_slug"],
+            event__league__slug=self.kwargs["league_slug"],
         )
         context["form"] = form
-        context["applications"] = dict(
+        context["applications"] = { key: list(group) for key, group in
             itertools.groupby(
                 self.get_queryset().order_by("status"), lambda i: i.status
-            )
-        )
+            ) }
+        context["ApplicationStatus"] = models.ApplicationStatus
         return context
 
     def get_queryset(self) -> QuerySet[models.Application]:
         form = get_object_or_404(
             models.ApplicationForm,
-            slug=self.kwargs["application_form"],
+            slug=self.kwargs["application_form_slug"],
             event__slug=self.kwargs["event_slug"],
-            event__league__slug=self.kwargs["league"],
+            event__league__slug=self.kwargs["league_slug"],
         )
         return super().get_queryset().filter(form=form)
 
+class ApplicationStatusView(views.View):
+    def post(self, request: HttpRequest, pk: UUID, status: models.ApplicationStatus) -> HttpResponse:
+        # TODO: permissions
+        application = get_object_or_404(models.Application, pk=pk)
+        application.status = status # TODO: verify
+        application.save()
+
+        redirect_url=request.POST.get('redirect_url')
+        if redirect_url and url_has_allowed_host_and_scheme(redirect_url, settings.ALLOWED_HOSTS):
+            return HttpResponseRedirect(redirect_url)
+
+        return HttpResponseRedirect('/')
 
 class CrewBuilderView(views.View):
     def get(
@@ -142,7 +156,6 @@ class CrewBuilderView(views.View):
         event_slug: str,
         application_form_slug: str,
     ) -> HttpResponse:
-        print("foo")
         application_form = get_object_or_404(
             models.ApplicationForm,
             slug=application_form_slug,
@@ -341,19 +354,19 @@ class ApplicationFormView(views.View):
                         len(values) != 1
                         and question.kind != question.QuestionKind.SELECT_MANY
                     ):
-                        return HttpResponse(400)
+                        return HttpResponseBadRequest()
                     if question.kind in (
                         models.QuestionKind.SHORT_TEXT,
                         models.QuestionKind.LONG_TEXT,
                     ):
-                        content = values[0]
+                        content = values
                     else:
                         # The content of `values` should be indices into the `options` array
                         # for this question
                         try:
                             answers = [question.options[int(v)] for v in values]
                         except (ValueError, IndexError):
-                            return HttpResponse(400)
+                            return HttpResponseBadRequest()
 
                         if f"{question.id}-other" in request.POST:
                             if not question.allow_other or not request.POST.get(
@@ -365,16 +378,16 @@ class ApplicationFormView(views.View):
                                     request.POST[f"{question.id}-other-value"]
                                 )
 
-                        content = answers if len(answers) > 1 else answers[0]
+                        content = answers
 
                     if question.required and not content:
-                        return HttpResponse("Missing content")
+                        return HttpResponseBadRequest("Missing content")
 
                     response = models.ApplicationResponse(
                         application=app, question=question, content=content
                     )
                     response.save()
                 else:
-                    return HttpResponse(f"missing question {question.content}")
+                    return HttpResponseBadRequest(f"missing question {question.content}")
 
             return HttpResponseRedirect(reverse("view-application", args=[app.id]))

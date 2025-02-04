@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from datetime import timedelta
 import json
 from django.db import models
+from django.db.models import Q, F
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 
@@ -178,6 +179,7 @@ class Game(models.Model):
     order_key = models.IntegerField()
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
+    # TODO: remove this relationship
     role_groups: models.ManyToManyField[RoleGroup, RoleGroupCrewAssignment] = (
         models.ManyToManyField(RoleGroup, through=RoleGroupCrewAssignment, blank=True)
     )
@@ -318,7 +320,6 @@ class ApplicationForm(models.Model):
 
     form_questions: models.Manager["Question"]
     applications: models.Manager["Application"]
-    role_groups: models.Manager[RoleGroup]
 
     def __str__(self) -> str:
         role_group_names = [rg.name for rg in self.role_groups.all()]
@@ -401,6 +402,7 @@ class Question(models.Model):
         blank=True,
     )
 
+    order_key = models.IntegerField()
     content = models.TextField()
     kind = models.IntegerField(choices=QuestionKind.choices)
     required = models.BooleanField(default=False)
@@ -410,7 +412,9 @@ class Question(models.Model):
     # TODO: don't allow an option called "Other" if allow_other is True
     # TODO: require len(options) > 0 if appropriate Kind
     class Meta:
+        ordering = ["application_form", "application_form_template", "order_key"]
         constraints = [
+                models.UniqueConstraint(fields=["application_form", "application_form_template", "order_key"], name="unique_question_order_key"),
             models.CheckConstraint(
                 condition=models.Q(application_form_template__isnull=False)
                 ^ models.Q(application_form__isnull=False),
@@ -450,6 +454,12 @@ class Application(models.Model):
     def __str__(self) -> str:
         return f"{self.form}: {self.user}"
 
+    def get_user_data(self) -> dict:
+        return { key: getattr(self.user, key) for key in self.form.requires_profile_fields }
+
+    def responses_by_question(self) -> dict[Question, 'ApplicationResponse']:
+        return { response.question: response for response in self.responses.all() }
+
     def role_names(self) -> set[str]:
         return set(r.name for r in self.roles.all())
 
@@ -468,9 +478,7 @@ class ApplicationResponse(models.Model):
         return json.dumps(self.content)
 
     def get_other_response(self) -> str:
-        if self.question.kind == QuestionKind.SELECT_MANY and isinstance(
-            self.content, list
-        ):
+        if self.question.kind == QuestionKind.SELECT_MANY:
             others = [a for a in self.content if a not in self.question.options]
 
             if others:
@@ -478,4 +486,10 @@ class ApplicationResponse(models.Model):
 
         return ""
 
-    # TODO: one response per question per application
+    # TODO: enforce content structure
+    class Meta:
+        ordering = ["question__application_form", "question__application_form_template", "question__order_key"]
+        constraints = [
+                models.UniqueConstraint(fields=["application", "question"], name="one_response_per_question_per_application"),
+                models.CheckConstraint(check=Q(application=F("question__application")), name="response_app_and_question_app_match")
+        ]

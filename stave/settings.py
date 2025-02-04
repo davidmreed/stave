@@ -30,7 +30,9 @@ SECRET_KEY = "django-insecure-6%^0%fc316&=oy!csn1-f&wc-oo@=(tsqc47pzb*5w^ljw95+%
 DEBUG = True
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+        "apollo"
+]
 
 
 # Application definition
@@ -50,6 +52,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.facebook",
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.instagram",
+    "template_partials",
     "markdownify",
     "stave",
 ]

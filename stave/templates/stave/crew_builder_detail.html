@@ -2,11 +2,12 @@
 
 {% load stave_tags %}
 {% block content %}
-<h1>Assigning {{ role.name }} for {{ game }}</h1>
+<h1>Assigning {{ role.name }} for {{ game.event }}{% if game.event.games.all|length != 1 %} (Game {{ game.order_key }}){% endif %}</h1>
 
 <table>
     <thead>
         <th>Action</th>
+        <!-- TODO -->
         <th>Preferred Name</th>
         <th>Pronouns</th>
         <th>Application</th>

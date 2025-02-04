@@ -126,7 +126,7 @@ This application covers the following games:
 <input type="text"
        id="{{question.id}}"
        name="{{question.id}}"
-       value="{% if application %}{{ response.content }}{% endif %}"
+       value="{% if application %}{{ response.content.0 }}{% endif %}"
        {% if not editable %} disabled {% endif %}
 >
 {% elif question.kind == question.QuestionKind.LONG_TEXT %}
@@ -135,7 +135,7 @@ This application covers the following games:
     name="{{question.id}}"
     {% if not editable %} disabled {% endif %}
 >
-    {% if application %}{{ response.content }}{% endif %}
+    {% if application %}{{ response.content.0 }}{% endif %}
 </textarea>
 {% elif question.kind == question.QuestionKind.SELECT_ONE %}
 {% for option in question.options %}
@@ -144,7 +144,7 @@ This application covers the following games:
        value="{{forloop.counter0}}"
        id="{{question.id}}-{{forloop.counter0}}"
        {% if not editable %} disabled {% endif %}
-       {% if option == response.content %} checked {% endif %}
+       {% if option == response.content.0 %} checked {% endif %}
        >
 <label for="{{question.id}}-{{forloop.counter0}}">{{option}}</label>
 {% endfor %}
