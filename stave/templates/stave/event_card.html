@@ -1,0 +1,60 @@
+{% load stave_tags %}
+
+<article>
+<style type="text/css">
+dl {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Below is just styling. Adjust as needed. */
+dt {
+ font-weight: bold;
+}
+dt,
+dd {
+  margin: 0;
+  padding: 0;
+}
+/* Small screens */
+@media screen and (max-width: 400px) {
+  dl {
+     flex-direction: column;
+  }
+  dl div {
+    padding: 1em 1em 0 1em;
+  }
+}
+</style>
+<header><h4>{{ event.name }}</h4>{% if request.user.is_authenticated and request.user|can_manage_league_events:event.league %}<a href="{% url 'event-edit' event.league.slug event.slug %}" role="button">Edit</a>{% endif %}</header>
+    <dl>
+        {% if show_host %}
+        <div>
+          <dt>Host</dt>
+          <dd><a href="{% url 'league-detail' event.league.slug %}">{{ event.league.name }}</a></dd>
+        </div>
+        {% endif %}
+        {% if event.end_date != event.start_date %}
+        <div>
+            <dt>Start Date</dt>
+            <dd>{{ event.start_date }}</dd>
+        </div>
+        <div>
+            <dt>End Date</dt>
+            <dd>{{ event.end_date }}</dd>
+        </div>
+        {% else %}
+        <div>
+            <dt>Date</dt>
+            <dd>{{ event.start_date }}</dd>
+        </div>
+        {% endif %}
+        <div>
+            <dt>Location</dt>
+            <dd>{{ event.location }}</dd>
+        </div>
+    </dl>
+    {% if show_details %}
+    <a href="{% url 'event-detail' event.league.slug event.slug %}">Details</a>
+    {% endif %}
+</article>

@@ -2,7 +2,23 @@ from django import template
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from .. import models
+
 register = template.Library()
+
+
+@register.filter
+def can_manage_league(user: models.User, league: models.League) -> bool:
+    return models.LeagueUserPermission.objects.filter(
+        user=user, league=league, permission=models.UserPermission.LEAGUE_MANAGER
+    ).exists()
+
+
+@register.filter
+def can_manage_league_events(user: models.User, league: models.League) -> bool:
+    return models.LeagueUserPermission.objects.filter(
+        user=user, league=league, permission=models.UserPermission.EVENT_MANAGER
+    ).exists()
 
 
 @register.filter

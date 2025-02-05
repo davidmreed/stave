@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Events</h1>
+{% for event in event_list %}
+{% with show_host=True %}
+{% include "stave/event_card.html" %}
+{% endwith %}
+{% endfor %}
+
+{% endblock %}

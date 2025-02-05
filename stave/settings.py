@@ -30,9 +30,7 @@ SECRET_KEY = "django-insecure-6%^0%fc316&=oy!csn1-f&wc-oo@=(tsqc47pzb*5w^ljw95+%
 DEBUG = True
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-ALLOWED_HOSTS = [
-        "apollo"
-]
+ALLOWED_HOSTS = ["apollo", "127.0.0.1", "0.0.0.0"]
 
 
 # Application definition

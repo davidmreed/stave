@@ -5,13 +5,21 @@
 
 {% block content %}
 
-<h1>{{ league.name }}</h1>
+{% if request.user|can_manage_league:league %}
+<a role="button" href="{% url 'league-edit' league.slug %}">Edit</a>
+{% endif %}
 
+<h1>{{ league.name }}</h1>
+<a href="{{ league.website }}">Home</a>
+{% if league.logo %}
+<img src="{{ league.logo.url }}" alt="{{ league.name }} logo" style="float: right;">
+{% endif %}
+<p>
+{{ league.description|markdownify }}
+</p>
 <ul>
 {% for event in league.events.all %}
-<li>
-    <a href="{% url 'event-detail' league.slug event.slug %}">{{ event.name }}</a>
-</li>
+{% include "stave/event_card.html" %}
 {% endfor %}
 </ul>
 {% endblock %}

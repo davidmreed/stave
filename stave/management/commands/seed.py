@@ -82,7 +82,12 @@ class Command(BaseCommand):
             role_group=role_group_tho, name="GTO", order_key=3
         )
 
-        league = models.League.objects.create(name="Ceres Roller Derby", slug="ceres")
+        league = models.League.objects.create(
+            name="Ceres Roller Derby",
+            slug="ceres",
+            description="The **best** roller derby in the Belt and Outer Planets",
+            website="https://derby.ceres.belt",
+        )
 
         # Create a 2-day, 5-game tournament event.
         tournament = models.Event.objects.create(
@@ -168,19 +173,19 @@ class Command(BaseCommand):
             options=["red", "blue", "green"],
             allow_other=True,
             required=True,
-            order_key=2
+            order_key=2,
         )
         app_form_question_skills = models.Question.objects.create(
             application_form=app_form,
             content="What are your special skills?",
             kind=models.QuestionKind.LONG_TEXT,
-            order_key=3
+            order_key=3,
         )
         app_form_question_marco = models.Question.objects.create(
             application_form=app_form,
             content="What do you think of Marco Inaros?",
             kind=models.QuestionKind.SHORT_TEXT,
-            order_key=4
+            order_key=4,
         )
 
         app_form_tho = models.ApplicationForm.objects.create(
@@ -247,7 +252,13 @@ class Command(BaseCommand):
             )
             return user
 
-        _ = create_user("admin", "admin", True, "he/him")
+        admin = create_user("admin", "admin", True, "he/him")
+        _ = models.LeagueUserPermission.objects.create(
+            user=admin, league=league, permission=models.UserPermission.EVENT_MANAGER
+        )
+        _ = models.LeagueUserPermission.objects.create(
+            user=admin, league=league, permission=models.UserPermission.LEAGUE_MANAGER
+        )
         drummer = create_user("drummer", "bossmang", False, "she/they")
         josep = create_user("josep", "sasaje", False, "he/him")
         michio = create_user("michio", "Michmuch", False, "she/her")

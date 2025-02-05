@@ -5,38 +5,22 @@
 
 {% block content %}
 
-<h1>{{ event.name }}</h1>
-<dl>
-    <div>
-      <dt>Host</dt>
-      <dd><a href="{% url 'league-detail' event.league.slug %}">{{ event.league.name }}</a>.</dd>
-    </div>
-    {% if event.end_date != event.start_date %}
-    <div>
-        <dt>Start Date</dt>
-        <dd>{{ event.start_date }}</dd>
-    </div>
-    <div>
-        <dt>End Date</dt>
-        <dd>{{ event.end_date }}</dd>
-    </div>
-    {% else %}
-    <div>
-        <dt>Date</dt>
-        <dd>{{ event.start_date }}</dd>
-    </div>
-    {% endif %}
-    <div>
-        <dt>Location</dt>
-        <dd>{{ event.location }}</dd>
-    </div>
-</dl>
+{% with show_host=True show_details=False %}
+{% include "stave/event_card.html" %}
+{% endwith %}
+
+{% if request.user.is_authenticated and request.user|can_manage_league_events:event.league %}
+<a role="button" href="{% url 'form-create' event.league.slug event.slug %}">Create Application Form</a>
+{% endif %}
+
 {% for form in event.application_forms.all %}
 <article>
-    <h3>{{ form.role_groups.all|commalist }}</h3>
+    <header><h4>{{ form.role_groups.all|commalist }}</h4></header>
     <a href="{% url 'application-form' event.league.slug event.slug form.slug %}">View Form</a>
+    {% if request.user|can_manage_league_events:event.league %}
     <a href="{% url 'form-applications' event.league.slug event.slug form.slug %}">View Applications</a>
     <a href="{% url 'crew-builder' event.league.slug event.slug form.slug %}">Crew Builder</a>
+    {% endif %}
 </article>
 {% endfor %}
 </ul>

@@ -1,4 +1,4 @@
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Q
 from django.shortcuts import render, get_object_or_404
 from django.db import transaction
 from django.http import (
@@ -11,18 +11,20 @@ from django.views import generic
 from django import views
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.contrib.auth.decorators import login_required
 from typing import Any, TYPE_CHECKING
 from collections.abc import Mapping
 import itertools
 from uuid import UUID
-from . import models, settings
+from . import models, settings, forms
 from dataclasses import dataclass, asdict, is_dataclass
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
 
 
-class MyApplicationsView(generic.ListView):
+class MyApplicationsView(LoginRequiredMixin, generic.ListView):
     template_name = "stave/my_applications.html"
     model = models.Application
 
@@ -42,6 +44,79 @@ class EventDetailView(generic.DetailView):
         )
 
 
+class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
+    template_name = "stave/league_edit.html"
+    form_class = forms.EventForm
+
+    def get_form_kwargs(self, *args, **kwargs):
+        kwargs = super().get_form_kwargs(*args, **kwargs)
+        kwargs["request"] = self.request
+        return kwargs
+
+    def get_queryset(self) -> QuerySet[models.Event]:
+        return models.Event.objects.filter(
+            league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+            league__user_permissions__user=self.request.user,
+        ).distinct()
+
+    def get_object(self) -> models.Event:
+        return (
+            self.get_queryset()
+            .filter(league__slug=self.kwargs["league"], slug=self.kwargs["event"])
+            .get()
+        )
+
+
+class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
+    template_name = "stave/league_edit.html"
+    form_class = forms.EventForm
+
+    def get_form_kwargs(self, *args, **kwargs):
+        kwargs = super().get_form_kwargs(*args, **kwargs)
+        kwargs["request"] = self.request
+        return kwargs
+
+    def form_valid(self, form: forms.EventForm) -> HttpResponse:
+        ret = super().form_valid(form)
+
+        # Make the current user a league manager
+        _ = models.LeagueUserPermission.objects.create(
+            league=self.object.league,
+            user=self.request.user,
+            permission=models.UserPermission.EVENT_MANAGER,
+        )
+
+        return ret
+
+
+class LeagueUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
+    template_name = "stave/league_edit.html"
+    form_class = forms.LeagueForm
+
+    def get_queryset(self) -> QuerySet[models.League]:
+        return models.League.objects.filter(
+            user_permissions__permission=models.UserPermission.LEAGUE_MANAGER,
+            user_permissions__user=self.request.user,
+        ).distinct()
+
+
+class LeagueCreateView(LoginRequiredMixin, generic.edit.CreateView):
+    template_name = "stave/league_edit.html"
+    form_class = forms.LeagueForm
+
+    def form_valid(self, form: forms.LeagueForm) -> HttpResponse:
+        ret = super().form_valid(form)
+
+        # Make the current user a league manager
+        _ = models.LeagueUserPermission.objects.create(
+            league=self.object,
+            user=self.request.user,
+            permission=models.UserPermission.LEAGUE_MANAGER,
+        )
+
+        return ret
+
+
 class LeagueDetailView(generic.DetailView):
     template_name = "stave/league_detail.html"
     model = models.League
@@ -57,7 +132,12 @@ class EventListView(generic.ListView):
     model = models.Event
 
 
-class ProfileView(generic.TemplateView):
+class FormCreateView(LoginRequiredMixin, generic.edit.CreateView):
+    template_name = "stave/league_edit.html"
+    form_class = forms.ApplicationFormForm
+
+
+class ProfileView(LoginRequiredMixin, generic.TemplateView):
     template_name = "stave/profile.html"
 
 
@@ -85,9 +165,20 @@ class ViewApplicationContext:
     editable: bool
 
 
-class SingleApplicationView(TypedContextView[ViewApplicationContext]):
+class SingleApplicationView(
+    LoginRequiredMixin, TypedContextView[ViewApplicationContext]
+):
     template_name = "stave/view_application.html"
     model = models.Application
+
+    def get_queryset(self) -> QuerySet[models.Application]:
+        return models.Application.objects.filter(
+            Q(user=self.request.user)
+            | Q(
+                form__event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+                form__event__league__user_permissions__user=self.request.user,
+            )
+        )
 
     def get_context(self) -> ViewApplicationContext:
         application: models.Application = self.get_object()
@@ -106,7 +197,7 @@ class SingleApplicationView(TypedContextView[ViewApplicationContext]):
         )
 
 
-class FormApplicationsView(generic.ListView):
+class FormApplicationsView(LoginRequiredMixin, generic.ListView):
     template_name = "stave/form_applications.html"
     model = models.Application
 
@@ -119,10 +210,12 @@ class FormApplicationsView(generic.ListView):
             event__league__slug=self.kwargs["league_slug"],
         )
         context["form"] = form
-        context["applications"] = { key: list(group) for key, group in
-            itertools.groupby(
+        context["applications"] = {
+            key: list(group)
+            for key, group in itertools.groupby(
                 self.get_queryset().order_by("status"), lambda i: i.status
-            ) }
+            )
+        }
         context["ApplicationStatus"] = models.ApplicationStatus
         return context
 
@@ -133,22 +226,43 @@ class FormApplicationsView(generic.ListView):
             event__slug=self.kwargs["event_slug"],
             event__league__slug=self.kwargs["league_slug"],
         )
-        return super().get_queryset().filter(form=form)
+        return (
+            super()
+            .get_queryset()
+            .filter(
+                Q(user=self.request.user)
+                | Q(
+                    form__event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+                    form__event__league__user_permissions__user=self.request.user,
+                ),
+                form=form,
+            )
+        )
 
-class ApplicationStatusView(views.View):
-    def post(self, request: HttpRequest, pk: UUID, status: models.ApplicationStatus) -> HttpResponse:
-        # TODO: permissions
-        application = get_object_or_404(models.Application, pk=pk)
-        application.status = status # TODO: verify
+
+class ApplicationStatusView(LoginRequiredMixin, views.View):
+    def post(
+        self, request: HttpRequest, pk: UUID, status: models.ApplicationStatus
+    ) -> HttpResponse:
+        application = get_object_or_404(
+            models.Application,
+            pk=pk,
+            form__event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+            form__event__league__user_permissions__user=self.request.user,
+        )
+        application.status = status  # TODO: verify
         application.save()
 
-        redirect_url=request.POST.get('redirect_url')
-        if redirect_url and url_has_allowed_host_and_scheme(redirect_url, settings.ALLOWED_HOSTS):
+        redirect_url = request.POST.get("redirect_url")
+        if redirect_url and url_has_allowed_host_and_scheme(
+            redirect_url, settings.ALLOWED_HOSTS
+        ):
             return HttpResponseRedirect(redirect_url)
 
-        return HttpResponseRedirect('/')
+        return HttpResponseRedirect("/")
 
-class CrewBuilderView(views.View):
+
+class CrewBuilderView(LoginRequiredMixin, views.View):
     def get(
         self,
         request: HttpRequest,
@@ -161,6 +275,8 @@ class CrewBuilderView(views.View):
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league,
+            event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+            event__league__user_permissions__user=self.request.user,
         )
         effective_assignments_by_game_by_role_id = {}
         for game in application_form.event.games.all():
@@ -183,7 +299,7 @@ class CrewBuilderView(views.View):
         )
 
 
-class CrewBuilderDetailView(views.View):
+class CrewBuilderDetailView(LoginRequiredMixin, views.View):
     """A view rendering the Crew Builder with a list of applications for a given position.
     On GET, renders the view.
     On POST, assigns a role and returns to CrewBuilderView."""
@@ -202,6 +318,8 @@ class CrewBuilderDetailView(views.View):
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league,
+            event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+            event__league__user_permissions__user=self.request.user,
         )
         role = get_object_or_404(models.Role, pk=role_id)
         game = get_object_or_404(models.Game, pk=game_id)
@@ -236,6 +354,8 @@ class CrewBuilderDetailView(views.View):
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league,
+            event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+            event__league__user_permissions__user=self.request.user,
         )
         role = get_object_or_404(models.Role, pk=role_id)
         game = get_object_or_404(models.Game, pk=game_id)
@@ -298,6 +418,7 @@ class ApplicationFormView(views.View):
 
         return render(request, "stave/view_application.html", asdict(context))
 
+    @login_required
     def post(
         self, request: HttpRequest, application_form: str, event: str, league: str
     ) -> HttpResponse:
@@ -388,6 +509,8 @@ class ApplicationFormView(views.View):
                     )
                     response.save()
                 else:
-                    return HttpResponseBadRequest(f"missing question {question.content}")
+                    return HttpResponseBadRequest(
+                        f"missing question {question.content}"
+                    )
 
             return HttpResponseRedirect(reverse("view-application", args=[app.id]))

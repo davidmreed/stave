@@ -3,8 +3,8 @@ from collections.abc import Iterable
 from datetime import timedelta
 import json
 from django.db import models
-from django.db.models import Q, F
 from django.contrib.auth.models import AbstractUser
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 
@@ -13,6 +13,8 @@ class User(AbstractUser):
     preferred_name = models.CharField(max_length=256)
     pronouns = models.CharField(max_length=32, blank=True, null=True)
     game_history_url = models.URLField(blank=True, null=True)
+
+    league_permissions: models.Manager["LeagueUserPermission"]
 
     def __str__(self) -> str:
         return self.preferred_name
@@ -53,21 +55,38 @@ class League(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     slug = models.SlugField()
     name = models.CharField(max_length=256)
+    logo = models.ImageField(null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    website = models.URLField(null=True, blank=True)
 
     events: models.Manager["Event"]
+    user_permissions: models.Manager["LeagueUserPermission"]
 
     def __str__(self) -> str:
         return self.name
+
+    def get_absolute_url(self) -> str:
+        return reverse("league-detail", args=[self.slug])
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["slug"], name="unique_slug")]
         ordering = ["name"]
 
 
-class LeagueUserRole(models.Model):
+class UserPermission(models.IntegerChoices):
+    LEAGUE_MANAGER = 1, _("League Manager")
+    EVENT_MANAGER = 2, _("Event Manager")
+
+
+class LeagueUserPermission(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    league = models.ForeignKey(League, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        User, related_name="league_permissions", on_delete=models.CASCADE
+    )
+    league = models.ForeignKey(
+        League, related_name="user_permissions", on_delete=models.CASCADE
+    )
+    permission = models.IntegerField(choices=UserPermission.choices)
 
 
 class EventTemplate(models.Model):
@@ -123,6 +142,9 @@ class Event(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    def get_absolute_url(self) -> str:
+        return reverse("event-detail", args=[self.league.slug, self.slug])
 
     class Meta:
         ordering = ["start_date", "name"]
@@ -414,7 +436,10 @@ class Question(models.Model):
     class Meta:
         ordering = ["application_form", "application_form_template", "order_key"]
         constraints = [
-                models.UniqueConstraint(fields=["application_form", "application_form_template", "order_key"], name="unique_question_order_key"),
+            models.UniqueConstraint(
+                fields=["application_form", "application_form_template", "order_key"],
+                name="unique_question_order_key",
+            ),
             models.CheckConstraint(
                 condition=models.Q(application_form_template__isnull=False)
                 ^ models.Q(application_form__isnull=False),
@@ -455,10 +480,12 @@ class Application(models.Model):
         return f"{self.form}: {self.user}"
 
     def get_user_data(self) -> dict:
-        return { key: getattr(self.user, key) for key in self.form.requires_profile_fields }
+        return {
+            key: getattr(self.user, key) for key in self.form.requires_profile_fields
+        }
 
-    def responses_by_question(self) -> dict[Question, 'ApplicationResponse']:
-        return { response.question: response for response in self.responses.all() }
+    def responses_by_question(self) -> dict[Question, "ApplicationResponse"]:
+        return {response.question: response for response in self.responses.all()}
 
     def role_names(self) -> set[str]:
         return set(r.name for r in self.roles.all())
@@ -488,8 +515,15 @@ class ApplicationResponse(models.Model):
 
     # TODO: enforce content structure
     class Meta:
-        ordering = ["question__application_form", "question__application_form_template", "question__order_key"]
+        ordering = [
+            "question__application_form",
+            "question__application_form_template",
+            "question__order_key",
+        ]
         constraints = [
-                models.UniqueConstraint(fields=["application", "question"], name="one_response_per_question_per_application"),
-                models.CheckConstraint(check=Q(application=F("question__application")), name="response_app_and_question_app_match")
+            models.UniqueConstraint(
+                fields=["application", "question"],
+                name="one_response_per_question_per_application",
+            ),
+            # models.CheckConstraint(check=Q(application=F("question__application")), name="response_app_and_question_app_match")
         ]

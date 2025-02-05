@@ -15,12 +15,12 @@
             <ul>
             <li><a href="{% url 'league-list' %}">Leagues</a></li>
             <li><a href="{% url 'event-list' %}">Events</a></li>
-            <li><a href="{% url 'my-applications' %}">My Applications</a></li>
             {% if request.user.is_authenticated %}
+            <li><a href="{% url 'my-applications' %}">My Applications</a></li>
             <li><a href="{% url 'profile' %}">Profile</a></li>
             <li><a href="{% url 'account_logout' %}">Logout</a></li>
             {% else %}
-            <<li>a href="{% url 'account_login' %}">Login</a></li>
+            <li><a href="{% url 'account_login' %}">Login</a></li>
             {% endif %}
             </ul>
         </nav>
@@ -35,5 +35,5 @@
         {% endif %}
         {% block content %}{% endblock %}
     </main>
-    <footer>Copyright &copy; 2025 David "Stacktrace" Reed</footer>
+    <footer>&copy; 2025 David "Stacktrace" Reed</footer>
 </html>
