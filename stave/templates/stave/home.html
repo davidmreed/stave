@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load stave_tags %}
+
+{% block content %}
+
+<div style="display: flex; gap: 1rem; ">
+
+<article style="{% if request.user.is_authenticated %}flex: 1fr;{% else %}flex: 2fr;{% endif %}">
+    <header><h2>Open Application Forms</h2></header>
+
+<ul>
+{% for application_form in application_forms %}
+    <li>
+        {{ application_form.event }}: <a href="{{ application_form.get_absolute_url }}">Apply as {{ application_form.role_groups.all|commalist }}</a> {% if application_form.close_date %}(closes {{ application_form.close_date }}){% endif %}
+    </li>
+{% empty %}
+There aren't any open applications for you right now.
+{% endfor %}
+</ul>
+</article>
+
+{% if request.user.is_authenticated %}
+
+<article style="flex: 1fr;">
+    <header>
+        <h2>My Applications</h2>
+    </header>
+
+{% for application in applications %}
+{{ application }}
+{% empty %}
+<p>
+You don't have any open applications right now.
+</p>
+{% endfor %}
+</article>
+
+<article style="flex: 1fr;">
+    <header>
+        <h2>My Events</h2>
+    </header>
+
+{% for event in events %}
+{{ event }}
+{% empty %}
+You aren't managing any events.
+{% endfor %}
+</article>
+{% else %}
+<article style="flex: 1fr;">
+    <header><h2>Join now</h2></header>
+    Use your Facebook or Google account, or your email address, to get started.
+    <a href="{% url 'account_signup' %}">Sign Up</a>
+</article>
+{% endif %}
+</div>
+{% endblock %}

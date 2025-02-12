@@ -14,7 +14,7 @@ class User(AbstractUser):
     preferred_name = models.CharField(max_length=256, verbose_name=_("preferred name"))
     pronouns = models.CharField(max_length=32, blank=True, null=True, verbose_name=_("pronouns"))
     game_history_url = models.URLField(verbose_name = _("game history URL"), blank=True, null=True)
-
+    # TODO: references.
     league_permissions: models.Manager["LeagueUserPermission"]
 
     def __str__(self) -> str:
@@ -297,6 +297,14 @@ class ApplicationFormTemplate(models.Model):
         on_delete=models.SET_NULL,
     )
 
+class ApplicationFormManager(models.Manager["ApplicationForm"]):
+    def open(self) -> models.QuerySet["ApplicationForm"]:
+        return self.filter(
+            closed=False, hidden=False
+        ).order_by(
+            "close_date",
+            "event__start_date"
+        ) # TODO: make this a CASE()
 
 class ApplicationForm(models.Model):
     ApplicationAvailabilityKind = ApplicationAvailabilityKind
@@ -315,11 +323,14 @@ class ApplicationForm(models.Model):
     role_groups: models.ManyToManyField["ApplicationForm", RoleGroup] = (
         models.ManyToManyField(RoleGroup)
     )
+    closed= models.BooleanField(default=False)
+    close_date= models.DateField(null=True, blank=True)
     hidden = models.BooleanField(default=False)
     intro_text = models.TextField()
     requires_profile_fields: models.JSONField[list[str]] = models.JSONField(
         default=list, blank=True
     )
+    objects = ApplicationFormManager()
     confirmed_email_template = models.ForeignKey(
         MessageTemplate,
         related_name="application_form_confirmed",
@@ -408,6 +419,7 @@ class ApplicationForm(models.Model):
         constraints = [
                 models.UniqueConstraint('slug', 'event', name='no-duplicate-form-slugs', violation_error_message=_("Application form slugs must be unique for any given Event."))
         ]
+        # TODO: only one form per Role Group per event
 
 
 class QuestionKind(models.IntegerChoices):
@@ -441,6 +453,9 @@ class Question(models.Model):
     required = models.BooleanField(default=False)
     options: models.JSONField[list[str]] = models.JSONField(default=list, blank=True)
     allow_other = models.BooleanField(default=False)
+
+    def __str__(self)-> str:
+        return f"Question \"{self.content}\" ({self.kind})"
 
     # TODO: don't allow an option called "Other" if allow_other is True
     # TODO: require len(options) > 0 if appropriate Kind

@@ -42,7 +42,7 @@
 <h2>Application</h2>
 
 {% if not request.user.is_authenticated and not application %}
-<p>You need to <a href="{% url 'account_login' %}">log in</a> to complete this application.</p>
+<p>You need to <a href="{% url 'account_signup' %}">sign up</a> or <a href="{% url 'account_login' %}">log in</a> to complete this application.</p>
 <hr>
 {% endif %}
 
@@ -68,12 +68,13 @@ This application includes information from your profile:
 {# Availability #}
 {% if form.application_availability_kind == form.ApplicationAvailabilityKind.WHOLE_EVENT %}
 
-<p>This application covers the entire event, from {{ form.event.start_date }} to {{ form.event.end_date }}.</p>
+<p>This application covers the entire event{% if form.event.start_date != form.event.end_date %}, from {{ form.event.start_date }} to {{ form.event.end_date }}{% endif %}.</p>
 
 {% elif form.application_availability_kind == form.ApplicationAvailabilityKind.BY_DAY %}
 
 This application covers the following days:
 
+<fieldset>
 {% for day in form.event.days %}
 <input type="checkbox"
        name="day-{{day}}"
@@ -83,21 +84,24 @@ This application covers the following days:
 >
 <label for="day-{{day}}">{{day}}</label>
 {% endfor %}
+</fieldset>
 
 {% elif form.application_availability_kind == form.ApplicationAvailabilityKind.BY_GAME %}
 
 This application covers the following games:
 
-{% for game in form.event.games %}
+<fieldset>
+{% for game in form.event.games.all %}
 <input type="checkbox"
        name="game-{{game.id}}"
        id="game-{{game.id}}"
        {% if not editable %} disabled {% endif %}
        {% if application and game in application.games.all %} checked {% endif %}
 >
-<label for="game-{{game.id}}">{{game}} ({{ game.start_time }} to {{ game.end_time }})</label>
+<label for="game-{{game.id}}">Game {{game.order_key}} ({{ game.start_time }} to {{ game.end_time }})</label>
 {% endfor %}
 {% endif %}
+</fieldset>
 
 <hr>
 
@@ -176,11 +180,13 @@ This application covers the following games:
        name="{{question.id}}-other-value"
        value="{% if application %}{{ response.get_other_response }}{% endif %}"
        {% if not editable %} disabled {% endif %}
+       style="width: auto;"
 >
 {% endif %}
 {% endif %}
 {% endwith %}
 </div>
+<hr>
 {% endfor %}
 <input type="submit" {% if not editable %} disabled {% endif %} value="Submit">
 </form>

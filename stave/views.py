@@ -19,6 +19,7 @@ from uuid import UUID
 from . import models, settings, forms
 from dataclasses import dataclass, asdict, is_dataclass
 from django.contrib.auth.mixins import LoginRequiredMixin
+from datetime import datetime
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
@@ -30,6 +31,36 @@ class MyApplicationsView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         return super().get_queryset().filter(user=self.request.user)
+
+class HomeView(generic.TemplateView):
+    template_name = "stave/home.html"
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+
+        application_forms = models.ApplicationForm.objects.open()
+        if self.request.user.is_authenticated:
+            application_forms = application_forms.exclude(
+                applications__user=self.request.user
+            )
+
+            applications = models.Application.objects.filter(
+                    user=self.request.user,
+                    form__event__start_date__gt=datetime.now()
+            )
+            events = models.Event.objects.filter(
+            league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+            league__user_permissions__user=self.request.user,
+        ).distinct()
+        else:
+            applications = []
+            events = []
+
+        context["application_forms"] = application_forms
+        context["events"] = events
+        context["applications"] = applications
+
+        return context
 
 
 class EventDetailView(generic.DetailView):
@@ -133,7 +164,6 @@ class EventListView(generic.ListView):
 
 
 class FormCreateView(LoginRequiredMixin, views.View):
-    # TODO: permission checks
     def get(self, request: HttpRequest, league: str, event: str) -> HttpResponse:
         event_ = get_object_or_404(
                 models.Event.objects.filter(
@@ -165,18 +195,23 @@ class FormCreateView(LoginRequiredMixin, views.View):
 
         app_form_form = forms.ApplicationFormForm(request.POST)
         question_formset = forms.QuestionFormSet(request.POST)
-
+        print(request.POST)
         # Determine if the user took a form-wide action, like Save or Save and Continue,
         # or if they asked to add a question.
         if "kind" not in kwargs and app_form_form.is_valid() and question_formset.is_valid():
            with transaction.atomic():
                app_form = app_form_form.save(commit=False)
                app_form.event = event_
+               app_form.role_groups.set(models.RoleGroup.objects.filter(id__in=app_form_form.cleaned_data['role_groups']))
+               print(app_form)
                app_form.save()
 
                for (i, instance) in enumerate(question_formset.save(commit=False)):
                    instance.application_form = app_form
                    instance.order_key = i
+                   # FIXME: options are not getting saved.
+                   print(instance)
+                   print(instance.options)
                    instance.save()
 
            return HttpResponseRedirect(app_form.get_absolute_url())

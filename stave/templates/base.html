@@ -12,19 +12,27 @@
         <title>{% block title %}Stave{% endblock %}</title>
     </head>
     <header>
-        <nav>
-            <ul><li><strong>Stave</strong> <small>for Roller Derby</small></li></ul>
+        <nav style="display: flex; flex-direction: row; justify-content: space-between; width: 100%;">
+            <div>
             <ul>
-            <li><a href="{% url 'league-list' %}">Leagues</a></li>
-            <li><a href="{% url 'event-list' %}">Events</a></li>
-            {% if request.user.is_authenticated %}
-            <li><a href="{% url 'my-applications' %}">My Applications</a></li>
-            <li><a href="{% url 'profile' %}">Profile</a></li>
-            <li><a href="{% url 'account_logout' %}">Logout</a></li>
-            {% else %}
-            <li><a href="{% url 'account_login' %}">Login</a></li>
-            {% endif %}
+                <li><strong>Stave</strong> <small>for Roller Derby</small></li>
+                <li><a href="{% url 'league-list' %}">Leagues</a></li>
+                <li><a href="{% url 'event-list' %}">Events</a></li>
             </ul>
+            </div>
+            <div>
+                <ul>
+                {% if request.user.is_authenticated %}
+                <li><small>{{ request.user.preferred_name }}</small></li>
+                <li><a href="{% url 'my-applications' %}">My Applications</a></li>
+                <li><a href="{% url 'profile' %}">Profile</a></li>
+                <li><a href="{% url 'account_logout' %}">Logout</a></li>
+                {% else %}
+                <li><a href="{% url 'account_signup' %}">Sign Up</a></li>
+                <li><a href="{% url 'account_login' %}">Login</a></li>
+                {% endif %}
+                </ul>
+            </div>
         </nav>
     </header>
     <main>

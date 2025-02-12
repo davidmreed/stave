@@ -15,45 +15,41 @@ class SeparatedJSONListField(forms.JSONField):
 
         return value
 
-    def to_python(self, value: str) -> list[str]:
+    def to_python(self, value: str) -> str:
         if value:
             python_value = [v.strip() for v in value.strip().replace('\r', '\n').split('\n') if v]
         else:
             python_value = []
 
-        return super().to_python(json.dumps(value or python_value))
+        return super().to_python(json.dumps(python_value))
 
 
 class QuestionForm(forms.ModelForm):
     class Meta:
         model = models.Question
-        fields = ['content', 'kind', 'required']
+        fields = ['content', 'kind', 'required', 'options', 'allow_other']
         widgets = { 'kind': forms.HiddenInput(), 'content': forms.TextInput }
 
-
+    options = SeparatedJSONListField(widget=forms.Textarea(attrs={"rows":5}))
+    allow_other = forms.BooleanField(required=False)
     kind: models.QuestionKind
 
     def __init__(self, *args, **kwargs):
         kwargs['label_suffix'] = ""
         super().__init__(*args, **kwargs)
-
-
-        kind_data = self.data.get(kwargs['prefix'] + '-kind')
+        kind_data = kwargs.get("data", {}).get(kwargs['prefix'] + '-kind')
         if not kind_data:
             raise Exception("No kind specified for question")
 
         self.kind = models.QuestionKind(int(kind_data))
         match self.kind:
             case models.QuestionKind.SELECT_MANY:
-                self.fields["options"] = SeparatedJSONListField(initial=kwargs.get('initial', {}).get('options', []), required=True, widget=forms.Textarea(attrs={"rows":5}))
-                self.fields["allow_other"] = forms.BooleanField(
-                        initial=self.instance.allow_other
-                )
-
-            case models.QuestionKind.SELECT_ONE:
-                self.fields["options"] = SeparatedJSONListField(initial=kwargs.get('initial', {}).get('options', []), required=True, widget=forms.Textarea(attrs={"rows":5}))
-            case _:
                 pass
+            case models.QuestionKind.SELECT_ONE:
+                self.fields["allow_other"].widget=forms.HiddenInput()
+            case _:
+                self.fields["options"].widget=forms.HiddenInput()
+                self.fields["allow_other"].widget=forms.HiddenInput()
 
     def get_kind_display(self) -> str:
         match self.kind:
@@ -72,7 +68,7 @@ class ApplicationFormForm(forms.ModelForm):
     application_kind = forms.TypedChoiceField(empty_value=None, choices=models.ApplicationKind, widget=forms.RadioSelect, required=True)
     application_availability_kind = forms.TypedChoiceField(empty_value=None, choices=models.ApplicationAvailabilityKind, widget=forms.RadioSelect, required=True)
     requires_profile_fields = forms.TypedMultipleChoiceField(empty_value=None, choices=[
-               (field, models.User._meta.get_field(field).verbose_name.title()) for field in models.User.ALLOWED_PROFILE_FIELDS], widget=forms.CheckboxSelectMultiple)
+               (field, models.User._meta.get_field(field).verbose_name.title()) for field in models.User.ALLOWED_PROFILE_FIELDS], widget=forms.CheckboxSelectMultiple, required=False)
     class Meta:
         model = models.ApplicationForm
         fields = [

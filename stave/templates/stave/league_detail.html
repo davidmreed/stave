@@ -27,7 +27,9 @@
 <p>
 {{ league.description|markdownify }}
 </p>
+
 <h2>Upcoming Events</h2>
+
 {% for event in league.events.all %}
 {% with show_host=False show_details=True %}
 {% include "stave/event_card.html" %}

@@ -4,7 +4,9 @@
 <header>
     <h4 style>{{ event.name }}</h4>
     {% if request.user|can_manage_event:event %}
-    <a href="{% url 'event-edit' event.league.slug event.slug %}" role="button">Edit</a>{% endif %}
+    <a style="margin-right: 0.5rem;" href="{% url 'event-edit' event.league.slug event.slug %}" role="button">Edit</a>
+    <a href="{% url 'form-create' event.league.slug event.slug %}" role="button">Create Form</a>
+    {% endif %}
 </header>
 
     <dl>
@@ -51,9 +53,6 @@
     {% if show_forms %}
     <header>
         <h5>Application Forms</h5>
-        {% if request.user|can_manage_event:event %}
-<a role="button" href="{% url 'form-create' event.league.slug event.slug %}">Create Application Form</a>
-{% endif %}
     </header>
     <ul>
 {% for form in event.application_forms.all %}

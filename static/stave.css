@@ -21,6 +21,14 @@ main a:not([role])::after {
     content: ' ⇨';
 }
 
+fieldset legend {
+    font-weight: bold;
+}
+
+body  header  nav {
+    border-bottom: 0.25rem solid var(--pico-primary);
+}
+
 dl {
     display: flex;
     gap: 1rem;
@@ -42,6 +50,16 @@ dl dd {
     margin: 0;
 }
 
+a {
+    text-decoration: underline dotted;
+}
+
+.helptext {
+    font-size: 60%;
+    margin-bottom: 0.25rem;
+    /* TODO: update template to just use <small> */
+}
+
 /* Small screens */
 @media screen and (max-width: 400px) {
   dl {
@@ -50,7 +68,4 @@ dl dd {
   dl div {
     padding: 1em 1em 0 1em;
   }
-}
-a {
-    text-decoration: underline dotted;
 }
