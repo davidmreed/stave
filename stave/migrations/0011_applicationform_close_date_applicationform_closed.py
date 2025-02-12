@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0010_league_location'),
+        ("stave", "0010_league_location"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='applicationform',
-            name='close_date',
+            model_name="applicationform",
+            name="close_date",
             field=models.DateField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='applicationform',
-            name='closed',
+            model_name="applicationform",
+            name="closed",
             field=models.BooleanField(default=False),
         ),
     ]

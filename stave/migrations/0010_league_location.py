@@ -4,16 +4,15 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0009_alter_applicationform_options_alter_league_slug_and_more'),
+        ("stave", "0009_alter_applicationform_options_alter_league_slug_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='league',
-            name='location',
-            field=models.CharField(default='Foo', max_length=256),
+            model_name="league",
+            name="location",
+            field=models.CharField(default="Foo", max_length=256),
             preserve_default=False,
         ),
     ]

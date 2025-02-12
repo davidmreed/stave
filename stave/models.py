@@ -12,8 +12,12 @@ class User(AbstractUser):
     ALLOWED_PROFILE_FIELDS = ["preferred_name", "pronouns", "game_history_url"]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     preferred_name = models.CharField(max_length=256, verbose_name=_("preferred name"))
-    pronouns = models.CharField(max_length=32, blank=True, null=True, verbose_name=_("pronouns"))
-    game_history_url = models.URLField(verbose_name = _("game history URL"), blank=True, null=True)
+    pronouns = models.CharField(
+        max_length=32, blank=True, null=True, verbose_name=_("pronouns")
+    )
+    game_history_url = models.URLField(
+        verbose_name=_("game history URL"), blank=True, null=True
+    )
     # TODO: references.
     league_permissions: models.Manager["LeagueUserPermission"]
 
@@ -54,10 +58,14 @@ class Role(models.Model):
 
 class League(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    slug = models.SlugField(help_text=_("The version of the league's name used in web addresses. Should be alphanumeric and contain no spaces, e.g., Central City Derby->central-city-derby"))
+    slug = models.SlugField(
+        help_text=_(
+            "The version of the league's name used in web addresses. Should be alphanumeric and contain no spaces, e.g., Central City Derby->central-city-derby"
+        )
+    )
     name = models.CharField(max_length=256)
     logo = models.ImageField(null=True, blank=True)
-    location= models.CharField(max_length=256)
+    location = models.CharField(max_length=256)
     description = models.TextField(null=True, blank=True)
     website = models.URLField(null=True, blank=True)
 
@@ -297,14 +305,13 @@ class ApplicationFormTemplate(models.Model):
         on_delete=models.SET_NULL,
     )
 
+
 class ApplicationFormManager(models.Manager["ApplicationForm"]):
     def open(self) -> models.QuerySet["ApplicationForm"]:
-        return self.filter(
-            closed=False, hidden=False
-        ).order_by(
-            "close_date",
-            "event__start_date"
-        ) # TODO: make this a CASE()
+        return self.filter(closed=False, hidden=False).order_by(
+            "close_date", "event__start_date"
+        )  # TODO: make this a CASE()
+
 
 class ApplicationForm(models.Model):
     ApplicationAvailabilityKind = ApplicationAvailabilityKind
@@ -316,15 +323,17 @@ class ApplicationForm(models.Model):
     )
     slug = models.SlugField()
 
-    application_kind = models.IntegerField(choices=ApplicationKind.choices, null=False, blank=False)
+    application_kind = models.IntegerField(
+        choices=ApplicationKind.choices, null=False, blank=False
+    )
     application_availability_kind = models.IntegerField(
         choices=ApplicationAvailabilityKind.choices, null=False, blank=False
     )
     role_groups: models.ManyToManyField["ApplicationForm", RoleGroup] = (
         models.ManyToManyField(RoleGroup)
     )
-    closed= models.BooleanField(default=False)
-    close_date= models.DateField(null=True, blank=True)
+    closed = models.BooleanField(default=False)
+    close_date = models.DateField(null=True, blank=True)
     hidden = models.BooleanField(default=False)
     intro_text = models.TextField()
     requires_profile_fields: models.JSONField[list[str]] = models.JSONField(
@@ -361,7 +370,10 @@ class ApplicationForm(models.Model):
         return f"{self.event.name} ({', '.join(role_group_names)})"
 
     def get_absolute_url(self) -> str:
-        return reverse('application-form', args = [self.event.league.slug, self.event.slug, self.slug])
+        return reverse(
+            "application-form",
+            args=[self.event.league.slug, self.event.slug, self.slug],
+        )
 
     # TODO: make it possible to get applications that would otherwise match
     # but are either un-accepted or assigned to other roles.
@@ -415,9 +427,16 @@ class ApplicationForm(models.Model):
         return applications
 
     class Meta:
-        ordering = ['slug']
+        ordering = ["slug"]
         constraints = [
-                models.UniqueConstraint('slug', 'event', name='no-duplicate-form-slugs', violation_error_message=_("Application form slugs must be unique for any given Event."))
+            models.UniqueConstraint(
+                "slug",
+                "event",
+                name="no-duplicate-form-slugs",
+                violation_error_message=_(
+                    "Application form slugs must be unique for any given Event."
+                ),
+            )
         ]
         # TODO: only one form per Role Group per event
 
@@ -454,8 +473,8 @@ class Question(models.Model):
     options: models.JSONField[list[str]] = models.JSONField(default=list, blank=True)
     allow_other = models.BooleanField(default=False)
 
-    def __str__(self)-> str:
-        return f"Question \"{self.content}\" ({self.kind})"
+    def __str__(self) -> str:
+        return f'Question "{self.content}" ({self.kind})'
 
     # TODO: don't allow an option called "Other" if allow_other is True
     # TODO: require len(options) > 0 if appropriate Kind

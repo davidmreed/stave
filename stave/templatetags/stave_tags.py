@@ -20,7 +20,9 @@ def can_manage_league(user: models.User, league: models.League) -> bool:
 def can_manage_event(user: models.User, event: models.Event) -> bool:
     if user.is_authenticated:
         return models.LeagueUserPermission.objects.filter(
-            user=user, league=event.league, permission=models.UserPermission.EVENT_MANAGER
+            user=user,
+            league=event.league,
+            permission=models.UserPermission.EVENT_MANAGER,
         ).exists()
     return False
 

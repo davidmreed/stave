@@ -4,6 +4,7 @@ from django.http import HttpRequest
 from django.utils.translation import gettext_lazy as _
 import json
 
+
 class SeparatedJSONListField(forms.JSONField):
     default_error_messages = {
         "invalid": _("Enter one or more choices separated by newlines.")
@@ -17,7 +18,9 @@ class SeparatedJSONListField(forms.JSONField):
 
     def to_python(self, value: str) -> str:
         if value:
-            python_value = [v.strip() for v in value.strip().replace('\r', '\n').split('\n') if v]
+            python_value = [
+                v.strip() for v in value.strip().replace("\r", "\n").split("\n") if v
+            ]
         else:
             python_value = []
 
@@ -27,17 +30,17 @@ class SeparatedJSONListField(forms.JSONField):
 class QuestionForm(forms.ModelForm):
     class Meta:
         model = models.Question
-        fields = ['content', 'kind', 'required', 'options', 'allow_other']
-        widgets = { 'kind': forms.HiddenInput(), 'content': forms.TextInput }
+        fields = ["content", "kind", "required", "options", "allow_other"]
+        widgets = {"kind": forms.HiddenInput(), "content": forms.TextInput}
 
-    options = SeparatedJSONListField(widget=forms.Textarea(attrs={"rows":5}))
+    options = SeparatedJSONListField(widget=forms.Textarea(attrs={"rows": 5}))
     allow_other = forms.BooleanField(required=False)
     kind: models.QuestionKind
 
     def __init__(self, *args, **kwargs):
-        kwargs['label_suffix'] = ""
+        kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
-        kind_data = kwargs.get("data", {}).get(kwargs['prefix'] + '-kind')
+        kind_data = kwargs.get("data", {}).get(kwargs["prefix"] + "-kind")
         if not kind_data:
             raise Exception("No kind specified for question")
 
@@ -46,10 +49,10 @@ class QuestionForm(forms.ModelForm):
             case models.QuestionKind.SELECT_MANY:
                 pass
             case models.QuestionKind.SELECT_ONE:
-                self.fields["allow_other"].widget=forms.HiddenInput()
+                self.fields["allow_other"].widget = forms.HiddenInput()
             case _:
-                self.fields["options"].widget=forms.HiddenInput()
-                self.fields["allow_other"].widget=forms.HiddenInput()
+                self.fields["options"].widget = forms.HiddenInput()
+                self.fields["allow_other"].widget = forms.HiddenInput()
 
     def get_kind_display(self) -> str:
         match self.kind:
@@ -62,13 +65,35 @@ class QuestionForm(forms.ModelForm):
             case models.QuestionKind.SELECT_MANY:
                 return _("Select Multiple Options")
 
-QuestionFormSet = forms.modelformset_factory(models.Question, form=QuestionForm, extra=0)
+
+QuestionFormSet = forms.modelformset_factory(
+    models.Question, form=QuestionForm, extra=0
+)
+
 
 class ApplicationFormForm(forms.ModelForm):
-    application_kind = forms.TypedChoiceField(empty_value=None, choices=models.ApplicationKind, widget=forms.RadioSelect, required=True)
-    application_availability_kind = forms.TypedChoiceField(empty_value=None, choices=models.ApplicationAvailabilityKind, widget=forms.RadioSelect, required=True)
-    requires_profile_fields = forms.TypedMultipleChoiceField(empty_value=None, choices=[
-               (field, models.User._meta.get_field(field).verbose_name.title()) for field in models.User.ALLOWED_PROFILE_FIELDS], widget=forms.CheckboxSelectMultiple, required=False)
+    application_kind = forms.TypedChoiceField(
+        empty_value=None,
+        choices=models.ApplicationKind,
+        widget=forms.RadioSelect,
+        required=True,
+    )
+    application_availability_kind = forms.TypedChoiceField(
+        empty_value=None,
+        choices=models.ApplicationAvailabilityKind,
+        widget=forms.RadioSelect,
+        required=True,
+    )
+    requires_profile_fields = forms.TypedMultipleChoiceField(
+        empty_value=None,
+        choices=[
+            (field, models.User._meta.get_field(field).verbose_name.title())
+            for field in models.User.ALLOWED_PROFILE_FIELDS
+        ],
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+    )
+
     class Meta:
         model = models.ApplicationForm
         fields = [
@@ -79,14 +104,11 @@ class ApplicationFormForm(forms.ModelForm):
             "hidden",
             "intro_text",
         ]
-        widgets = {
-                'role_groups':forms.CheckboxSelectMultiple
-                }
+        widgets = {"role_groups": forms.CheckboxSelectMultiple}
 
     def __init__(self, *args, **kwargs):
-        kwargs['label_suffix'] = ''
+        kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
-
 
 
 class LeagueForm(forms.ModelForm):
@@ -95,7 +117,7 @@ class LeagueForm(forms.ModelForm):
         fields = ["name", "slug", "description", "logo", "website"]
 
     def __init__(self, *args, **kwargs):
-        kwargs['label_suffix'] = ''
+        kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
 
@@ -117,7 +139,7 @@ class EventForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         request: HttpRequest = kwargs.pop("request")
-        kwargs['label_suffix'] = ''
+        kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
         self.fields["league"].queryset = models.League.objects.filter(

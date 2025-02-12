@@ -32,6 +32,7 @@ class MyApplicationsView(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         return super().get_queryset().filter(user=self.request.user)
 
+
 class HomeView(generic.TemplateView):
     template_name = "stave/home.html"
 
@@ -45,13 +46,12 @@ class HomeView(generic.TemplateView):
             )
 
             applications = models.Application.objects.filter(
-                    user=self.request.user,
-                    form__event__start_date__gt=datetime.now()
+                user=self.request.user, form__event__start_date__gt=datetime.now()
             )
             events = models.Event.objects.filter(
-            league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
-            league__user_permissions__user=self.request.user,
-        ).distinct()
+                league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+                league__user_permissions__user=self.request.user,
+            ).distinct()
         else:
             applications = []
             events = []
@@ -166,31 +166,39 @@ class EventListView(generic.ListView):
 class FormCreateView(LoginRequiredMixin, views.View):
     def get(self, request: HttpRequest, league: str, event: str) -> HttpResponse:
         event_ = get_object_or_404(
-                models.Event.objects.filter(
-                    league__slug=league,
-                    league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
-                    league__user_permissions__user=request.user,
-                ).distinct(),
-                slug=event
+            models.Event.objects.filter(
+                league__slug=league,
+                league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+                league__user_permissions__user=request.user,
+            ).distinct(),
+            slug=event,
         )
         app_form_form = forms.ApplicationFormForm()
-        question_formset = forms.QuestionFormSet(queryset=models.Question.objects.none())
+        question_formset = forms.QuestionFormSet(
+            queryset=models.Question.objects.none()
+        )
 
-        return render(request, 'stave/form_edit.html', context = {
-            "form": app_form_form,
-            "event": event_,
-            "question_formset": question_formset,
-            "QuestionKind": models.QuestionKind
-        })
+        return render(
+            request,
+            "stave/form_edit.html",
+            context={
+                "form": app_form_form,
+                "event": event_,
+                "question_formset": question_formset,
+                "QuestionKind": models.QuestionKind,
+            },
+        )
 
-    def post(self, request: HttpRequest, league: str, event: str, **kwargs) -> HttpResponse:
+    def post(
+        self, request: HttpRequest, league: str, event: str, **kwargs
+    ) -> HttpResponse:
         event_ = get_object_or_404(
-                models.Event.objects.filter(
-                    league__slug=league,
-                    league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
-                    league__user_permissions__user=request.user,
-                ).distinct(),
-                slug=event
+            models.Event.objects.filter(
+                league__slug=league,
+                league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+                league__user_permissions__user=request.user,
+            ).distinct(),
+            slug=event,
         )
 
         app_form_form = forms.ApplicationFormForm(request.POST)
@@ -198,53 +206,64 @@ class FormCreateView(LoginRequiredMixin, views.View):
         print(request.POST)
         # Determine if the user took a form-wide action, like Save or Save and Continue,
         # or if they asked to add a question.
-        if "kind" not in kwargs and app_form_form.is_valid() and question_formset.is_valid():
-           with transaction.atomic():
-               app_form = app_form_form.save(commit=False)
-               app_form.event = event_
-               app_form.role_groups.set(models.RoleGroup.objects.filter(id__in=app_form_form.cleaned_data['role_groups']))
-               print(app_form)
-               app_form.save()
+        if (
+            "kind" not in kwargs
+            and app_form_form.is_valid()
+            and question_formset.is_valid()
+        ):
+            with transaction.atomic():
+                app_form = app_form_form.save(commit=False)
+                app_form.event = event_
+                app_form.role_groups.set(
+                    models.RoleGroup.objects.filter(
+                        id__in=app_form_form.cleaned_data["role_groups"]
+                    )
+                )
+                print(app_form)
+                app_form.save()
 
-               for (i, instance) in enumerate(question_formset.save(commit=False)):
-                   instance.application_form = app_form
-                   instance.order_key = i
-                   # FIXME: options are not getting saved.
-                   print(instance)
-                   print(instance.options)
-                   instance.save()
+                for i, instance in enumerate(question_formset.save(commit=False)):
+                    instance.application_form = app_form
+                    instance.order_key = i
+                    # FIXME: options are not getting saved.
+                    print(instance)
+                    print(instance.options)
+                    instance.save()
 
-           return HttpResponseRedirect(app_form.get_absolute_url())
+            return HttpResponseRedirect(app_form.get_absolute_url())
         elif "kind" in kwargs:
-           kind: int=kwargs["kind"]
-           if kind in models.QuestionKind.values:
-               new_data = question_formset.data.copy()
-               try:
-                   count = int(new_data['form-TOTAL_FORMS'])
-                   new_data[f'form-{count}-id'] = ''
-                   new_data[f'form-{count}-kind'] = str(kind)
-                   if kind in [models.QuestionKind.SELECT_ONE, models.QuestionKind.SELECT_MANY]:
-                       new_data[f'form-{count}-options'] = "[]"
+            kind: int = kwargs["kind"]
+            if kind in models.QuestionKind.values:
+                new_data = question_formset.data.copy()
+                try:
+                    count = int(new_data["form-TOTAL_FORMS"])
+                    new_data[f"form-{count}-id"] = ""
+                    new_data[f"form-{count}-kind"] = str(kind)
+                    if kind in [
+                        models.QuestionKind.SELECT_ONE,
+                        models.QuestionKind.SELECT_MANY,
+                    ]:
+                        new_data[f"form-{count}-options"] = "[]"
 
-                   count += 1
-                   new_data['form-TOTAL_FORMS'] = str(count)
-               except (KeyError, ValueError):
+                    count += 1
+                    new_data["form-TOTAL_FORMS"] = str(count)
+                except (KeyError, ValueError):
                     return HttpResponseBadRequest()
 
-               question_formset = forms.QuestionFormSet(
-                       data=new_data
-                )
-           else:
-               return HttpResponseBadRequest()
+                question_formset = forms.QuestionFormSet(data=new_data)
+            else:
+                return HttpResponseBadRequest()
 
-        return render(request, 'stave/form_edit.html', context = {
+        return render(
+            request,
+            "stave/form_edit.html",
+            context={
                 "form": app_form_form,
                 "event": event_,
                 "question_formset": question_formset,
-                "QuestionKind": models.QuestionKind
-            })
-
-
+                "QuestionKind": models.QuestionKind,
+            },
+        )
 
 
 class ProfileView(LoginRequiredMixin, generic.TemplateView):
