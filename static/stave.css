@@ -1,0 +1,20 @@
+dl {
+    display: flex;
+    gap: 1rem;
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-left: 0.25rem solid var(--pico-primary);
+    padding-left: 1rem;
+    margin-bottom: 2rem;
+}
+
+dl dt {
+    font-weight: bold;
+}
+dl dd {
+    margin: 0;
+}
+
+a {
+    text-decoration: underline dotted;
+}

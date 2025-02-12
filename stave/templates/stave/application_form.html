@@ -5,6 +5,7 @@
 {% block content %}
 
 <h1>{{ form.event.name }}</h1>
+<div style="border-left: 1rem solid var(--pico-primary)">
 <p>
 Hosted by <a href="{% url 'league-detail' form.event.league.slug %}">{{ form.event.league.name }}</a>.
 </p>
@@ -19,8 +20,10 @@ Hosted by <a href="{% url 'league-detail' form.event.league.slug %}">{{ form.eve
 </p>
 
 {{ form.intro_text|markdownify }}
+</div>
 
-<hr>
+<h2>Application</h2>
+
 
 <form action="{% url 'application-form' form.event.league.slug form.slug %}" method="post">
 {% csrf_token %}

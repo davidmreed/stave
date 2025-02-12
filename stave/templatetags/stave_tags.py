@@ -9,16 +9,20 @@ register = template.Library()
 
 @register.filter
 def can_manage_league(user: models.User, league: models.League) -> bool:
-    return models.LeagueUserPermission.objects.filter(
-        user=user, league=league, permission=models.UserPermission.LEAGUE_MANAGER
-    ).exists()
+    if user.is_authenticated:
+        return models.LeagueUserPermission.objects.filter(
+            user=user, league=league, permission=models.UserPermission.LEAGUE_MANAGER
+        ).exists()
+    return False
 
 
 @register.filter
-def can_manage_league_events(user: models.User, league: models.League) -> bool:
-    return models.LeagueUserPermission.objects.filter(
-        user=user, league=league, permission=models.UserPermission.EVENT_MANAGER
-    ).exists()
+def can_manage_event(user: models.User, event: models.Event) -> bool:
+    if user.is_authenticated:
+        return models.LeagueUserPermission.objects.filter(
+            user=user, league=event.league, permission=models.UserPermission.EVENT_MANAGER
+        ).exists()
+    return False
 
 
 @register.filter

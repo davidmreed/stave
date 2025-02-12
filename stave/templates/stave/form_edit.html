@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<form method="post" action="{% url 'form-create' event.league.slug event.slug %}">
+    {% csrf_token %}
+    {{ form }}
+    <hr>
+    {{ question_formset.management_form }}
+    {% for question_form in question_formset %}
+    <div>
+        <fieldset>
+            <legend><strong>{{ question_form.get_kind_display }} Question<strong></legend>
+        {{ question_form }}
+        </fieldset>
+    </div>
+    <hr>
+    {% endfor %}
+    <div role="group">
+        <input type="submit" formaction="{% url 'form-create-question' event.league.slug event.slug QuestionKind.SHORT_TEXT %}" formnovalidate value="Add Short Text">
+        <input type="submit" formaction="{% url 'form-create-question' event.league.slug event.slug QuestionKind.LONG_TEXT %}" formnovalidate value="Add Long Text">
+        <input type="submit" formaction="{% url 'form-create-question' event.league.slug event.slug QuestionKind.SELECT_ONE %}" formnovalidate value="Add Single Choice">
+        <input type="submit" formaction="{% url 'form-create-question' event.league.slug event.slug QuestionKind.SELECT_MANY %}" formnovalidate value="Add Multiple Choice">
+    </div>
+    <hr>
+    <input type="submit" value="Save">
+    <input type="submit" value="Save and Continue Editing">
+</form>
+{% endblock %}

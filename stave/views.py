@@ -132,9 +132,84 @@ class EventListView(generic.ListView):
     model = models.Event
 
 
-class FormCreateView(LoginRequiredMixin, generic.edit.CreateView):
-    template_name = "stave/league_edit.html"
-    form_class = forms.ApplicationFormForm
+class FormCreateView(LoginRequiredMixin, views.View):
+    # TODO: permission checks
+    def get(self, request: HttpRequest, league: str, event: str) -> HttpResponse:
+        event_ = get_object_or_404(
+                models.Event.objects.filter(
+                    league__slug=league,
+                    league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+                    league__user_permissions__user=request.user,
+                ).distinct(),
+                slug=event
+        )
+        app_form_form = forms.ApplicationFormForm()
+        question_formset = forms.QuestionFormSet(queryset=models.Question.objects.none())
+
+        return render(request, 'stave/form_edit.html', context = {
+            "form": app_form_form,
+            "event": event_,
+            "question_formset": question_formset,
+            "QuestionKind": models.QuestionKind
+        })
+
+    def post(self, request: HttpRequest, league: str, event: str, **kwargs) -> HttpResponse:
+        event_ = get_object_or_404(
+                models.Event.objects.filter(
+                    league__slug=league,
+                    league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+                    league__user_permissions__user=request.user,
+                ).distinct(),
+                slug=event
+        )
+
+        app_form_form = forms.ApplicationFormForm(request.POST)
+        question_formset = forms.QuestionFormSet(request.POST)
+
+        # Determine if the user took a form-wide action, like Save or Save and Continue,
+        # or if they asked to add a question.
+        if "kind" not in kwargs and app_form_form.is_valid() and question_formset.is_valid():
+           with transaction.atomic():
+               app_form = app_form_form.save(commit=False)
+               app_form.event = event_
+               app_form.save()
+
+               for (i, instance) in enumerate(question_formset.save(commit=False)):
+                   instance.application_form = app_form
+                   instance.order_key = i
+                   instance.save()
+
+           return HttpResponseRedirect(app_form.get_absolute_url())
+        elif "kind" in kwargs:
+           kind: int=kwargs["kind"]
+           if kind in models.QuestionKind.values:
+               new_data = question_formset.data.copy()
+               try:
+                   count = int(new_data['form-TOTAL_FORMS'])
+                   new_data[f'form-{count}-id'] = ''
+                   new_data[f'form-{count}-kind'] = str(kind)
+                   if kind in [models.QuestionKind.SELECT_ONE, models.QuestionKind.SELECT_MANY]:
+                       new_data[f'form-{count}-options'] = "[]"
+
+                   count += 1
+                   new_data['form-TOTAL_FORMS'] = str(count)
+               except (KeyError, ValueError):
+                    return HttpResponseBadRequest()
+
+               question_formset = forms.QuestionFormSet(
+                       data=new_data
+                )
+           else:
+               return HttpResponseBadRequest()
+
+        return render(request, 'stave/form_edit.html', context = {
+                "form": app_form_form,
+                "event": event_,
+                "question_formset": question_formset,
+                "QuestionKind": models.QuestionKind
+            })
+
+
 
 
 class ProfileView(LoginRequiredMixin, generic.TemplateView):

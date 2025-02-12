@@ -5,12 +5,16 @@
 
 {% block content %}
 
-<h1><a href="{% url 'event-detail' form.event.league.slug form.event.slug %}">{{ form.event.name }}</a><span style="float:right; text-transform: small-caps;">{{ application.get_status_display }}</span></h1>
+<h1 style="display: flex; align-items: baseline;">
+    <span style="flex: 1;">{{ form.event.name }}</span>
+    <a style="font-size: 50%;" href="{% url 'event-detail' form.event.league.slug form.event.slug %}">Event Details ➡️</a>
+    {% if application %}<span style="float:right; text-transform: small-caps;">{{ application.get_status_display }}</span>{% endif %}</h1>
+
 <p>
 <dl>
     <div>
       <dt>Host</dt>
-      <dd><a href="{% url 'league-detail' form.event.league.slug %}">{{ form.event.league.name }}</a>.</dd>
+      <dd><a href="{% url 'league-detail' form.event.league.slug %}">{{ form.event.league.name }}</a></dd>
     </div>
     {% if form.event.end_date != form.event.start_date %}
     <div>
@@ -35,7 +39,7 @@
 
 {{ form.intro_text|markdownify }}
 
-<hr>
+<h2>Application</h2>
 
 {% if not request.user.is_authenticated and not application %}
 <p>You need to <a href="{% url 'account_login' %}">log in</a> to complete this application.</p>
@@ -59,7 +63,6 @@ This application includes information from your profile:
 <li>{{ profile_field }} {% if request.user.is_authenticated %}({{ user_data|get:profile_field }}){% endif %}</li>
 {% endfor %}
 </ul>
-<hr>
 {% endif %}
 
 {# Availability #}
@@ -179,8 +182,6 @@ This application covers the following games:
 {% endwith %}
 </div>
 {% endfor %}
-{% if editable %}
-<input type="submit">
-{% endif %}
+<input type="submit" {% if not editable %} disabled {% endif %} value="Submit">
 </form>
 {% endblock %}

@@ -9,10 +9,11 @@ from django.utils.translation import gettext_lazy as _
 
 
 class User(AbstractUser):
+    ALLOWED_PROFILE_FIELDS = ["preferred_name", "pronouns", "game_history_url"]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    preferred_name = models.CharField(max_length=256)
-    pronouns = models.CharField(max_length=32, blank=True, null=True)
-    game_history_url = models.URLField(blank=True, null=True)
+    preferred_name = models.CharField(max_length=256, verbose_name=_("preferred name"))
+    pronouns = models.CharField(max_length=32, blank=True, null=True, verbose_name=_("pronouns"))
+    game_history_url = models.URLField(verbose_name = _("game history URL"), blank=True, null=True)
 
     league_permissions: models.Manager["LeagueUserPermission"]
 
@@ -53,7 +54,7 @@ class Role(models.Model):
 
 class League(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    slug = models.SlugField()
+    slug = models.SlugField(help_text=_("The version of the league's name used in web addresses. Should be alphanumeric and contain no spaces, e.g., Central City Derby->central-city-derby"))
     name = models.CharField(max_length=256)
     logo = models.ImageField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
@@ -306,9 +307,9 @@ class ApplicationForm(models.Model):
     )
     slug = models.SlugField()
 
-    application_kind = models.IntegerField(choices=ApplicationKind.choices)
+    application_kind = models.IntegerField(choices=ApplicationKind.choices, null=False, blank=False)
     application_availability_kind = models.IntegerField(
-        choices=ApplicationAvailabilityKind.choices
+        choices=ApplicationAvailabilityKind.choices, null=False, blank=False
     )
     role_groups: models.ManyToManyField["ApplicationForm", RoleGroup] = (
         models.ManyToManyField(RoleGroup)
@@ -346,6 +347,9 @@ class ApplicationForm(models.Model):
     def __str__(self) -> str:
         role_group_names = [rg.name for rg in self.role_groups.all()]
         return f"{self.event.name} ({', '.join(role_group_names)})"
+
+    def get_absolute_url(self) -> str:
+        return reverse('application-form', args = [self.event.league.slug, self.event.slug, self.slug])
 
     # TODO: make it possible to get applications that would otherwise match
     # but are either un-accepted or assigned to other roles.
@@ -398,6 +402,12 @@ class ApplicationForm(models.Model):
 
         return applications
 
+    class Meta:
+        ordering = ['slug']
+        constraints = [
+                models.UniqueConstraint('slug', 'event', name='no-duplicate-form-slugs', violation_error_message=_("Application form slugs must be unique for any given Event."))
+        ]
+
 
 class QuestionKind(models.IntegerChoices):
     SHORT_TEXT = 1, _("Short Text")
@@ -425,7 +435,7 @@ class Question(models.Model):
     )
 
     order_key = models.IntegerField()
-    content = models.TextField()
+    content = models.TextField(verbose_name="title")
     kind = models.IntegerField(choices=QuestionKind.choices)
     required = models.BooleanField(default=False)
     options: models.JSONField[list[str]] = models.JSONField(default=list, blank=True)

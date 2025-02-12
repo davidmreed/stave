@@ -6,6 +6,7 @@
 - Application forms
   - Easy create account
   + Edit + update profile data inline
+  - Elide role selection if there is exactly one Role Group & Role in scope
 
 + League page
   + Basic data, link, logo
@@ -24,9 +25,17 @@
   - Email sending on status changes
 
 - Event feed
-  - Subscribe to leagues
-  - iCal for events
-  - iCal for committed items
+  - Subscribe to leagues.
+  - One-click subscribe + create account
+
+  - Post-MVP
+    - iCal for events
+    - iCal for committed items
+    - Promotion tools
+      - Facebook
+      - Slack
+      - Discord
+      - Email
 
 + Create events
 - Create application forms

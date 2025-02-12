@@ -19,7 +19,9 @@
 </p>
 <ul>
 {% for event in league.events.all %}
+{% with show_host=False show_details=True %}
 {% include "stave/event_card.html" %}
+{% endwith %}
 {% endfor %}
 </ul>
 {% endblock %}
