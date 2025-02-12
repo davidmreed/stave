@@ -57,6 +57,7 @@ class League(models.Model):
     slug = models.SlugField(help_text=_("The version of the league's name used in web addresses. Should be alphanumeric and contain no spaces, e.g., Central City Derby->central-city-derby"))
     name = models.CharField(max_length=256)
     logo = models.ImageField(null=True, blank=True)
+    location= models.CharField(max_length=256)
     description = models.TextField(null=True, blank=True)
     website = models.URLField(null=True, blank=True)
 

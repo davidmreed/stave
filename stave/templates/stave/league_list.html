@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Leagues {% if user.is_authenticated %}<a href="{% url 'league-create' %}" role="button">Create</a>{% endif %}</h1>
+<header>
+    <h1>Leagues</h1>
+    {% if user.is_authenticated %}<a href="{% url 'league-create' %}" role="button">Create</a>{% endif %}
+</header>
 {% for league in league_list %}
 {% include "stave/league_card.html" %}
 {% endfor %}

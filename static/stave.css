@@ -1,3 +1,26 @@
+header {
+    display: flex;
+    align-items: baseline;
+}
+header h1, h2, h3, h4, h5, h6 {
+    flex: 1;
+}
+article h1, h2, h3, h4, h5, h6 {
+    margin-bottom: 0;
+}
+
+header a[role=button] {
+    padding: 0.25rem;
+    align-content: center;
+    height: 80%;
+    vertical-align: middle;
+    font-weight: bold;
+}
+
+main a:not([role])::after {
+    content: ' ⇨';
+}
+
 dl {
     display: flex;
     gap: 1rem;
@@ -8,6 +31,10 @@ dl {
     margin-bottom: 2rem;
 }
 
+article dl {
+    justify-content: space-between;
+}
+
 dl dt {
     font-weight: bold;
 }
@@ -15,6 +42,15 @@ dl dd {
     margin: 0;
 }
 
+/* Small screens */
+@media screen and (max-width: 400px) {
+  dl {
+     flex-direction: column;
+  }
+  dl div {
+    padding: 1em 1em 0 1em;
+  }
+}
 a {
     text-decoration: underline dotted;
 }

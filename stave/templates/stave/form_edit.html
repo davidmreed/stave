@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
+<header>
+    <h1>Application Form for {{ event }}</h1>
+</header>
 <form method="post" action="{% url 'form-create' event.league.slug event.slug %}">
     {% csrf_token %}
     {{ form }}

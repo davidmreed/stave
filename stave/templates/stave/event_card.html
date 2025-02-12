@@ -1,32 +1,12 @@
 {% load stave_tags %}
 
 <article>
-<style type="text/css">
-dl {
-  display: flex;
-  justify-content: space-between;
-}
+<header>
+    <h4 style>{{ event.name }}</h4>
+    {% if request.user|can_manage_event:event %}
+    <a href="{% url 'event-edit' event.league.slug event.slug %}" role="button">Edit</a>{% endif %}
+</header>
 
-/* Below is just styling. Adjust as needed. */
-dt {
- font-weight: bold;
-}
-dt,
-dd {
-  margin: 0;
-  padding: 0;
-}
-/* Small screens */
-@media screen and (max-width: 400px) {
-  dl {
-     flex-direction: column;
-  }
-  dl div {
-    padding: 1em 1em 0 1em;
-  }
-}
-</style>
-<header><h4>{{ event.name }}</h4>{% if request.user|can_manage_event:event %}<a href="{% url 'event-edit' event.league.slug event.slug %}" role="button">Edit</a>{% endif %}</header>
     <dl>
         {% if show_host %}
         <div>
@@ -48,6 +28,16 @@ dd {
             <dt>Date</dt>
             <dd>{{ event.start_date }}</dd>
         </div>
+        <div>
+            <dt>Time</dt>
+            <dd>{{ event.games.first.start_time|time }}&ndash;{{ event.games.last.end_time|time }}</dd>
+        </div>
+        {% endif %}
+        {% if event.games.all|length > 1 %}
+        <div>
+            <dd>Games</dd>
+            <dt>{{ event.games.all|length }}</dt>
+        </div>
         {% endif %}
         <div>
             <dt>Location</dt>
@@ -57,4 +47,24 @@ dd {
     {% if show_details %}
     <a href="{% url 'event-detail' event.league.slug event.slug %}">Details</a>
     {% endif %}
+
+    {% if show_forms %}
+    <header>
+        <h5>Application Forms</h5>
+        {% if request.user|can_manage_event:event %}
+<a role="button" href="{% url 'form-create' event.league.slug event.slug %}">Create Application Form</a>
+{% endif %}
+    </header>
+    <ul>
+{% for form in event.application_forms.all %}
+    <li>{{ form.role_groups.all|commalist }}
+    <a href="{% url 'application-form' event.league.slug event.slug form.slug %}">View Form</a>
+    {% if request.user|can_manage_event:event %}
+    <a href="{% url 'form-applications' event.league.slug event.slug form.slug %}">View Applications</a>
+    <a href="{% url 'crew-builder' event.league.slug event.slug form.slug %}">Crew Builder</a>
+    {% endif %}
+    </li>
+{% endfor %}
+{% endif %}
+
 </article>

@@ -85,6 +85,7 @@ class Command(BaseCommand):
         league = models.League.objects.create(
             name="Ceres Roller Derby",
             slug="ceres",
+            location="Ceres Station, The Belt",
             description="The **best** roller derby in the Belt and Outer Planets",
             website="https://derby.ceres.belt",
         )

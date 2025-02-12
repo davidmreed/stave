@@ -7,7 +7,7 @@
 
 <h1 style="display: flex; align-items: baseline;">
     <span style="flex: 1;">{{ form.event.name }}</span>
-    <a style="font-size: 50%;" href="{% url 'event-detail' form.event.league.slug form.event.slug %}">Event Details ➡️</a>
+    <a style="font-size: 50%;" href="{% url 'event-detail' form.event.league.slug form.event.slug %}">Event Details</a>
     {% if application %}<span style="float:right; text-transform: small-caps;">{{ application.get_status_display }}</span>{% endif %}</h1>
 
 <p>
