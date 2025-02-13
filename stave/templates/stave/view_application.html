@@ -5,11 +5,13 @@
 
 {% block content %}
 
-<h1 style="display: flex; align-items: baseline;">
-    <span style="flex: 1;">{{ form.event.name }}</span>
-    <a style="font-size: 50%;" href="{% url 'event-detail' form.event.league.slug form.event.slug %}">Event Details</a>
+<header>
+    <h1 style="display: flex; align-items: baseline;">
+        {{ form.event.name }}
+    </h1>
+    <a href="{% url 'event-detail' form.event.league.slug form.event.slug %}">Event Details</a>
     {% if application %}<span style="float:right; text-transform: small-caps;">{{ application.get_status_display }}</span>{% endif %}</h1>
-
+</header>
 <p>
 <dl>
     <div>
@@ -60,7 +62,7 @@ The status of this application is {{ application.get_status_display }}.
 This application includes information from your profile:
 <ul>
 {% for profile_field in form.requires_profile_fields %}
-<li>{{ profile_field }} {% if request.user.is_authenticated %}({{ user_data|get:profile_field }}){% endif %}</li>
+<li>{{ profile_field|get_profile_field_name }} {% if request.user.is_authenticated %}({{ user_data|get:profile_field }}){% endif %}</li>
 {% endfor %}
 </ul>
 {% endif %}

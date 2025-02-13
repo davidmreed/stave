@@ -307,7 +307,7 @@ class SingleApplicationView(
                 form__event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
                 form__event__league__user_permissions__user=self.request.user,
             )
-        )
+        ).distinct()
 
     def get_context(self) -> ViewApplicationContext:
         application: models.Application = self.get_object()
@@ -408,9 +408,14 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
             event__league__user_permissions__user=self.request.user,
         )
         effective_assignments_by_game_by_role_id = {}
+        effective_assignments_by_game_by_role_id[application_form.event.id] = {}
+        if application_form.event.crew:
+            for crew_assignment in application_form.event.crew.assignments.all():
+                effective_assignments_by_game_by_role_id[application_form.event.id][crew_assignment.role_id] = crew_assignment
+
         for game in application_form.event.games.all():
             effective_assignments_by_game_by_role_id[game.id] = {}
-            for rgca in game.role_group_crew_assignments.filter(
+            for rgca in game.role_groups.filter(
                 role_group__in=application_form.role_groups.all()
             ):
                 for crew_assignment in rgca.effective_crew():
@@ -496,7 +501,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         if len(applications) != 1:
             return HttpResponseBadRequest("multiple matching applications")
 
-        role_group_crew_assignment = game.role_group_crew_assignments.filter(
+        role_group_crew_assignment = game.role_groups.filter(
             role_group__roles__id=role_id
         ).first()
         if not role_group_crew_assignment.crew_overrides:
@@ -519,6 +524,100 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         )
 
 
+# TODO: reduce duplication
+class CrewBuilderEventDetailView(LoginRequiredMixin, views.View):
+    """A view rendering the Crew Builder with a list of applications for a given position at the Event level.
+    On GET, renders the view.
+    On POST, assigns a role and returns to CrewBuilderView."""
+
+    def get(
+        self,
+        request: HttpRequest,
+        league: str,
+        event_slug: str,
+        application_form_slug: str,
+        role_id: UUID,
+    ) -> HttpResponse:
+        application_form = get_object_or_404(
+            models.ApplicationForm,
+            slug=application_form_slug,
+            event__slug=event_slug,
+            event__league__slug=league,
+            event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+            event__league__user_permissions__user=self.request.user,
+        )
+        role = get_object_or_404(models.Role, pk=role_id)
+        event = get_object_or_404(models.Event,
+            slug=event_slug,
+            league__slug=league,
+            league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+            league__user_permissions__user=self.request.user,
+        )
+        # TODO: verification
+        applications = list(application_form.get_applications_for_event_role(role))
+        return render(
+            request,
+            "stave/crew_builder_detail.html",
+            {
+                "form": application_form,
+                "applications": applications,
+                "event": event,
+                "role": role,
+            },
+        )
+
+    def post(
+        self,
+        request: HttpRequest,
+        league: str,
+        event_slug: str,
+        application_form_slug: str,
+        role_id: UUID,
+    ) -> HttpResponse:
+        application_id = request.POST.get("application_id")
+        if not application_id:
+            return HttpResponseBadRequest("invalid application id")
+
+        application_form = get_object_or_404(
+            models.ApplicationForm,
+            slug=application_form_slug,
+            event__slug=event_slug,
+            event__league__slug=league,
+            event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+            event__league__user_permissions__user=self.request.user,
+        )
+        role = get_object_or_404(models.Role, pk=role_id)
+        event = get_object_or_404(models.Event,
+            slug=event_slug,
+            league__slug=league,
+            league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+            league__user_permissions__user=self.request.user,
+        )
+        # TODO: verification
+        applications = application_form.applications.filter(
+            id=application_id,
+            roles__name=role.name,
+        )
+        if len(applications) != 1:
+            return HttpResponseBadRequest("multiple matching applications")
+
+        if not event.crew:
+            event.crew = models.Crew.objects.create(
+                role_group=role.role_group,
+                event=event,
+            )
+            event.save()
+
+        _ = models.CrewAssignment.objects.get_or_create(
+            role_id=role_id,
+            crew=event.crew,
+            user=applications[0].user,
+        )
+
+        # Redirect the user to the base Crew Builder for this crew
+        return HttpResponseRedirect(
+            reverse("crew-builder", args=[league, event_slug, application_form_slug])
+        )
 class ApplicationFormView(views.View):
     def get(
         self, request: HttpRequest, application_form: str, event: str, league: str
@@ -534,7 +633,7 @@ class ApplicationFormView(views.View):
             application=None,
             form=form,
             user_data={
-                models.User._meta.get_field(key).verbose_name.title(): str(
+                key: str(
                     getattr(request.user, key)
                 )
                 for key in form.requires_profile_fields
@@ -547,11 +646,11 @@ class ApplicationFormView(views.View):
 
         return render(request, "stave/view_application.html", asdict(context))
 
-    @login_required
     def post(
         self, request: HttpRequest, application_form: str, event: str, league: str
     ) -> HttpResponse:
         # TODO: if this is an edit to an existing application, replace data.
+        # TODO: enforce authentication
         app = None
 
         with transaction.atomic():

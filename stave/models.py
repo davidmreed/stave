@@ -175,7 +175,7 @@ class RoleGroupCrewAssignment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     role_group = models.ForeignKey(RoleGroup, on_delete=models.CASCADE)
     game: models.ForeignKey["Game"] = models.ForeignKey(
-        "Game", related_name="role_group_crew_assignments", on_delete=models.CASCADE
+        "Game", related_name="role_groups", on_delete=models.CASCADE
     )
     crew = models.ForeignKey(
         Crew,
@@ -211,10 +211,10 @@ class Game(models.Model):
     order_key = models.IntegerField()
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
-    # TODO: remove this relationship
-    role_groups: models.ManyToManyField[RoleGroup, RoleGroupCrewAssignment] = (
-        models.ManyToManyField(RoleGroup, through=RoleGroupCrewAssignment, blank=True)
-    )
+
+    # TODO: this is a bit weird, how we've set up the through model.
+    def assigned_role_groups(self) -> models.QuerySet[RoleGroup]:
+        return RoleGroup.objects.filter(rolegroupcrewassignment__in=self.role_groups.all()).distinct()
 
     class Meta:
         constraints = [
@@ -365,6 +365,13 @@ class ApplicationForm(models.Model):
     form_questions: models.Manager["Question"]
     applications: models.Manager["Application"]
 
+    def games(self) -> models.QuerySet[Game]:
+        """Return those games from this form's event which have
+        at least one of the Role Groups from this form."""
+        return self.event.games.filter(
+            role_groups__role_group__in=self.role_groups.all()
+        ).distinct() # TODO: is this correct?
+
     def __str__(self) -> str:
         role_group_names = [rg.name for rg in self.role_groups.all()]
         return f"{self.event.name} ({', '.join(role_group_names)})"
@@ -423,6 +430,48 @@ class ApplicationForm(models.Model):
 
         elif self.application_availability_kind == ApplicationAvailabilityKind.BY_GAME:
             applications = applications.filter(availability_by_game__includes=game)
+
+        return applications
+
+    def get_applications_for_event_role(
+        self, role: Role
+    ) -> Iterable["Application"]:
+        applications = self.applications.filter(
+            roles__name=role.name, roles__role_group_id=role.role_group.id
+        )
+
+        # Filter based on our application model.
+        if self.application_kind == ApplicationKind.CONFIRM_ONLY:
+            applications = applications.filter(
+                status__in=[
+                    ApplicationStatus.APPLIED,
+                    ApplicationStatus.INVITED,
+                    ApplicationStatus.CONFIRMED,
+                ]
+            )
+        elif self.application_kind == ApplicationKind.CONFIRM_THEN_ASSIGN:
+            applications = applications.filter(status=ApplicationStatus.INVITED)
+
+        # Exclude already-assigned users (to any Role in this Event or an individual Game)
+        # TODO: profile this heinous query
+        applications = applications.exclude(
+            user__in=User.objects.filter(
+                crews__crew__role_group_assignments__game__event=self.event,
+            )
+        )
+        applications = applications.exclude(
+            user__in=User.objects.filter(
+                crews__crew__role_group_override_assignments__game__event=self.event,
+            )
+        )
+        applications = applications.exclude(
+                user__in=User.objects.filter(
+                    crews__role__nonexclusive=False,
+                    crews__crew__event=self.event
+                )
+        )
+
+        # No predicate for availability on event-wide roles.
 
         return applications
 
@@ -515,6 +564,7 @@ class Application(models.Model):
 
     class Meta:
         # TODO: require population of the relevant availability type for the form.
+        # FIXME: this constraint does not appear to work.
         constraints = [
             models.UniqueConstraint(
                 fields=["form", "user"], name="one_app_per_event_per_user"

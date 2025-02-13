@@ -38,5 +38,6 @@
       - Email
 
 + Create events
-- Create application forms
++ Create application forms
+- Create games
 - Event-wide roles

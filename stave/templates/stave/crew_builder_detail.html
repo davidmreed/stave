@@ -2,21 +2,38 @@
 
 {% load stave_tags %}
 {% block content %}
-<h1>Assigning {{ role.name }} for {{ game.event }}{% if game.event.games.all|length != 1 %} (Game {{ game.order_key }}){% endif %}</h1>
+<header>
+    <h1>
+        Assigning {{ role.name }} for {% if game %}{{ game.event }}{% if game.event.games.all|length != 1 %} (Game {{ game.order_key }}){% endif %}{% else %}{{ event }}{% endif %}
+    </h1>
+    {% if game %}
+    <a href="{% url 'crew-builder' game.event.league.slug game.event.slug form.slug %}">Back to Crew Builder</a>
+    {% else %}
+    <a href="{% url 'crew-builder' event.league.slug event.slug form.slug %}">Back to Crew Builder</a>
+    {% endif %}
+</header>
 
 <table>
     <thead>
         <th>Action</th>
-        <!-- TODO -->
-        <th>Preferred Name</th>
-        <th>Pronouns</th>
+        {# Profile fields #}
+        {% for field in form.requires_profile_fields %}
+        <th>{{ field|get_profile_field_name }}</th>
+        {% endfor %}
+        {# Roles per Role Group #}
+        {% for role_group in form.role_groups.all %}
+        <th>{{ role_group.name }}</th>
+        {% endfor %}
+        {# Application questions #}
+        {% for question in form.form_questions.all %}
+        <th>{{ question.content }}</th>
+        {% endfor %}
         <th>Application</th>
     </thead>
     <tbody>
         {% for application in applications %}
         <tr>
             <td>
-
                 <form method="POST" action="{{ request.path }}">
                     {% csrf_token %}
                     <input type="hidden" value="{{ game_id }}" id="game_id" name="game_id">
@@ -24,12 +41,35 @@
                     <input type="submit" value="Select">
                 </form>
             </td>
-            <td>{{ application.user.preferred_name }}</td>
-            <td>{{ application.user.pronouns }}</td>
+            {# Profile fields #}
+            {% for field in application.form.requires_profile_fields %}
+            <td>{{ application.get_user_data|get:field }}</td>
+            {% endfor %}
+            {# Roles #}
+            {% for role_group in form.role_groups.all %}
+            <td>
+                {% for role in application.roles.all %}
+                {% if role.role_group == role_group %}
+                {{ role }}
+                {% endif %}
+                {% endfor %}
+            </td>
+            {% endfor %}
+            {# Availability #}
+        {# Application questions #}
+        {% for question in form.form_questions.all %}
+        {% with application.responses_by_question|get:question as response %}
+        <td>{{ response.content|commalist }}</td>
+        {% endwith %}
+        {% endfor %}
             <td>
                 <a href="{% url 'view-application' application.id %}">View</a></td>
             </td>
 
+        </tr>
+        {% empty %}
+        <tr>
+            <td>No applicants are available.</td>
         </tr>
         {% endfor %}
     </tbody>

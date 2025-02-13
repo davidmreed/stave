@@ -29,7 +29,7 @@
         <th>Action</th>
         {# Profile fields #}
         {% for field in form.requires_profile_fields %}
-        <th>{{ field }}</th>
+        <th>{{ field|get_profile_field_name }}</th>
         {% endfor %}
         {# Roles per Role Group #}
         {% for role_group in form.role_groups.all %}

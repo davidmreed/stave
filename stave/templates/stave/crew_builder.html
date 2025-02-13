@@ -4,17 +4,62 @@
 {% block content %}
 
 {# Parameters: form, crew_assignments #}
-<h1>Staffing for {{ form.event.name }}, {{ form.role_groups.all|commalist }}</h1>
-<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 6rem;">
+<header>
+    <h1>
+        Staffing for {{ form.event.name }}, {{ form.role_groups.all|commalist }}
+    </h1>
+    <a role="button" href="TODO">Send Confirmation Emails</a>
+</header>
+
+{# Event-wide roles #}
+{% for role_group in form.role_groups.all %}
+{% if role_group in form.event.role_groups.all %}
+{% with crew_assignments|get:form.event.id as game_assignments %}
+<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 2rem;">
+<div style="flex: 1fr;">
+<h4>{{ role_group.name }}</h4>
+<table>
+<thead>
+    <th>Role Name</th>
+    <th>Assignment</th>
+    <th>Actions</th>
+</thead>
+{% for role in role_group.roles.all %}
+<tbody>
+<tr>
+    <td>{{ role.name }}</td>
+    <td>
+        {% if role.id in game_assignments %}
+        {% with game_assignments|get:role.id as assignment %}
+        {{ assignment.user.preferred_name }}
+        {% endwith %}
+        {% else %}
+        Open
+        {% endif %}
+    </td>
+    <td><a href="{% url 'crew-builder-event-detail' form.event.league.slug form.event.slug form.slug role.id %}">{% if role.id in game_assignments %}Reassign{% else %}Assign{% endif %}</a></td>
+</tr>
+</tbody>
+{% endfor %}
+</table>
+</div>
+</div>
+{% endwith %}
+{% endif %}
+{% endfor %}
+
+{# Per-game roles #}
+
 {% for day in form.event.days %}
 <div style="flex: 1fr;">
-{% if form.event.days|length > 1 %}
+{% if form.event.days|length > 1 and form.games %}
 <h2>{{ day }}</h2>
 {% endif %}
 
-{% for game in form.event.games.all %}
+{% for game in form.games %}
+{% if game.start_time.date|date:"Y-m-d" == day %}
 <div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 4rem;">
-{% if form.event.games.all|length > 1 %}
+{% if form.games|length > 1 %}
 <div style="flex: 1fr;">
 <h3>Game {{ game.order_key }} ({{ game.start_time.time }}&ndash;{{ game.end_time.time }})</h3>
 {% endif %}
@@ -22,6 +67,7 @@
 {% with crew_assignments|get:game.id as game_assignments %}
 <div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 2rem;">
 {% for role_group in form.role_groups.all %}
+{% if role_group in game.assigned_role_groups %}
 <div style="flex: 1fr;">
 <h4>{{ role_group.name }}</h4>
 
@@ -44,15 +90,17 @@
         Open
         {% endif %}
     </td>
-    <td><a href="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug game.id role.id %}">Assign</a></td>
+    <td><a href="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug game.id role.id %}">{% if role.id in game_assignments %}Reassign{% else %}Assign{% endif %}</a></td>
 </tr>
 </tbody>
 {% endfor %}
 </table>
 </div>
+{% endif %}
 {% endfor %}
 </div>
 {% endwith %}
+{% endif %}
 {% endfor %}
 </div>
 {% endfor %}
