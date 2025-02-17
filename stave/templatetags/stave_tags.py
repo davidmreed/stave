@@ -1,10 +1,24 @@
 from django import template
 from collections.abc import Mapping, Sequence
 from typing import Any
-
 from .. import models
-
+from stave.templates.stave import contexts
 register = template.Library()
+
+class TemplateValidationException(Exception):
+    pass
+
+@register.simple_tag(takes_context=True)
+def inputs(context: template.Context, model_name: str) -> str:
+    # TODO: decide how to dynamic or not this.
+    type_ = getattr(contexts, model_name)
+
+    try:
+        _ = type_(**(context.dicts[-1]))
+    except Exception as e:
+        raise TemplateValidationException from e
+
+    return ""
 
 
 @register.filter

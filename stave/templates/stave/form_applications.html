@@ -45,22 +45,7 @@
         {% for application in applications %}
         <tr>
             <td>
-                <div role="group">
-                    <a role="button" href="{% url 'view-application' application.id %}">View</a>
-                    {% if application.status == ApplicationStatus.APPLIED %}
-                    <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.INVITED %}" value="Accept">
-                    <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.REJECTED %}" value="Reject">
-                    {% elif application.status == ApplicationStatus.INVITED %}
-                    <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.CONFIRMED %}" value="Confirm">
-                    <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.DECLINED %}" value="Decline">
-                    {% elif application.status == ApplicationStatus.CONFIRMED %}
-                    <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.DECLINED %}" value="Decline">
-                    {% elif application.status == ApplicationStatus.DECLINED %}
-                    <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.APPLIED %}" value="Reopen">
-                    {% elif application.status == ApplicationStatus.REJECTED %}
-                    <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.APPLIED %}" value="Reopen">
-                    {% endif %}
-                </div>
+                {% include "stave/application_actions.html" with user=request.user application=application ApplicationStatus=ApplicationStatus include_view=True only %}
             </td>
             {# Profile fields #}
             {% for field in application.form.requires_profile_fields %}

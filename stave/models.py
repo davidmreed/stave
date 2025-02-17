@@ -106,6 +106,17 @@ class EventTemplate(models.Model):
     role_groups: models.ManyToManyField["EventTemplate", RoleGroup] = (
         models.ManyToManyField(RoleGroup, blank=True)
     )
+    days= models.IntegerField()
+    location = models.TextField(blank=True, null=True)
+
+
+class GameTemplate(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    event_template = models.ForeignKey(EventTemplate, on_delete=models.CASCADE)
+    day= models.IntegerField()
+    start_time= models.TimeField()
+    end_time= models.TimeField()
+    role_groups: models.ManyToManyField["GameTemplate", RoleGroup] = models.ManyToManyField(RoleGroup, blank=True)
 
 
 class Crew(models.Model):
@@ -191,6 +202,7 @@ class RoleGroupCrewAssignment(models.Model):
     )
 
     # TODO: constrain crew_overrides to have is_override=True
+    # TODO: constrain crews to match game's Event
     def effective_crew(self) -> list[CrewAssignment]:
         crew_assignments_by_role: dict[uuid.UUID, CrewAssignment] = {}
 
@@ -231,6 +243,7 @@ class ApplicationStatus(models.IntegerChoices):
     CONFIRMED = 3, _("Confirmed")
     DECLINED = 4, _("Declined")
     REJECTED = 5, _("Rejected")
+    WITHDRAWN = 6, _("Withdrawn")
 
 
 class MessageTemplate(models.Model):
@@ -285,7 +298,7 @@ class ApplicationFormTemplate(models.Model):
     )
     confirmed_email_template = models.ForeignKey(
         MessageTemplate,
-        related_name="application_form_templates_comfirmed",
+        related_name="application_form_templates_confirmed",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -304,6 +317,8 @@ class ApplicationFormTemplate(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
     )
+
+    event_templates: models.ManyToManyField["ApplicationFormTemplate", EventTemplate] = models.ManyToManyField(EventTemplate, blank=True, related_name="application_form_templates")
 
 
 class ApplicationFormManager(models.Manager["ApplicationForm"]):

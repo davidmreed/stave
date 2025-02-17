@@ -26,25 +26,28 @@ There aren't any open applications for you right now.
         <h2>My Applications</h2>
     </header>
 
+<ul>
 {% for application in applications %}
-{{ application }}
+<li><a href="{% url 'view-application' application.id %}">{{ application.form.event }} ({{application.get_status_display}})</a></li>
 {% empty %}
 <p>
 You don't have any open applications right now.
 </p>
 {% endfor %}
+</ul>
 </article>
 
 <article style="flex: 1fr;">
     <header>
         <h2>My Events</h2>
     </header>
-
+<ul>
 {% for event in events %}
-{{ event }}
+<li><a href="{% url 'event-detail' event.league.slug event.slug %}">{{ event }}</a></li>
 {% empty %}
 You aren't managing any events.
 {% endfor %}
+</ul>
 </article>
 {% else %}
 <article style="flex: 1fr;">

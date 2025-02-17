@@ -6,12 +6,36 @@
 {% block content %}
 
 <header>
-    <h1 style="display: flex; align-items: baseline;">
+    <h1>
         {{ form.event.name }}
     </h1>
-    <a href="{% url 'event-detail' form.event.league.slug form.event.slug %}">Event Details</a>
-    {% if application %}<span style="float:right; text-transform: small-caps;">{{ application.get_status_display }}</span>{% endif %}</h1>
 </header>
+
+{% if application %}
+<header>
+    <h2>Status</h2>
+</header>
+<dl>
+    <div>
+        <dt>Applicant</dt>
+        <dd>{{ user }} </dd>
+    </div>
+    <div>
+        <dt>Status</td>
+        <dd>{{ application.get_status_display }}</dd>
+    </div>
+    <div>
+        <dt>Event</dt>
+        <dd><a href="{% url 'event-detail' form.event.league.slug form.event.slug %}">{{ form.event }}</a></dd>
+    </div>
+</dl>
+<form method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="redirect_url" id="redirect_url" value="{{ request.path }}">
+    {% include "stave/application_actions.html" with user=request.user application=application ApplicationStatus=ApplicationStatus include_view=False only %}
+    </div>
+</form>
+{% else %}
 <p>
 <dl>
     <div>
@@ -40,6 +64,7 @@
 </dl>
 
 {{ form.intro_text|markdownify }}
+{% endif %}
 
 <h2>Application</h2>
 
@@ -50,12 +75,6 @@
 
 <form action="{% url 'application-form' form.event.league.slug form.event.slug form.slug %}" method="post">
 {% csrf_token %}
-
-{% if application %}
-The status of this application is {{ application.get_status_display }}.
-
-<hr>
-{% endif %}
 
 {% if form.requires_profile_fields %}
 

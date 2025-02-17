@@ -55,7 +55,7 @@ urlpatterns = [
         name="view-application",
     ),
     path(
-        "application/<uuid:pk>/<int:status>",
+        "application/<uuid:pk>/<int:status>/",
         view=views.ApplicationStatusView.as_view(),
         name="application-status",
     ),

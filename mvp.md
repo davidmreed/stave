@@ -14,7 +14,7 @@
 - Crew Builder
   - Static crews
   - Assign static crew to game
-  - Manage single game staffing
+  + Manage single game staffing
 
 + Authentication
   + One authenticated role - staff manager
@@ -40,4 +40,12 @@
 + Create events
 + Create application forms
 - Create games
-- Event-wide roles
++ Event-wide roles
+- User confirmation
+
+- Templates
+- Cron jobs (post MVP?)
+- Enforce app process
+- Disable availability options for single-game events
+
+- Allow for multiple tracks - simultaneous games - assess availability with potential time overlap

@@ -11,7 +11,6 @@ from django.views import generic
 from django import views
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.contrib.auth.decorators import login_required
 from typing import Any, TYPE_CHECKING
 from collections.abc import Mapping
 import itertools
@@ -203,7 +202,8 @@ class FormCreateView(LoginRequiredMixin, views.View):
 
         app_form_form = forms.ApplicationFormForm(request.POST)
         question_formset = forms.QuestionFormSet(request.POST)
-        print(request.POST)
+
+        # TODO: implement Save and Continue
         # Determine if the user took a form-wide action, like Save or Save and Continue,
         # or if they asked to add a question.
         if (
@@ -225,9 +225,6 @@ class FormCreateView(LoginRequiredMixin, views.View):
                 for i, instance in enumerate(question_formset.save(commit=False)):
                     instance.application_form = app_form
                     instance.order_key = i
-                    # FIXME: options are not getting saved.
-                    print(instance)
-                    print(instance.options)
                     instance.save()
 
             return HttpResponseRedirect(app_form.get_absolute_url())
@@ -289,6 +286,7 @@ class TypedContextView[T: Mapping[str, Any] | DataclassInstance](generic.DetailV
 class ViewApplicationContext:
     form: models.ApplicationForm
     application: models.Application | None
+    ApplicationStatus: type
     user_data: dict[str, str]
     responses_by_id: dict[UUID, models.ApplicationResponse]
     editable: bool
@@ -312,6 +310,7 @@ class SingleApplicationView(
     def get_context(self) -> ViewApplicationContext:
         application: models.Application = self.get_object()
         return ViewApplicationContext(
+            ApplicationStatus=models.ApplicationStatus,
             application=application,
             form=application.form,
             user_data={
@@ -374,19 +373,34 @@ class ApplicationStatusView(LoginRequiredMixin, views.View):
         self, request: HttpRequest, pk: UUID, status: models.ApplicationStatus
     ) -> HttpResponse:
         application = get_object_or_404(
-            models.Application,
-            pk=pk,
-            form__event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
-            form__event__league__user_permissions__user=self.request.user,
-        )
-        application.status = status  # TODO: verify
-        application.save()
+            models.Application.objects.filter(
+            Q(user=request.user) | Q(
+                form__event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+                form__event__league__user_permissions__user=self.request.user,
+                )).distinct(), pk=pk)
 
-        redirect_url = request.POST.get("redirect_url")
-        if redirect_url and url_has_allowed_host_and_scheme(
-            redirect_url, settings.ALLOWED_HOSTS
-        ):
-            return HttpResponseRedirect(redirect_url)
+        # There are different legal state transformations based on whether the actor
+        # is the applicant or the event manager.
+        is_this_user = request.user == application.user
+        legal_changes = [
+            not is_this_user
+            and application.status == models.ApplicationStatus.APPLIED
+            and status in [models.ApplicationStatus.INVITED, models.ApplicationStatus.CONFIRMED, models.ApplicationStatus.REJECTED],
+            application.status in [models.ApplicationStatus.INVITED] and status in [models.ApplicationStatus.CONFIRMED, models.ApplicationStatus.DECLINED],
+            application.status in [models.ApplicationStatus.APPLIED, models.ApplicationStatus.CONFIRMED] and status == models.ApplicationStatus.WITHDRAWN,
+            ]
+
+        if any(legal_changes):
+            application.status = status
+            application.save()
+            redirect_url = request.POST.get("redirect_url")
+            if redirect_url and url_has_allowed_host_and_scheme(
+                redirect_url, settings.ALLOWED_HOSTS
+            ):
+                return HttpResponseRedirect(redirect_url)
+
+        else:
+            return HttpResponseBadRequest(f"invalid status {status}")
 
         return HttpResponseRedirect("/")
 
@@ -618,6 +632,7 @@ class CrewBuilderEventDetailView(LoginRequiredMixin, views.View):
         return HttpResponseRedirect(
             reverse("crew-builder", args=[league, event_slug, application_form_slug])
         )
+
 class ApplicationFormView(views.View):
     def get(
         self, request: HttpRequest, application_form: str, event: str, league: str
