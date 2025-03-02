@@ -16,9 +16,11 @@ from collections.abc import Mapping
 import itertools
 from uuid import UUID
 from . import models, settings, forms
+from stave.templates.stave import contexts
 from dataclasses import dataclass, asdict, is_dataclass
 from django.contrib.auth.mixins import LoginRequiredMixin
 from datetime import datetime
+import dataclasses
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
@@ -28,7 +30,7 @@ class MyApplicationsView(LoginRequiredMixin, generic.ListView):
     template_name = "stave/my_applications.html"
     model = models.Application
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[models.Application]:
         return super().get_queryset().filter(user=self.request.user)
 
 
@@ -421,28 +423,14 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
             event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
             event__league__user_permissions__user=self.request.user,
         )
-        effective_assignments_by_game_by_role_id = {}
-        effective_assignments_by_game_by_role_id[application_form.event.id] = {}
-        if application_form.event.crew:
-            for crew_assignment in application_form.event.crew.assignments.all():
-                effective_assignments_by_game_by_role_id[application_form.event.id][crew_assignment.role_id] = crew_assignment
-
-        for game in application_form.event.games.all():
-            effective_assignments_by_game_by_role_id[game.id] = {}
-            for rgca in game.role_groups.filter(
-                role_group__in=application_form.role_groups.all()
-            ):
-                for crew_assignment in rgca.effective_crew():
-                    effective_assignments_by_game_by_role_id[game.id][
-                        crew_assignment.role_id
-                    ] = crew_assignment
 
         return render(
             request,
             "stave/crew_builder.html",
             {
                 "form": application_form,
-                "crew_assignments": effective_assignments_by_game_by_role_id,
+                "static_crews": application_form.static_crews(),
+                "event_crews_by_role_group_id": {}, # TODO
             },
         )
 
@@ -458,7 +446,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         league: str,
         event_slug: str,
         application_form_slug: str,
-        game_id: UUID,
+        crew_id: UUID,
         role_id: UUID,
     ) -> HttpResponse:
         application_form = get_object_or_404(
@@ -469,19 +457,29 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
             event__league__user_permissions__user=self.request.user,
         )
-        role = get_object_or_404(models.Role, pk=role_id)
-        game = get_object_or_404(models.Game, pk=game_id)
+        role = get_object_or_404(models.Role.objects.filter(role_group__in=application_form.role_groups.all()), pk=role_id)
+        # We might have a Crew Id that's a game crew, a game override crew, an event crew, or a static crew.
+        crew = get_object_or_404(
+            models.Crew.objects.filter(
+                event=application_form.event,
+            ),
+            pk=crew_id
+        )
         # TODO: verification
-        applications = list(application_form.get_applications_for_role(role, game))
+        context = crew.get_context()
+        applications = list(application_form.get_applications_for_role(
+            role, context
+        ))
         return render(
             request,
             "stave/crew_builder_detail.html",
-            {
-                "form": application_form,
-                "applications": applications,
-                "game": game,
-                "role": role,
-            },
+            dataclasses.asdict(contexts.CrewBuilderDetailInputs(
+                    form=application_form,
+                    applications=applications,
+                    game=context if isinstance(context, models.Game) else None,
+                    event=application_form.event,
+                    role=role,
+                )),
         )
 
     def post(
@@ -490,7 +488,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         league: str,
         event_slug: str,
         application_form_slug: str,
-        game_id: UUID,
+        crew_id: UUID,
         role_id: UUID,
     ) -> HttpResponse:
         application_id = request.POST.get("application_id")
@@ -506,7 +504,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             event__league__user_permissions__user=self.request.user,
         )
         role = get_object_or_404(models.Role, pk=role_id)
-        game = get_object_or_404(models.Game, pk=game_id)
+        crew = get_object_or_404(models.Crew, pk=crew_id)
         # TODO: verification
         applications = application_form.applications.filter(
             id=application_id,
@@ -515,20 +513,9 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         if len(applications) != 1:
             return HttpResponseBadRequest("multiple matching applications")
 
-        role_group_crew_assignment = game.role_groups.filter(
-            role_group__roles__id=role_id
-        ).first()
-        if not role_group_crew_assignment.crew_overrides:
-            role_group_crew_assignment.crew_overrides = models.Crew.objects.create(
-                is_override=True,
-                role_group=role_group_crew_assignment.role_group,
-                event=game.event,
-            )
-            role_group_crew_assignment.save()
-
         _ = models.CrewAssignment.objects.get_or_create(
             role_id=role_id,
-            crew=role_group_crew_assignment.crew_overrides,
+            crew=crew_id,
             user=applications[0].user,
         )
 
@@ -537,101 +524,6 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             reverse("crew-builder", args=[league, event_slug, application_form_slug])
         )
 
-
-# TODO: reduce duplication
-class CrewBuilderEventDetailView(LoginRequiredMixin, views.View):
-    """A view rendering the Crew Builder with a list of applications for a given position at the Event level.
-    On GET, renders the view.
-    On POST, assigns a role and returns to CrewBuilderView."""
-
-    def get(
-        self,
-        request: HttpRequest,
-        league: str,
-        event_slug: str,
-        application_form_slug: str,
-        role_id: UUID,
-    ) -> HttpResponse:
-        application_form = get_object_or_404(
-            models.ApplicationForm,
-            slug=application_form_slug,
-            event__slug=event_slug,
-            event__league__slug=league,
-            event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
-            event__league__user_permissions__user=self.request.user,
-        )
-        role = get_object_or_404(models.Role, pk=role_id)
-        event = get_object_or_404(models.Event,
-            slug=event_slug,
-            league__slug=league,
-            league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
-            league__user_permissions__user=self.request.user,
-        )
-        # TODO: verification
-        applications = list(application_form.get_applications_for_event_role(role))
-        return render(
-            request,
-            "stave/crew_builder_detail.html",
-            {
-                "form": application_form,
-                "applications": applications,
-                "event": event,
-                "role": role,
-            },
-        )
-
-    def post(
-        self,
-        request: HttpRequest,
-        league: str,
-        event_slug: str,
-        application_form_slug: str,
-        role_id: UUID,
-    ) -> HttpResponse:
-        application_id = request.POST.get("application_id")
-        if not application_id:
-            return HttpResponseBadRequest("invalid application id")
-
-        application_form = get_object_or_404(
-            models.ApplicationForm,
-            slug=application_form_slug,
-            event__slug=event_slug,
-            event__league__slug=league,
-            event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
-            event__league__user_permissions__user=self.request.user,
-        )
-        role = get_object_or_404(models.Role, pk=role_id)
-        event = get_object_or_404(models.Event,
-            slug=event_slug,
-            league__slug=league,
-            league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
-            league__user_permissions__user=self.request.user,
-        )
-        # TODO: verification
-        applications = application_form.applications.filter(
-            id=application_id,
-            roles__name=role.name,
-        )
-        if len(applications) != 1:
-            return HttpResponseBadRequest("multiple matching applications")
-
-        if not event.crew:
-            event.crew = models.Crew.objects.create(
-                role_group=role.role_group,
-                event=event,
-            )
-            event.save()
-
-        _ = models.CrewAssignment.objects.get_or_create(
-            role_id=role_id,
-            crew=event.crew,
-            user=applications[0].user,
-        )
-
-        # Redirect the user to the base Crew Builder for this crew
-        return HttpResponseRedirect(
-            reverse("crew-builder", args=[league, event_slug, application_form_slug])
-        )
 
 class ApplicationFormView(views.View):
     def get(
@@ -645,6 +537,7 @@ class ApplicationFormView(views.View):
         )
 
         context = ViewApplicationContext(
+            ApplicationStatus=models.ApplicationStatus,
             application=None,
             form=form,
             user_data={

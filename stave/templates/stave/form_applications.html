@@ -2,22 +2,18 @@
 {% load stave_tags %}
 {% load partials %}
 
-{% block content %}
-
-<nav style="float: right;" aria-label="breadcrumb">
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
     <ul>
         <li><a href="{% url 'league-detail' form.event.league.slug %}">{{ form.event.league }}</a></li>
         <li><a href="{% url 'event-detail' form.event.league.slug form.event.slug %}">{{ form.event }}</a></li>
-        <li>{{ form }}</li>
+        <li>{{ form.role_groups.all|commalist }}</li>
         <li><a href="{{ request.path }}">Applications</a></li>
     </ul>
 </nav>
-<nav>
-    <li>
-        <a href="{% url 'crew-builder' form.event.league.slug form.event.slug form.slug %}">Crew Builder</a>
-    </li>
-</nav>
+{% endblock %}
 
+{% block content %}
 
 <form method="POST" action="{{ request.path }}">
 {% csrf_token %}
@@ -25,56 +21,24 @@
 
 {% partialdef application-table %}
 <table>
-    <thead>
-        <th>Action</th>
-        {# Profile fields #}
-        {% for field in form.requires_profile_fields %}
-        <th>{{ field|get_profile_field_name }}</th>
-        {% endfor %}
-        {# Roles per Role Group #}
-        {% for role_group in form.role_groups.all %}
-        <th>{{ role_group.name }}</th>
-        {% endfor %}
-        {# Availability #}
-        {# Application questions #}
-        {% for question in form.form_questions.all %}
-        <th>{{ question.content }}</th>
-        {% endfor %}
-    </thead>
+    {% include 'stave/partials/application_table_header.html' with form=form only %}
     <tbody>
         {% for application in applications %}
         <tr>
             <td>
                 {% include "stave/application_actions.html" with user=request.user application=application ApplicationStatus=ApplicationStatus include_view=True only %}
             </td>
-            {# Profile fields #}
-            {% for field in application.form.requires_profile_fields %}
-            <td>{{ application.get_user_data|get:field }}</td>
-            {% endfor %}
-            {# Roles #}
-            {% for role_group in form.role_groups.all %}
-            <td>
-                {% for role in application.roles.all %}
-                {% if role.role_group == role_group %}
-                {{ role }}
-                {% endif %}
-                {% endfor %}
-            </td>
-            {% endfor %}
-            {# Availability #}
-        {# Application questions #}
-        {% for question in form.form_questions.all %}
-        {% with application.responses_by_question|get:question as response %}
-        <td>{{ response.content|commalist }}</td>
-        {% endwith %}
-        {% endfor %}
+            {% include 'stave/partials/application_table_row.html' with form=form application=application only %}
         </tr>
         {% endfor %}
     </tbody>
 </table>
 {% endpartialdef application-table %}
 
+<header>
 <h2>Applications</h2>
+<a href="{% url 'crew-builder' form.event.league.slug form.event.slug form.slug %}">Crew Builder</a>
+</header>
 
 {% if not applications %}
 This form has not received any applications yet.

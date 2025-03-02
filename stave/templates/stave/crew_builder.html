@@ -11,40 +11,36 @@
     <a role="button" href="TODO">Send Confirmation Emails</a>
 </header>
 
-{# Event-wide roles #}
-{% for role_group in form.role_groups.all %}
-{% if role_group in form.event.role_groups.all %}
-{% with crew_assignments|get:form.event.id as game_assignments %}
+{# Static crews #}
+
+{% if static_crews %}
+{% for crew in static_crews %}
 <div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 2rem;">
 <div style="flex: 1fr;">
-<h4>{{ role_group.name }}</h4>
-<table>
-<thead>
-    <th>Role Name</th>
-    <th>Assignment</th>
-    <th>Actions</th>
-</thead>
-{% for role in role_group.roles.all %}
-<tbody>
-<tr>
-    <td>{{ role.name }}</td>
-    <td>
-        {% if role.id in game_assignments %}
-        {% with game_assignments|get:role.id as assignment %}
-        {{ assignment.user.preferred_name }}
-        {% endwith %}
-        {% else %}
-        Open
-        {% endif %}
-    </td>
-    <td><a href="{% url 'crew-builder-event-detail' form.event.league.slug form.event.slug form.slug role.id %}">{% if role.id in game_assignments %}Reassign{% else %}Assign{% endif %}</a></td>
-</tr>
-</tbody>
+<h4>{{ crew }}</h4>
+{% include 'stave/partials/crew_editor.html' with form=form crew=crew crew_assignments=crew.get_assignments_by_role_id role_group=crew.role_group only %}
+</div>
+</div>
 {% endfor %}
-</table>
-</div>
-</div>
+{% else %}
+<form method="POST" action="foo">
+    <input type="submit" value="Add Crew">
+</form>
+{% endif %}
+
+{# Event-wide roles #}
+
+{% for role_group in form.role_groups.all %}
+{% if role_group.id in event_crews_by_role_group_id %}
+<h4>Crews for {{ role_group }}</h4>
+{% for crew in event_crews_by_role_group_id|get:role_group.id %}
+{% with crew.get_assignments_by_role_id as game_assignments %}
+<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 2rem;">
+<div style="flex: 1fr;">
+<h4>{{ crew }}</h4>
+{% include 'stave/partials/crew_editor.html' with form=form crew_assignments=game_assignments role_group=role_group crew=crew only %}
 {% endwith %}
+{% endfor %}
 {% endif %}
 {% endfor %}
 
@@ -64,42 +60,29 @@
 <h3>Game {{ game.order_key }} ({{ game.start_time.time }}&ndash;{{ game.end_time.time }})</h3>
 {% endif %}
 
-{% with crew_assignments|get:game.id as game_assignments %}
 <div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 2rem;">
+{% with game.get_crew_assignments_by_role_group as role_group_assignments %}
 {% for role_group in form.role_groups.all %}
-{% if role_group in game.assigned_role_groups %}
+{% with role_group.id as role_group_id %}
+{% with role_group_assignments|get:role_group_id as rgca %}
+{% if rgca %}
 <div style="flex: 1fr;">
+<header>
 <h4>{{ role_group.name }}</h4>
-
-<table>
-<thead>
-    <th>Role Name</th>
-    <th>Assignment</th>
-    <th>Actions</th>
-</thead>
-{% for role in role_group.roles.all %}
-<tbody>
-<tr>
-    <td>{{ role.name }}</td>
-    <td>
-        {% if role.id in game_assignments %}
-        {% with game_assignments|get:role.id as assignment %}
-        {{ assignment.user.preferred_name }}
-        {% endwith %}
-        {% else %}
-        Open
-        {% endif %}
-    </td>
-    <td><a href="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug game.id role.id %}">{% if role.id in game_assignments %}Reassign{% else %}Assign{% endif %}</a></td>
-</tr>
-</tbody>
-{% endfor %}
-</table>
+{% if rgca.crew %}
+Crew: {{ rgca.crew }}
+{% elif static_crews %}
+Assign Crew
+{% endif %}
+</header>
+{% include 'stave/partials/crew_editor.html' with form=form crew_assignments=rgca.effective_crew_by_role_id role_group=role_group crew=rgca.crew_overrides only %}
 </div>
 {% endif %}
-{% endfor %}
-</div>
 {% endwith %}
+{% endwith %}
+{% endfor %}
+{% endwith %}
+</div>
 {% endif %}
 {% endfor %}
 </div>

@@ -1,6 +1,17 @@
 {% extends "base.html" %}
 
 {% load stave_tags %}
+{% inputs 'CrewBuilderDetailInputs' %}
+
+{% block breadcrumbs %}
+<nav role="breadcrumbs">
+    <li><a href="{{ event.league.get_absolute_url }}">{{ event.league }}</a></li>
+    <li><a href="{{ event.get_absolute_url }}">{{ event }}</a><li>
+    <li><a href="{{ form.get_crew_builder_url }}">Crew Builder: {{ form.role_groups.all|commalist }}</a></li>
+    <li>{{ role.name }}</li>
+</nav>
+{% endblock %}
+
 {% block content %}
 <header>
     <h1>
@@ -14,63 +25,27 @@
 </header>
 
 <table>
-    <thead>
-        <th>Action</th>
-        {# Profile fields #}
-        {% for field in form.requires_profile_fields %}
-        <th>{{ field|get_profile_field_name }}</th>
-        {% endfor %}
-        {# Roles per Role Group #}
-        {% for role_group in form.role_groups.all %}
-        <th>{{ role_group.name }}</th>
-        {% endfor %}
-        {# Application questions #}
-        {% for question in form.form_questions.all %}
-        <th>{{ question.content }}</th>
-        {% endfor %}
-        <th>Application</th>
-    </thead>
+    {% include 'stave/partials/application_table_header.html' with form=form only %}
     <tbody>
         {% for application in applications %}
         <tr>
             <td>
                 <form method="POST" action="{{ request.path }}">
                     {% csrf_token %}
-                    <input type="hidden" value="{{ game_id }}" id="game_id" name="game_id">
+                    <input type="hidden" value="{{ crew.id }}" id="crew_id" name="crew_id">
                     <input type="hidden" value="{{ application.id }}" id="application_id" name="application_id">
-                    <input type="submit" value="Select">
+                    <div role="group">
+                        <input type="submit" value="Select">
+                        <a role="button" href="{% url 'view-application' application.id %}">View</a>
+                    </div>
                 </form>
             </td>
-            {# Profile fields #}
-            {% for field in application.form.requires_profile_fields %}
-            <td>{{ application.get_user_data|get:field }}</td>
-            {% endfor %}
-            {# Roles #}
-            {% for role_group in form.role_groups.all %}
-            <td>
-                {% for role in application.roles.all %}
-                {% if role.role_group == role_group %}
-                {{ role }}
-                {% endif %}
-                {% endfor %}
-            </td>
-            {% endfor %}
-            {# Availability #}
-        {# Application questions #}
-        {% for question in form.form_questions.all %}
-        {% with application.responses_by_question|get:question as response %}
-        <td>{{ response.content|commalist }}</td>
-        {% endwith %}
-        {% endfor %}
-            <td>
-                <a href="{% url 'view-application' application.id %}">View</a></td>
-            </td>
-
+            {% include 'stave/partials/application_table_row.html' with form=form application=application only %}
         </tr>
         {% empty %}
-        <tr>
-            <td>No applicants are available.</td>
-        </tr>
+        <caption>
+            No applicants are available.
+        </caption>
         {% endfor %}
     </tbody>
 </table>

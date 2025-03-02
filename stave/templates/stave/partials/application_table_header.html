@@ -1,0 +1,20 @@
+{% load stave_tags %}
+
+{% inputs 'ApplicationTableInputs' %}
+
+<thead>
+    <th style="width: 25%;">Action</th>
+    {# Profile fields #}
+    {% for field in form.requires_profile_fields %}
+    <th>{{ field|get_profile_field_name }}</th>
+    {% endfor %}
+    {# Roles per Role Group #}
+    {% for role_group in form.role_groups.all %}
+    <th>{{ role_group.name }}</th>
+    {% endfor %}
+    {# Availability #}
+    {# Application questions #}
+    {% for question in form.form_questions.all %}
+    <th>{{ question.content }}</th>
+    {% endfor %}
+</thead>

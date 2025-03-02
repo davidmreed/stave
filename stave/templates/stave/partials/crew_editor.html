@@ -1,0 +1,31 @@
+{% load stave_tags %}
+{% inputs 'CrewEditorInputs' %}
+
+<table>
+<thead>
+    <th>Role Name</th>
+    <th>Assignment</th>
+    <th>Actions</th>
+</thead>
+<tbody>
+{% for role in role_group.roles.all %}
+<tr>
+    <td>{{ role.name }}</td>
+    <td>
+        {% if role.id in crew_assignments %}
+        {% with crew_assignments|get:role.id as assignment %}
+        {{ assignment.user.preferred_name }}
+        {% endwith %}
+        {% else %}
+        Open
+        {% endif %}
+    </td>
+    <td>
+        <a href="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug crew.id role.id %}">
+            {% if role.id in crew_assignments %}Reassign{% else %}Assign{% endif %}
+        </a>
+    </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>

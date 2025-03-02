@@ -1,0 +1,26 @@
+{% load stave_tags %}
+{% inputs 'ApplicationTableRowInputs' %}
+
+{# Profile fields #}
+{% for field in application.form.requires_profile_fields %}
+    <td>{{ application.get_user_data|get:field }}</td>
+{% endfor %}
+{# Roles #}
+{% for role_group in form.role_groups.all %}
+    <td>
+        {% for role in application.roles.all %}
+            {% if role.role_group == role_group %}
+                {{ role }}
+            {% endif %}
+        {% endfor %}
+    </td>
+{% endfor %}
+{# Availability TODO #}
+{# Application questions #}
+{% for question in form.form_questions.all %}
+    {% with application.responses_by_question|get:question as response %}
+        <td>
+            {{ response.content|commalist }}
+        </td>
+    {% endwith %}
+{% endfor %}
