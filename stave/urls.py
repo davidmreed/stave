@@ -75,4 +75,14 @@ urlpatterns = [
         views.CrewCreateView.as_view(),
         name="crew-builder-add-crew",
     ),
+    path(
+        "_/<slug:league_slug>/<slug:event_slug>/<slug:form_slug>/builder/set-crew/<uuid:game_id>/<uuid:role_group_id>/",
+        views.SetGameCrewView.as_view(),
+        name="set-game-crew",
+    ),
+    path(
+        "_/<slug:league_slug>/<slug:event_slug>/<slug:form_slug>/builder/set-crew/<uuid:game_id>/<uuid:role_group_id>/<uuid:crew_id>/",
+        views.SetGameCrewView.as_view(),
+        name="set-game-crew",
+    ),
 ]

@@ -4,19 +4,21 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0013_remove_event_crew_and_more'),
+        ("stave", "0013_remove_event_crew_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='crew',
-            name='is_override',
+            model_name="crew",
+            name="is_override",
         ),
         migrations.AddField(
-            model_name='crew',
-            name='kind',
-            field=models.IntegerField(choices=[(1, 'Event Crew'), (2, 'Game Crew'), (3, 'Override Crew')], default=2),
+            model_name="crew",
+            name="kind",
+            field=models.IntegerField(
+                choices=[(1, "Event Crew"), (2, "Game Crew"), (3, "Override Crew")],
+                default=2,
+            ),
         ),
     ]

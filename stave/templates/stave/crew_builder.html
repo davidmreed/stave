@@ -14,19 +14,23 @@
 {# Static crews #}
 {# Only available on multi-game events #}
 
-{% if static_crews or form.event.games.all|length > 1%}
+{% if static_crews or form.event.games.all|length > 1 %}
 <header>
 <h4>Static Crews</h4>
+</header>
+
 {% for role_group in form.role_groups.all %}
+<header>
+    <h5>{{ role_group }}</h5>
 <form method="POST" action="{% url 'crew-builder-add-crew' form.event.league.slug form.event.slug form.slug %}">
     {% csrf_token %}
     <input type="hidden" name="redirect_url" value="{{ request.path }}">
     <input type="hidden" name="role_group_id" value="{{ role_group.id }}">
     <input type="submit" value="Add {{role_group }} Crew">
 </form>
-{% endfor %}
 </header>
-{% for crew in static_crews %}
+
+{% for crew in static_crews|get:role_group.id %}
 <div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 2rem;">
 <div style="flex: 1fr;">
     <h4>{{ crew }} ({{ crew.role_group }})</h4>
@@ -35,6 +39,8 @@
 </div>
 {% empty %}
 No static crews yet.
+{% endfor %}
+
 {% endfor %}
 {% endif %}
 
@@ -81,8 +87,22 @@ No static crews yet.
 <h4>{{ role_group.name }}</h4>
 {% if rgca.crew %}
 Crew: {{ rgca.crew }}
-{% elif static_crews %}
-Assign Crew
+<form action="{% url 'set-game-crew' form.event.league.slug form.event.slug form.slug game.id role_group.id %}" method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="redirect_url" value="{{ request.path }}">
+    <input type="submit" value="Unassign">
+</form>
+{% elif static_crews|get:role_group_id %}
+Assign:
+<form action="" method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="redirect_url" value="{{ request.path }}">
+{% for static_crew in static_crews|get:role_group_id %}
+    <input type="submit"
+           formaction="{% url 'set-game-crew' form.event.league.slug form.event.slug form.slug game.id role_group.id static_crew.id %}"
+           value="{{ static_crew }}">
+{% endfor %}
+</form>
 {% endif %}
 </header>
 {% include 'stave/partials/crew_editor.html' with form=form crew_assignments=rgca.effective_crew_by_role_id role_group=role_group crew=rgca.crew_overrides only %}

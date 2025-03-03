@@ -1,3 +1,4 @@
+from collections import defaultdict
 from django.db.models import QuerySet, Q
 from django.shortcuts import render, get_object_or_404
 from django.db import transaction
@@ -123,37 +124,44 @@ class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
 
 
 class CrewCreateView(LoginRequiredMixin, views.View):
-    def post(self, request: HttpRequest, league_slug: str, event_slug: str, form_slug: str) -> HttpResponse:
-        form = get_object_or_404(models.ApplicationForm.objects.filter(
-            event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
-            event__league__user_permissions__user=self.request.user).distinct(),
+    def post(
+        self, request: HttpRequest, league_slug: str, event_slug: str, form_slug: str
+    ) -> HttpResponse:
+        form = get_object_or_404(
+            models.ApplicationForm.objects.filter(
+                event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+                event__league__user_permissions__user=self.request.user,
+            ).distinct(),
             event__league__slug=league_slug,
             event__slug=event_slug,
-            slug = form_slug
+            slug=form_slug,
         )
         role_group = get_object_or_404(
-                form.role_groups.all(),
-                pk = request.POST.get("role_group_id")
-            )
+            form.role_groups.all(), pk=request.POST.get("role_group_id")
+        )
 
         name = gettext_lazy("{} Crew {}").format(
-                role_group,
-                models.Crew.objects.filter(event=form.event, kind=models.CrewKind.GAME_CREW, role_group=role_group).count() + 1
+            role_group,
+            models.Crew.objects.filter(
+                event=form.event, kind=models.CrewKind.GAME_CREW, role_group=role_group
+            ).count()
+            + 1,
         )
 
         _ = models.Crew.objects.create(
-            kind = models.CrewKind.GAME_CREW,
-            event = form.event,
-            role_group = role_group,
-            name = name,
+            kind=models.CrewKind.GAME_CREW,
+            event=form.event,
+            role_group=role_group,
+            name=name,
         )
         redirect_url = request.POST.get("redirect_url")
         if redirect_url and url_has_allowed_host_and_scheme(
-                redirect_url, settings.ALLOWED_HOSTS
+            redirect_url, settings.ALLOWED_HOSTS
         ):
             return HttpResponseRedirect(redirect_url)
 
         return HttpResponseRedirect(form.get_absolute_url())
+
 
 class LeagueUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     template_name = "stave/league_edit.html"
@@ -410,10 +418,14 @@ class ApplicationStatusView(LoginRequiredMixin, views.View):
     ) -> HttpResponse:
         application = get_object_or_404(
             models.Application.objects.filter(
-            Q(user=request.user) | Q(
-                form__event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
-                form__event__league__user_permissions__user=self.request.user,
-                )).distinct(), pk=pk)
+                Q(user=request.user)
+                | Q(
+                    form__event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+                    form__event__league__user_permissions__user=self.request.user,
+                )
+            ).distinct(),
+            pk=pk,
+        )
 
         # There are different legal state transformations based on whether the actor
         # is the applicant or the event manager.
@@ -421,10 +433,19 @@ class ApplicationStatusView(LoginRequiredMixin, views.View):
         legal_changes = [
             not is_this_user
             and application.status == models.ApplicationStatus.APPLIED
-            and status in [models.ApplicationStatus.INVITED, models.ApplicationStatus.CONFIRMED, models.ApplicationStatus.REJECTED],
-            application.status in [models.ApplicationStatus.INVITED] and status in [models.ApplicationStatus.CONFIRMED, models.ApplicationStatus.DECLINED],
-            application.status in [models.ApplicationStatus.APPLIED, models.ApplicationStatus.CONFIRMED] and status == models.ApplicationStatus.WITHDRAWN,
-            ]
+            and status
+            in [
+                models.ApplicationStatus.INVITED,
+                models.ApplicationStatus.CONFIRMED,
+                models.ApplicationStatus.REJECTED,
+            ],
+            application.status in [models.ApplicationStatus.INVITED]
+            and status
+            in [models.ApplicationStatus.CONFIRMED, models.ApplicationStatus.DECLINED],
+            application.status
+            in [models.ApplicationStatus.APPLIED, models.ApplicationStatus.CONFIRMED]
+            and status == models.ApplicationStatus.WITHDRAWN,
+        ]
 
         if any(legal_changes):
             application.status = status
@@ -439,6 +460,47 @@ class ApplicationStatusView(LoginRequiredMixin, views.View):
             return HttpResponseBadRequest(f"invalid status {status}")
 
         return HttpResponseRedirect("/")
+
+
+class SetGameCrewView(LoginRequiredMixin, views.View):
+    def post(
+        self,
+        request: HttpRequest,
+        league_slug: str,
+        event_slug: str,
+        form_slug: str,
+        game_id: UUID,
+        role_group_id: UUID,
+        crew_id: UUID | None = None,
+    ) -> HttpResponse:
+        game = get_object_or_404(
+            models.Game.objects.filter(
+                event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+                event__league__user_permissions__user=self.request.user,
+            ).distinct(),
+            pk=game_id,
+        )
+        rgca = get_object_or_404(game.role_groups, role_group_id=role_group_id)
+        if crew_id:
+            crew = get_object_or_404(
+                models.Crew.objects.filter(
+                    event=game.event, kind=models.CrewKind.GAME_CREW
+                ),
+                pk=crew_id,
+            )
+        else:
+            crew = None
+
+        rgca.crew = crew
+        rgca.save()
+
+        redirect_url = request.POST.get("redirect_url")
+        if redirect_url and url_has_allowed_host_and_scheme(
+            redirect_url, settings.ALLOWED_HOSTS
+        ):
+            return HttpResponseRedirect(redirect_url)
+        else:
+            return HttpResponseRedirect(game.event.get_absolute_url())  # TODO
 
 
 class CrewBuilderView(LoginRequiredMixin, views.View):
@@ -458,16 +520,20 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
             event__league__user_permissions__user=self.request.user,
         )
 
+        static_crews_by_role_group_id = defaultdict(list)
+        for crew in application_form.static_crews():
+            static_crews_by_role_group_id[crew.role_group_id].append(crew)
+
         return render(
             request,
             "stave/crew_builder.html",
             {
+                "request": request,
                 "form": application_form,
-                "static_crews": application_form.static_crews(),
-                "event_crews_by_role_group_id": {}, # TODO
+                "static_crews": static_crews_by_role_group_id,
+                "event_crews_by_role_group_id": {},  # TODO
             },
         )
-
 
 
 class CrewBuilderDetailView(LoginRequiredMixin, views.View):
@@ -492,29 +558,34 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
             event__league__user_permissions__user=self.request.user,
         )
-        role = get_object_or_404(models.Role.objects.filter(role_group__in=application_form.role_groups.all()), pk=role_id)
+        role = get_object_or_404(
+            models.Role.objects.filter(
+                role_group__in=application_form.role_groups.all()
+            ),
+            pk=role_id,
+        )
         # We might have a Crew Id that's a game crew, a game override crew, an event crew, or a static crew.
         crew = get_object_or_404(
             models.Crew.objects.filter(
                 event=application_form.event,
             ),
-            pk=crew_id
+            pk=crew_id,
         )
         # TODO: verification
         context = crew.get_context()
-        applications = list(application_form.get_applications_for_role(
-            role, context
-        ))
+        applications = list(application_form.get_applications_for_role(role, context))
         return render(
             request,
             "stave/crew_builder_detail.html",
-            dataclasses.asdict(contexts.CrewBuilderDetailInputs(
+            dataclasses.asdict(
+                contexts.CrewBuilderDetailInputs(
                     form=application_form,
                     applications=applications,
                     game=context if isinstance(context, models.Game) else None,
                     event=application_form.event,
                     role=role,
-                )),
+                )
+            ),
         )
 
     def post(
@@ -576,9 +647,7 @@ class ApplicationFormView(views.View):
             application=None,
             form=form,
             user_data={
-                key: str(
-                    getattr(request.user, key)
-                )
+                key: str(getattr(request.user, key))
                 for key in form.requires_profile_fields
             }
             if request.user.is_authenticated

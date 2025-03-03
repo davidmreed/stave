@@ -6,60 +6,124 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0012_remove_game_role_groups_and_more'),
+        ("stave", "0012_remove_game_role_groups_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='event',
-            name='crew',
+            model_name="event",
+            name="crew",
         ),
         migrations.AddField(
-            model_name='applicationformtemplate',
-            name='event_templates',
-            field=models.ManyToManyField(blank=True, related_name='application_form_templates', to='stave.eventtemplate'),
+            model_name="applicationformtemplate",
+            name="event_templates",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="application_form_templates",
+                to="stave.eventtemplate",
+            ),
         ),
         migrations.AddField(
-            model_name='eventtemplate',
-            name='days',
+            model_name="eventtemplate",
+            name="days",
             field=models.IntegerField(default=1),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='eventtemplate',
-            name='location',
+            model_name="eventtemplate",
+            name="location",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='application',
-            name='status',
-            field=models.IntegerField(choices=[(1, 'Applied'), (2, 'Invited'), (3, 'Confirmed'), (4, 'Declined'), (5, 'Rejected'), (6, 'Withdrawn')]),
+            model_name="application",
+            name="status",
+            field=models.IntegerField(
+                choices=[
+                    (1, "Applied"),
+                    (2, "Invited"),
+                    (3, "Confirmed"),
+                    (4, "Declined"),
+                    (5, "Rejected"),
+                    (6, "Withdrawn"),
+                ]
+            ),
         ),
         migrations.AlterField(
-            model_name='applicationformtemplate',
-            name='confirmed_email_template',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='application_form_templates_confirmed', to='stave.messagetemplate'),
+            model_name="applicationformtemplate",
+            name="confirmed_email_template",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="application_form_templates_confirmed",
+                to="stave.messagetemplate",
+            ),
         ),
         migrations.CreateModel(
-            name='EventRoleGroupCrewAssignment',
+            name="EventRoleGroupCrewAssignment",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('crew', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='event_role_group_assignments', to='stave.crew')),
-                ('event', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='role_group_crew_assignments', to='stave.event')),
-                ('role_group', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='event_crew_assignments', to='stave.rolegroup')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "crew",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="event_role_group_assignments",
+                        to="stave.crew",
+                    ),
+                ),
+                (
+                    "event",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="role_group_crew_assignments",
+                        to="stave.event",
+                    ),
+                ),
+                (
+                    "role_group",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="event_crew_assignments",
+                        to="stave.rolegroup",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='GameTemplate',
+            name="GameTemplate",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('day', models.IntegerField()),
-                ('start_time', models.TimeField()),
-                ('end_time', models.TimeField()),
-                ('event_template', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='stave.eventtemplate')),
-                ('role_groups', models.ManyToManyField(blank=True, to='stave.rolegroup')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("day", models.IntegerField()),
+                ("start_time", models.TimeField()),
+                ("end_time", models.TimeField()),
+                (
+                    "event_template",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="stave.eventtemplate",
+                    ),
+                ),
+                (
+                    "role_groups",
+                    models.ManyToManyField(blank=True, to="stave.rolegroup"),
+                ),
             ],
         ),
     ]

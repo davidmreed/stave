@@ -2,6 +2,7 @@ from stave import models
 from dataclasses import dataclass
 from uuid import UUID
 
+
 @dataclass
 class ApplicationActionsInputs:
     user: models.User
@@ -14,10 +15,12 @@ class ApplicationActionsInputs:
 class ApplicationTableInputs:
     form: models.ApplicationForm
 
+
 @dataclass
 class ApplicationTableRowInputs:
     form: models.ApplicationForm
     application: models.Application
+
 
 @dataclass
 class CrewEditorInputs:
@@ -25,6 +28,7 @@ class CrewEditorInputs:
     role_group: models.RoleGroup
     crew: models.Crew
     crew_assignments: dict[UUID, models.CrewAssignment]
+
 
 @dataclass
 class CrewBuilderDetailInputs:

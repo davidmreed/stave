@@ -121,11 +121,11 @@ class LeagueForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
 
-
 class CrewForm(forms.ModelForm):
     class Meta:
         model = models.Crew
-        fields = [ "name" ]
+        fields = ["name"]
+
 
 class EventForm(forms.ModelForm):
     league = forms.ModelChoiceField(queryset=None)

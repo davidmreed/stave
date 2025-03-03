@@ -145,8 +145,7 @@ class Command(BaseCommand):
         ]:
             for role_group in [role_group_so, role_group_nso]:
                 _ = models.RoleGroupCrewAssignment.objects.create(
-                        game=game,
-                        role_group=role_group
+                    game=game, role_group=role_group
                 )
 
         ## Add Role Groups to the tournament
@@ -228,10 +227,9 @@ class Command(BaseCommand):
             order_key=1,
         )
         for role_group in [role_group_so, role_group_nso]:
-                _ = models.RoleGroupCrewAssignment.objects.create(
-                        game=singleheader_game,
-                        role_group=role_group
-                )
+            _ = models.RoleGroupCrewAssignment.objects.create(
+                game=singleheader_game, role_group=role_group
+            )
         singleheader_app_form = models.ApplicationForm.objects.create(
             event=singleheader,
             slug="apply",

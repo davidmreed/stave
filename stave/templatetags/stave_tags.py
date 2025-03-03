@@ -3,10 +3,13 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 from .. import models
 from stave.templates.stave import contexts
+
 register = template.Library()
+
 
 class TemplateValidationException(Exception):
     pass
+
 
 @register.simple_tag(takes_context=True)
 def inputs(context: template.Context, model_name: str) -> str:
@@ -45,9 +48,11 @@ def can_manage_event(user: models.User, event: models.Event) -> bool:
 def get(d: Mapping[Any, Any], key: Any) -> Any | None:
     return d.get(key)
 
+
 @register.filter
 def get_profile_field_name(field_name: str) -> str:
     return models.User._meta.get_field(field_name).verbose_name.title()
+
 
 @register.filter
 def commalist(d: Sequence[Any]) -> str:

@@ -106,17 +106,20 @@ class EventTemplate(models.Model):
     role_groups: models.ManyToManyField["EventTemplate", RoleGroup] = (
         models.ManyToManyField(RoleGroup, blank=True)
     )
-    days= models.IntegerField()
+    days = models.IntegerField()
     location = models.TextField(blank=True, null=True)
 
 
 class GameTemplate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event_template = models.ForeignKey(EventTemplate, on_delete=models.CASCADE)
-    day= models.IntegerField()
-    start_time= models.TimeField()
-    end_time= models.TimeField()
-    role_groups: models.ManyToManyField["GameTemplate", RoleGroup] = models.ManyToManyField(RoleGroup, blank=True)
+    day = models.IntegerField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    role_groups: models.ManyToManyField["GameTemplate", RoleGroup] = (
+        models.ManyToManyField(RoleGroup, blank=True)
+    )
+
 
 class CrewKind(models.IntegerChoices):
     EVENT_CREW = 1, _("Event Crew")
@@ -126,14 +129,16 @@ class CrewKind(models.IntegerChoices):
 
 class Crew(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name= models.CharField(max_length=256)
+    name = models.CharField(max_length=256)
     event: models.ForeignKey["Event"] = models.ForeignKey(
         "Event", related_name="crews", on_delete=models.CASCADE
     )
     role_group = models.ForeignKey(
         RoleGroup, related_name="crews", on_delete=models.CASCADE
     )
-    kind = models.IntegerField(choices=CrewKind.choices, blank=False, null=False, default=CrewKind.GAME_CREW)
+    kind = models.IntegerField(
+        choices=CrewKind.choices, blank=False, null=False, default=CrewKind.GAME_CREW
+    )
 
     assignments: models.Manager["CrewAssignment"]
     event_role_group_assignments: models.Manager["EventRoleGroupCrewAssignment"]
@@ -141,9 +146,7 @@ class Crew(models.Model):
     role_group_override_assignments: models.Manager["RoleGroupCrewAssignment"]
 
     def get_assignments_by_role_id(self) -> dict[uuid.UUID, "CrewAssignment"]:
-        return {
-            assignment.role_id: assignment for assignment in self.assignments.all()
-                }
+        return {assignment.role_id: assignment for assignment in self.assignments.all()}
 
     def get_context(self) -> "None | Game | Event":
         if erga := self.event_role_group_assignments.first():
@@ -158,13 +161,14 @@ class Crew(models.Model):
     def __str__(self) -> str:
         return self.name
 
+
 class CrewAssignment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     crew = models.ForeignKey(Crew, related_name="assignments", on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name="crews", on_delete=models.CASCADE)
     role = models.ForeignKey(
         Role, related_name="crew_assignments", on_delete=models.CASCADE
-        ) # TODO: constrain to this crew's Role Group.
+    )  # TODO: constrain to this crew's Role Group.
     assignment_sent = models.BooleanField(default=False)
 
     # FIXME: Two different users can be assigned the same Role
@@ -207,10 +211,18 @@ class Event(models.Model):
             for i in range((self.end_date - self.start_date).days + 1)
         ]
 
+
 class EventRoleGroupCrewAssignment(models.Model):
-    event = models.ForeignKey(Event, related_name="role_group_crew_assignments", on_delete=models.CASCADE)
-    role_group = models.ForeignKey(RoleGroup, related_name="event_crew_assignments", on_delete=models.CASCADE)
-    crew = models.ForeignKey(Crew, related_name="event_role_group_assignments", on_delete=models.CASCADE)
+    event = models.ForeignKey(
+        Event, related_name="role_group_crew_assignments", on_delete=models.CASCADE
+    )
+    role_group = models.ForeignKey(
+        RoleGroup, related_name="event_crew_assignments", on_delete=models.CASCADE
+    )
+    crew = models.ForeignKey(
+        Crew, related_name="event_role_group_assignments", on_delete=models.CASCADE
+    )
+
 
 class RoleGroupCrewAssignment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -233,7 +245,11 @@ class RoleGroupCrewAssignment(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.crew_overrides_id:
-            self.crew_overrides_id = Crew.objects.create(kind=CrewKind.OVERRIDE_CREW, role_group=self.role_group,event=self.game.event).id
+            self.crew_overrides_id = Crew.objects.create(
+                kind=CrewKind.OVERRIDE_CREW,
+                role_group=self.role_group,
+                event=self.game.event,
+            ).id
 
         return super().save(*args, **kwargs)
 
@@ -247,7 +263,6 @@ class RoleGroupCrewAssignment(models.Model):
             for assignment in self.crew_overrides.assignments.all():
                 crew_assignments_by_role[assignment.role.id] = assignment
         return crew_assignments_by_role
-
 
     # TODO: constrain crew_overrides to have is_override=True
     # TODO: constrain crews to match game's Event
@@ -263,8 +278,10 @@ class Game(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
 
-    def get_crew_assignments_by_role_group(self) -> dict[uuid.UUID, RoleGroupCrewAssignment]:
-        return { rgca.role_group_id: rgca for rgca in self.role_groups.all() }
+    def get_crew_assignments_by_role_group(
+        self,
+    ) -> dict[uuid.UUID, RoleGroupCrewAssignment]:
+        return {rgca.role_group_id: rgca for rgca in self.role_groups.all()}
 
     class Meta:
         constraints = [
@@ -356,7 +373,11 @@ class ApplicationFormTemplate(models.Model):
         on_delete=models.SET_NULL,
     )
 
-    event_templates: models.ManyToManyField["ApplicationFormTemplate", EventTemplate] = models.ManyToManyField(EventTemplate, blank=True, related_name="application_form_templates")
+    event_templates: models.ManyToManyField[
+        "ApplicationFormTemplate", EventTemplate
+    ] = models.ManyToManyField(
+        EventTemplate, blank=True, related_name="application_form_templates"
+    )
 
 
 class ApplicationFormManager(models.Manager["ApplicationForm"]):
@@ -419,25 +440,21 @@ class ApplicationForm(models.Model):
     applications: models.Manager["Application"]
 
     def event_crews(self) -> models.QuerySet[EventRoleGroupCrewAssignment]:
-        return (
-                self.event.crews
-                .filter(kind=CrewKind.EVENT_CREW)
-                .filter(role_group__in=self.role_groups.all())
-            )
+        return self.event.crews.filter(kind=CrewKind.EVENT_CREW).filter(
+            role_group__in=self.role_groups.all()
+        )
 
     def static_crews(self) -> models.QuerySet[Crew]:
-        return (
-                self.event.crews
-                .filter(kind=CrewKind.GAME_CREW)
-                .filter(role_group__in=self.role_groups.all())
-            )
+        return self.event.crews.filter(kind=CrewKind.GAME_CREW).filter(
+            role_group__in=self.role_groups.all()
+        )
 
     def games(self) -> models.QuerySet[Game]:
         """Return those games from this form's event which have
         at least one of the Role Groups from this form."""
         return self.event.games.filter(
             role_groups__role_group__in=self.role_groups.all()
-        ).distinct() # TODO: is this correct?
+        ).distinct()  # TODO: is this correct?
 
     def __str__(self) -> str:
         role_group_names = [rg.name for rg in self.role_groups.all()]
@@ -453,7 +470,7 @@ class ApplicationForm(models.Model):
     # but are either un-accepted or assigned to other roles.
     # TODO: handle games with overlapping times.
     def get_applications_for_role(
-            self, role: Role, context: Game | Event | None
+        self, role: Role, context: Game | Event | None
     ) -> Iterable["Application"]:
         applications = self.applications.filter(
             roles__name=role.name, roles__role_group_id=role.role_group.id
@@ -493,15 +510,13 @@ class ApplicationForm(models.Model):
             )
         elif isinstance(context, Event):
             applications = applications.exclude(
-                    user__in=User.objects.filter(
-                        crews__crew__event_role_groups__event=context
-                    )
+                user__in=User.objects.filter(
+                    crews__crew__event_role_groups__event=context
+                )
             )
         elif context is None:
             applications = applications.exclude(
-                user__in=User.objects.filter(
-                    crews__crew__event=self.event
-                )
+                user__in=User.objects.filter(crews__crew__event=self.event)
             )
 
         # Predicate for availability.
@@ -516,8 +531,13 @@ class ApplicationForm(models.Model):
                     if str(context.start_time.date()) in app.availability_by_day
                 ]
 
-            elif self.application_availability_kind == ApplicationAvailabilityKind.BY_GAME:
-                applications = applications.filter(availability_by_game__includes=context)
+            elif (
+                self.application_availability_kind
+                == ApplicationAvailabilityKind.BY_GAME
+            ):
+                applications = applications.filter(
+                    availability_by_game__includes=context
+                )
 
         return applications
 

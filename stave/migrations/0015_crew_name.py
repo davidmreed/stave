@@ -4,16 +4,15 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0014_remove_crew_is_override_crew_kind'),
+        ("stave", "0014_remove_crew_is_override_crew_kind"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='crew',
-            name='name',
-            field=models.CharField(default='Crew', max_length=256),
+            model_name="crew",
+            name="name",
+            field=models.CharField(default="Crew", max_length=256),
             preserve_default=False,
         ),
     ]
