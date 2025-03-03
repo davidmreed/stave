@@ -17,7 +17,7 @@ header a[role=button] {
     font-weight: bold;
 }
 
-header input[type=submit] {
+.inline input {
     padding: 0.25rem;
     align-content: center;
     height: 80%;
@@ -27,14 +27,14 @@ header input[type=submit] {
 
 
 main a:not([role])::after {
-    content: ' ⇨';
+    content: '⇨';
 }
 
 fieldset legend {
     font-weight: bold;
 }
 
-body  header  nav {
+body header nav {
     border-bottom: 0.25rem solid var(--pico-primary);
 }
 
@@ -78,6 +78,7 @@ td div[role=group] a {
     font-size: 100%;
     padding: 0.25rem;
     vertical-align: middle;
+    font-weight: bold;
 }
 
 /* Small screens */

@@ -8,7 +8,7 @@
     <h1>
         Staffing for {{ form.event.name }}, {{ form.role_groups.all|commalist }}
     </h1>
-    <a role="button" href="TODO">Send Confirmation Emails</a>
+    <a role="button" href="TODO">Send Schedule Emails</a>
 </header>
 
 {# Static crews #}
@@ -29,17 +29,17 @@
     <input type="submit" value="Add {{role_group }} Crew">
 </form>
 </header>
+<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 2rem;">
 
 {% for crew in static_crews|get:role_group.id %}
-<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 2rem;">
 <div style="flex: 1fr;">
-    <h4>{{ crew }} ({{ crew.role_group }})</h4>
+    <h6>{{ crew }} ({{ crew.role_group }})</h6>
 {% include 'stave/partials/crew_editor.html' with form=form crew=crew crew_assignments=crew.get_assignments_by_role_id role_group=crew.role_group only %}
-</div>
 </div>
 {% empty %}
 No static crews yet.
 {% endfor %}
+</div>
 
 {% endfor %}
 {% endif %}
@@ -85,17 +85,18 @@ No static crews yet.
 <div style="flex: 1fr;">
 <header>
 <h4>{{ role_group.name }}</h4>
+</header>
+<div>
 {% if rgca.crew %}
 Crew: {{ rgca.crew }}
-<form action="{% url 'set-game-crew' form.event.league.slug form.event.slug form.slug game.id role_group.id %}" method="POST">
+<form class="inline" action="{% url 'set-game-crew' form.event.league.slug form.event.slug form.slug game.id role_group.id %}" method="POST">
     {% csrf_token %}
     <input type="hidden" name="redirect_url" value="{{ request.path }}">
     <input type="submit" value="Unassign">
 </form>
 {% elif static_crews|get:role_group_id %}
-<div>
 Assign:
-<form action="" method="POST" style="display: inline-block;">
+<form class="inline" action="" method="POST">
     {% csrf_token %}
     <input type="hidden" name="redirect_url" value="{{ request.path }}">
 <div role="group">
@@ -106,9 +107,8 @@ Assign:
 {% endfor %}
 </div>
 </form>
-</div>
 {% endif %}
-</header>
+</div>
 {% include 'stave/partials/crew_editor.html' with form=form crew_assignments=rgca.effective_crew_by_role_id role_group=role_group crew=rgca.crew_overrides only %}
 </div>
 {% endif %}

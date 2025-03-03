@@ -30,7 +30,7 @@
         {% for application in applications %}
         <tr>
             <td>
-                <form method="POST" action="{{ request.path }}">
+                <form class="inline" method="POST" action="{{ request.path }}">
                     {% csrf_token %}
                     <input type="hidden" value="{{ crew.id }}" id="crew_id" name="crew_id">
                     <input type="hidden" value="{{ application.id }}" id="application_id" name="application_id">
