@@ -93,16 +93,20 @@ Crew: {{ rgca.crew }}
     <input type="submit" value="Unassign">
 </form>
 {% elif static_crews|get:role_group_id %}
+<div>
 Assign:
-<form action="" method="POST">
+<form action="" method="POST" style="display: inline-block;">
     {% csrf_token %}
     <input type="hidden" name="redirect_url" value="{{ request.path }}">
+<div role="group">
 {% for static_crew in static_crews|get:role_group_id %}
     <input type="submit"
            formaction="{% url 'set-game-crew' form.event.league.slug form.event.slug form.slug game.id role_group.id static_crew.id %}"
            value="{{ static_crew }}">
 {% endfor %}
+</div>
 </form>
+</div>
 {% endif %}
 </header>
 {% include 'stave/partials/crew_editor.html' with form=form crew_assignments=rgca.effective_crew_by_role_id role_group=role_group crew=rgca.crew_overrides only %}

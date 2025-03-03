@@ -128,6 +128,7 @@ class CrewKind(models.IntegerChoices):
 
 
 class Crew(models.Model):
+    CrewKind = CrewKind
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=256)
     event: models.ForeignKey["Event"] = models.ForeignKey(
