@@ -70,4 +70,9 @@ urlpatterns = [
         views.CrewBuilderDetailView.as_view(),
         name="crew-builder-detail",
     ),
+    path(
+        "_/<slug:league_slug>/<slug:event_slug>/<slug:form_slug>/builder/add-crew/",
+        views.CrewCreateView.as_view(),
+        name="crew-builder-add-crew",
+    ),
 ]

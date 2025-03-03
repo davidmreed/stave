@@ -126,6 +126,7 @@ class CrewKind(models.IntegerChoices):
 
 class Crew(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name= models.CharField(max_length=256)
     event: models.ForeignKey["Event"] = models.ForeignKey(
         "Event", related_name="crews", on_delete=models.CASCADE
     )
@@ -139,6 +140,11 @@ class Crew(models.Model):
     role_group_assignments: models.Manager["RoleGroupCrewAssignment"]
     role_group_override_assignments: models.Manager["RoleGroupCrewAssignment"]
 
+    def get_assignments_by_role_id(self) -> dict[uuid.UUID, "CrewAssignment"]:
+        return {
+            assignment.role_id: assignment for assignment in self.assignments.all()
+                }
+
     def get_context(self) -> "None | Game | Event":
         if erga := self.event_role_group_assignments.first():
             return erga.event
@@ -149,6 +155,9 @@ class Crew(models.Model):
 
         return None
 
+    def __str__(self) -> str:
+        return self.name
+
 class CrewAssignment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     crew = models.ForeignKey(Crew, related_name="assignments", on_delete=models.CASCADE)
@@ -158,8 +167,11 @@ class CrewAssignment(models.Model):
         ) # TODO: constrain to this crew's Role Group.
     assignment_sent = models.BooleanField(default=False)
 
+    # FIXME: Two different users can be assigned the same Role
+
 
 class Event(models.Model):
+    # TODO/FIXME: we have two relationships to rolegroup
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     league = models.ForeignKey(League, related_name="events", on_delete=models.CASCADE)
 
@@ -214,10 +226,16 @@ class RoleGroupCrewAssignment(models.Model):
     )
     crew_overrides = models.ForeignKey(
         Crew,
-        null=True,
+        editable=False,
         related_name="role_group_override_assignments",
         on_delete=models.CASCADE,
     )
+
+    def save(self, *args, **kwargs):
+        if not self.crew_overrides_id:
+            self.crew_overrides_id = Crew.objects.create(kind=CrewKind.OVERRIDE_CREW, role_group=self.role_group,event=self.game.event).id
+
+        return super().save(*args, **kwargs)
 
     def effective_crew_by_role_id(self) -> dict[uuid.UUID, CrewAssignment]:
         crew_assignments_by_role: dict[uuid.UUID, CrewAssignment] = {}
@@ -433,6 +451,7 @@ class ApplicationForm(models.Model):
 
     # TODO: make it possible to get applications that would otherwise match
     # but are either un-accepted or assigned to other roles.
+    # TODO: handle games with overlapping times.
     def get_applications_for_role(
             self, role: Role, context: Game | Event | None
     ) -> Iterable["Application"]:

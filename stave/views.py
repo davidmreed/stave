@@ -21,6 +21,7 @@ from dataclasses import dataclass, asdict, is_dataclass
 from django.contrib.auth.mixins import LoginRequiredMixin
 from datetime import datetime
 import dataclasses
+from django.utils.translation import gettext_lazy
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
@@ -120,6 +121,39 @@ class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
 
         return ret
 
+
+class CrewCreateView(LoginRequiredMixin, views.View):
+    def post(self, request: HttpRequest, league_slug: str, event_slug: str, form_slug: str) -> HttpResponse:
+        form = get_object_or_404(models.ApplicationForm.objects.filter(
+            event__league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
+            event__league__user_permissions__user=self.request.user).distinct(),
+            event__league__slug=league_slug,
+            event__slug=event_slug,
+            slug = form_slug
+        )
+        role_group = get_object_or_404(
+                form.role_groups.all(),
+                pk = request.POST.get("role_group_id")
+            )
+
+        name = gettext_lazy("{} Crew {}").format(
+                role_group,
+                models.Crew.objects.filter(event=form.event, kind=models.CrewKind.GAME_CREW, role_group=role_group).count() + 1
+        )
+
+        _ = models.Crew.objects.create(
+            kind = models.CrewKind.GAME_CREW,
+            event = form.event,
+            role_group = role_group,
+            name = name,
+        )
+        redirect_url = request.POST.get("redirect_url")
+        if redirect_url and url_has_allowed_host_and_scheme(
+                redirect_url, settings.ALLOWED_HOSTS
+        ):
+            return HttpResponseRedirect(redirect_url)
+
+        return HttpResponseRedirect(form.get_absolute_url())
 
 class LeagueUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     template_name = "stave/league_edit.html"
@@ -435,6 +469,7 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         )
 
 
+
 class CrewBuilderDetailView(LoginRequiredMixin, views.View):
     """A view rendering the Crew Builder with a list of applications for a given position.
     On GET, renders the view.
@@ -515,7 +550,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
 
         _ = models.CrewAssignment.objects.get_or_create(
             role_id=role_id,
-            crew=crew_id,
+            crew_id=crew_id,
             user=applications[0].user,
         )
 

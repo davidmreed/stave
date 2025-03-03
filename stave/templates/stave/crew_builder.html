@@ -12,20 +12,30 @@
 </header>
 
 {# Static crews #}
+{# Only available on multi-game events #}
 
-{% if static_crews %}
+{% if static_crews or form.event.games.all|length > 1%}
+<header>
+<h4>Static Crews</h4>
+{% for role_group in form.role_groups.all %}
+<form method="POST" action="{% url 'crew-builder-add-crew' form.event.league.slug form.event.slug form.slug %}">
+    {% csrf_token %}
+    <input type="hidden" name="redirect_url" value="{{ request.path }}">
+    <input type="hidden" name="role_group_id" value="{{ role_group.id }}">
+    <input type="submit" value="Add {{role_group }} Crew">
+</form>
+{% endfor %}
+</header>
 {% for crew in static_crews %}
 <div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 2rem;">
 <div style="flex: 1fr;">
-<h4>{{ crew }}</h4>
+    <h4>{{ crew }} ({{ crew.role_group }})</h4>
 {% include 'stave/partials/crew_editor.html' with form=form crew=crew crew_assignments=crew.get_assignments_by_role_id role_group=crew.role_group only %}
 </div>
 </div>
+{% empty %}
+No static crews yet.
 {% endfor %}
-{% else %}
-<form method="POST" action="foo">
-    <input type="submit" value="Add Crew">
-</form>
 {% endif %}
 
 {# Event-wide roles #}
