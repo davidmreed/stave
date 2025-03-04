@@ -8,6 +8,7 @@
     <li><a href="{{ event.league.get_absolute_url }}">{{ event.league }}</a></li>
     <li><a href="{{ event.get_absolute_url }}">{{ event }}</a><li>
     <li><a href="{{ form.get_crew_builder_url }}">Crew Builder: {{ form.role_groups.all|commalist }}</a></li>
+    <li>{% if game %}{{ game.event }}{% if game.event.games.all|length != 1 %} (Game {{ game.order_key }}){% endif %}{% else %}{{ event }}{% endif %}</li>
     <li>{{ role.name }}</li>
 </nav>
 {% endblock %}
@@ -17,11 +18,6 @@
     <h1>
         Assigning {{ role.name }} for {% if game %}{{ game.event }}{% if game.event.games.all|length != 1 %} (Game {{ game.order_key }}){% endif %}{% else %}{{ event }}{% endif %}
     </h1>
-    {% if game %}
-    <a href="{% url 'crew-builder' game.event.league.slug game.event.slug form.slug %}">Back to Crew Builder</a>
-    {% else %}
-    <a href="{% url 'crew-builder' event.league.slug event.slug form.slug %}">Back to Crew Builder</a>
-    {% endif %}
 </header>
 
 <table>

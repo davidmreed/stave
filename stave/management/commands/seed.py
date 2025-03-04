@@ -136,6 +136,10 @@ class Command(BaseCommand):
             end_time=datetime.combine(tournament.end_date, time(16, 00)),
             order_key=5,
         )
+
+        ## Add Role Groups to the tournament
+        tournament.role_groups.set([role_group_tho, role_group_so, role_group_nso])
+
         for game in [
             tournament_game_1,
             tournament_game_2,
@@ -148,8 +152,10 @@ class Command(BaseCommand):
                     game=game, role_group=role_group
                 )
 
-        ## Add Role Groups to the tournament
-        tournament.role_groups.set([role_group_tho])
+        _ = models.EventRoleGroupCrewAssignment.objects.create(
+            event=tournament,
+            role_group=role_group_tho,
+        )
 
         ## Create application forms for the tournament
         app_form = models.ApplicationForm.objects.create(

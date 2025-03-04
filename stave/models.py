@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from datetime import timedelta
 import json
 from django.db import models
+from django.db.models import Q, F
 from django.contrib.auth.models import AbstractUser
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -28,7 +29,7 @@ class User(AbstractUser):
 class RoleGroup(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=256)
-
+    # TODO: move to under League
     roles: models.Manager["Role"]
 
     def __str__(self) -> str:
@@ -97,6 +98,13 @@ class LeagueUserPermission(models.Model):
         League, related_name="user_permissions", on_delete=models.CASCADE
     )
     permission = models.IntegerField(choices=UserPermission.choices)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "league", "permission"], name="unique_grant"
+            )
+        ]
 
 
 class EventTemplate(models.Model):
@@ -169,14 +177,19 @@ class CrewAssignment(models.Model):
     user = models.ForeignKey(User, related_name="crews", on_delete=models.CASCADE)
     role = models.ForeignKey(
         Role, related_name="crew_assignments", on_delete=models.CASCADE
-    )  # TODO: constrain to this crew's Role Group.
+    )
     assignment_sent = models.BooleanField(default=False)
 
-    # FIXME: Two different users can be assigned the same Role
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["crew", "role"], name="one_assignment_per_role"
+            ),
+            # models.CheckConstraint(condition=Q(role__in=F("crew__role_group__roles")), name="role_must_be_in_crews_rolegroup")
+        ]
 
 
 class Event(models.Model):
-    # TODO/FIXME: we have two relationships to rolegroup
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     league = models.ForeignKey(League, related_name="events", on_delete=models.CASCADE)
 
@@ -223,6 +236,23 @@ class EventRoleGroupCrewAssignment(models.Model):
     crew = models.ForeignKey(
         Crew, related_name="event_role_group_assignments", on_delete=models.CASCADE
     )
+
+    def save(self, *args, **kwargs):
+        if not self.crew_id:
+            self.crew_id = Crew.objects.create(
+                name=f"{self.role_group} Crew",
+                event=self.event,
+                kind=CrewKind.EVENT_CREW,
+                role_group=self.role_group,
+            ).id
+
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        constraints = [
+            # models.CheckConstraint(condition=Q(crew__event=F("event")), name="crew_must_match_event"),
+            # models.CheckConstraint(condition=Q(role_group__in=F("event__role_groups")), name="role_group_must_be_assigned_to_event")
+        ]
 
 
 class RoleGroupCrewAssignment(models.Model):
@@ -440,7 +470,7 @@ class ApplicationForm(models.Model):
     form_questions: models.Manager["Question"]
     applications: models.Manager["Application"]
 
-    def event_crews(self) -> models.QuerySet[EventRoleGroupCrewAssignment]:
+    def event_crews(self) -> models.QuerySet[Crew]:
         return self.event.crews.filter(kind=CrewKind.EVENT_CREW).filter(
             role_group__in=self.role_groups.all()
         )
@@ -465,6 +495,11 @@ class ApplicationForm(models.Model):
         return reverse(
             "application-form",
             args=[self.event.league.slug, self.event.slug, self.slug],
+        )
+
+    def get_crew_builder_url(self) -> str:
+        return reverse(
+            "crew-builder", args=[self.event.league.slug, self.event.slug, self.slug]
         )
 
     # TODO: make it possible to get applications that would otherwise match

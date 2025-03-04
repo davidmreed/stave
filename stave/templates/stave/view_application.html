@@ -2,6 +2,7 @@
 
 {% load markdownify %}
 {% load stave_tags %}
+{% load socialaccount %}
 
 {% block content %}
 
@@ -70,6 +71,7 @@
 
 {% if not request.user.is_authenticated and not application %}
 <p>You need to <a href="{% url 'account_signup' %}">sign up</a> or <a href="{% url 'account_login' %}">log in</a> to complete this application.</p>
+<p>Use your <a href="{% provider_login_url 'facebook' process='login' %}">Facebook</a> or <a href="{% provider_login_url 'google' process='login' %}">Google</a> account.</p>
 <hr>
 {% endif %}
 

@@ -1,6 +1,7 @@
 from stave import models
 from dataclasses import dataclass
 from uuid import UUID
+from django.http import HttpRequest
 
 
 @dataclass
@@ -37,3 +38,13 @@ class CrewBuilderDetailInputs:
     role: models.Role
     game: models.Game | None
     applications: list[models.Application]
+
+
+@dataclass
+class CrewBuilderInputs:
+    form: models.ApplicationForm
+    request: HttpRequest
+    static_crews: dict[UUID, models.Crew]
+    event_crews: dict[UUID, models.Crew]
+    allow_static_crews: dict[UUID, bool]
+    any_static_crew_role_groups: bool

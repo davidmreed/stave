@@ -70,9 +70,11 @@ class EventDetailView(generic.DetailView):
     template_name = "stave/event_detail.html"
     model = models.Event
 
-    def get_object(self) -> models.Event:
+    def get_object(
+        self, queryset: QuerySet[models.Event] | None = None
+    ) -> models.Event:
         return get_object_or_404(
-            models.Event,
+            queryset or self.get_queryset(),
             league__slug=self.kwargs.get("league"),
             slug=self.kwargs.get("event"),
         )
@@ -81,8 +83,9 @@ class EventDetailView(generic.DetailView):
 class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     template_name = "stave/league_edit.html"
     form_class = forms.EventForm
+    slug_url_kwarg = "event"
 
-    def get_form_kwargs(self, *args, **kwargs):
+    def get_form_kwargs(self, *args: Any, **kwargs: Any):
         kwargs = super().get_form_kwargs(*args, **kwargs)
         kwargs["request"] = self.request
         return kwargs
@@ -91,14 +94,8 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
         return models.Event.objects.filter(
             league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
             league__user_permissions__user=self.request.user,
+            league__slug=self.kwargs["league"],
         ).distinct()
-
-    def get_object(self) -> models.Event:
-        return (
-            self.get_queryset()
-            .filter(league__slug=self.kwargs["league"], slug=self.kwargs["event"])
-            .get()
-        )
 
 
 class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
@@ -111,6 +108,7 @@ class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
         return kwargs
 
     def form_valid(self, form: forms.EventForm) -> HttpResponse:
+        # TODO / FIXME: this needs perm enforcement.
         ret = super().form_valid(form)
 
         # Make the current user a league manager
@@ -524,6 +522,16 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         for crew in application_form.static_crews():
             static_crews_by_role_group_id[crew.role_group_id].append(crew)
 
+        event_crews_by_role_group_id = defaultdict(list)
+        for crew in application_form.event_crews():
+            event_crews_by_role_group_id[crew.role_group_id].append(crew)
+
+        allow_static_crews_by_role_group_id = {
+            role_group.id: (role_group.id not in event_crews_by_role_group_id)
+            for role_group in application_form.role_groups.all()
+        }
+        any_static_crew_role_groups = any(allow_static_crews_by_role_group_id.values())
+
         return render(
             request,
             "stave/crew_builder.html",
@@ -531,7 +539,9 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
                 "request": request,
                 "form": application_form,
                 "static_crews": static_crews_by_role_group_id,
-                "event_crews_by_role_group_id": {},  # TODO
+                "event_crews": event_crews_by_role_group_id,
+                "allow_static_crews": allow_static_crews_by_role_group_id,
+                "any_static_crew_role_groups": any_static_crew_role_groups,
             },
         )
 
@@ -663,6 +673,7 @@ class ApplicationFormView(views.View):
     ) -> HttpResponse:
         # TODO: if this is an edit to an existing application, replace data.
         # TODO: enforce authentication
+        # FIXME
         app = None
 
         with transaction.atomic():

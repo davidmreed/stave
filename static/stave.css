@@ -27,7 +27,7 @@ header a[role=button] {
 
 
 main a:not([role])::after {
-    content: '⇨';
+    content: ' ⇨';
 }
 
 fieldset legend {
