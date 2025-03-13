@@ -1,8 +1,13 @@
-from pathlib import Path
 import os
+from pathlib import Path
+
+import dj_database_url
 import django_stubs_ext
+import dotenv
 
 django_stubs_ext.monkeypatch()
+
+_ = dotenv.load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -12,10 +17,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-6%^0%fc316&=oy!csn1-f&wc-oo@=(tsqc47pzb*5w^ljw95+%"
+SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG") == "True"
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 ALLOWED_HOSTS = ["apollo", "127.0.0.1", "0.0.0.0"]
@@ -88,12 +92,10 @@ WSGI_APPLICATION = "stave.wsgi.application"
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": dj_database_url.config(
+        default="sqlite:///db.sqlite3", conn_max_age=600, conn_health_checks=True
+    )
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

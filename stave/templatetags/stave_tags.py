@@ -1,6 +1,6 @@
 from django import template
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, Callable
 from .. import models
 from stave.templates.stave import contexts
 
@@ -29,6 +29,17 @@ def can_manage_league(user: models.User, league: models.League) -> bool:
     if user.is_authenticated:
         return models.LeagueUserPermission.objects.filter(
             user=user, league=league, permission=models.UserPermission.LEAGUE_MANAGER
+        ).exists()
+    return False
+
+
+@register.filter
+def can_manage_league_events(user: models.User, league: models.League) -> bool:
+    if user.is_authenticated:
+        return models.LeagueUserPermission.objects.filter(
+            user=user,
+            league=league,
+            permission=models.UserPermission.EVENT_MANAGER,
         ).exists()
     return False
 

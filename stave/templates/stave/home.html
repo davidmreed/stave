@@ -6,7 +6,7 @@
 <div style="display: flex; gap: 1rem; ">
 
 <article style="{% if request.user.is_authenticated %}flex: 1fr;{% else %}flex: 2fr;{% endif %}">
-    <header><h2>Open Application Forms</h2></header>
+    <header><h2>Open Applications</h2></header>
 
 <ul>
 {% for application_form in application_forms %}

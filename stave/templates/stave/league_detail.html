@@ -2,6 +2,7 @@
 
 {% load markdownify %}
 {% load stave_tags %}
+{% inputs 'LeagueDetailViewInputs' %}
 
 {% block content %}
 
@@ -9,6 +10,12 @@
     <h1>{{ league.name }}</h1>
 {% if request.user|can_manage_league:league %}
 <a role="button" href="{% url 'league-edit' league.slug %}">Edit</a>
+{% endif %}
+{% if request.user|can_manage_league_events:league %}
+<a role="button" href="{% url 'event-create' league.slug %}">Create Event</a>
+{% endif %}
+{% if not league.enabled %}
+<div style="background-color: red; color: white;">Not yet enabled by administrator. Visible only to you.</div>
 {% endif %}
 </header>
 <dl>
@@ -29,8 +36,7 @@
 </p>
 
 <h2>Upcoming Events</h2>
-
-{% for event in league.events.all %}
+{% for event in events %}
 {% with show_host=False show_details=True %}
 {% include "stave/event_card.html" %}
 {% endwith %}

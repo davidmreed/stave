@@ -9,7 +9,6 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("profile/", view=views.ProfileView.as_view(), name="profile"),
     path("events/", view=views.EventListView.as_view(), name="event-list"),
-    path("events/create/", view=views.EventCreateView.as_view(), name="event-create"),
     path("leagues/", view=views.LeagueListView.as_view(), name="league-list"),
     path(
         "leagues/create/", view=views.LeagueCreateView.as_view(), name="league-create"
@@ -19,32 +18,47 @@ urlpatterns = [
         "_/<slug:slug>/edit/", view=views.LeagueUpdateView.as_view(), name="league-edit"
     ),
     path(
-        "_/<slug:league>/<slug:event>/",
+        "_/<slug:league>/create-event/",
+        view=views.EventCreateView.as_view(),
+        name="event-create",
+    ),
+    path(
+        "_/<slug:league>/events/<slug:event>/",
         view=views.EventDetailView.as_view(),
         name="event-detail",
     ),
     path(
-        "_/<slug:league>/<slug:event>/edit",
+        "_/<slug:league>/events/<slug:event>/edit",
         view=views.EventUpdateView.as_view(),
         name="event-edit",
     ),
     path(
-        "_/<slug:league>/<slug:event>/create-form/<int:kind>",
+        "_/<slug:league_slug>/events/<slug:event_slug>/games/<uuid:pk>",
+        view=views.GameUpdateView.as_view(),
+        name="game-edit",
+    ),
+    path(
+        "_/<slug:league_slug>/events/<slug:event_slug>/create-game/",
+        view=views.GameCreateView.as_view(),
+        name="game-create",
+    ),
+    path(
+        "_/<slug:league>/events/<slug:event>/create-form/<int:kind>",
         views.FormCreateView.as_view(),
         name="form-create-question",
     ),
     path(
-        "_/<slug:league>/<slug:event>/create-form/",
+        "_/<slug:league>/events/<slug:event>/create-form/",
         views.FormCreateView.as_view(),
         name="form-create",
     ),
     path(
-        "_/<slug:league>/<slug:event>/<slug:application_form>/",
+        "_/<slug:league>/events/<slug:event>/forms/<slug:application_form>/",
         views.ApplicationFormView.as_view(),
         name="application-form",
     ),
     path(
-        "_/<slug:league_slug>/<slug:event_slug>/<slug:application_form_slug>/applications/",
+        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:application_form_slug>/applications/",
         views.FormApplicationsView.as_view(),
         name="form-applications",
     ),
@@ -61,27 +75,27 @@ urlpatterns = [
     ),
     # Crew Builder urls
     path(
-        "_/<slug:league>/<slug:event_slug>/<slug:application_form_slug>/builder/",
+        "_/<slug:league>/events/<slug:event_slug>/forms/<slug:application_form_slug>/builder/",
         views.CrewBuilderView.as_view(),
         name="crew-builder",
     ),
     path(
-        "_/<slug:league>/<slug:event_slug>/<slug:application_form_slug>/builder/<uuid:crew_id>/<uuid:role_id>/",
+        "_/<slug:league>/events/<slug:event_slug>/forms/<slug:application_form_slug>/builder/<uuid:crew_id>/<uuid:role_id>/",
         views.CrewBuilderDetailView.as_view(),
         name="crew-builder-detail",
     ),
     path(
-        "_/<slug:league_slug>/<slug:event_slug>/<slug:form_slug>/builder/add-crew/",
+        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/builder/add-crew/",
         views.CrewCreateView.as_view(),
         name="crew-builder-add-crew",
     ),
     path(
-        "_/<slug:league_slug>/<slug:event_slug>/<slug:form_slug>/builder/set-crew/<uuid:game_id>/<uuid:role_group_id>/",
+        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/builder/set-crew/<uuid:game_id>/<uuid:role_group_id>/",
         views.SetGameCrewView.as_view(),
         name="set-game-crew",
     ),
     path(
-        "_/<slug:league_slug>/<slug:event_slug>/<slug:form_slug>/builder/set-crew/<uuid:game_id>/<uuid:role_group_id>/<uuid:crew_id>/",
+        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/builder/set-crew/<uuid:game_id>/<uuid:role_group_id>/<uuid:crew_id>/",
         views.SetGameCrewView.as_view(),
         name="set-game-crew",
     ),

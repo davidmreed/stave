@@ -4,13 +4,27 @@ from datetime import timedelta
 import json
 from django.db import models
 from django.db.models import Q, F
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, AnonymousUser
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 
+class CertificationLevel(models.TextChoices):
+    RECOGNIZED = "Recognized", _("Recognized")
+    LEVEL_1 = "Level 1", _("Level 1")
+    LEVEL_2 = "Level 2", _("Level 2")
+    LEVEL_3 = "Level 3", _("Level 3")
+
+
 class User(AbstractUser):
-    ALLOWED_PROFILE_FIELDS = ["preferred_name", "pronouns", "game_history_url"]
+    ALLOWED_PROFILE_FIELDS = [
+        "preferred_name",
+        "pronouns",
+        "game_history_url",
+        "wftda_insurance_number",
+        "nso_certification_level",
+        "so_certification_level",
+    ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     preferred_name = models.CharField(max_length=256, verbose_name=_("preferred name"))
     pronouns = models.CharField(
@@ -19,6 +33,24 @@ class User(AbstractUser):
     game_history_url = models.URLField(
         verbose_name=_("game history URL"), blank=True, null=True
     )
+    wftda_insurance_number = models.IntegerField(
+        blank=True, null=True, verbose_name=_("WFTDA insurance number")
+    )
+    nso_certification_level = models.CharField(
+        max_length=32,
+        choices=CertificationLevel.choices,
+        null=True,
+        blank=True,
+        verbose_name=_("NSO certification level"),
+    )
+    so_certification_level = models.CharField(
+        max_length=32,
+        choices=CertificationLevel.choices,
+        null=True,
+        blank=True,
+        verbose_name=_("SO certification level"),
+    )
+
     # TODO: references.
     league_permissions: models.Manager["LeagueUserPermission"]
 
@@ -29,11 +61,25 @@ class User(AbstractUser):
 class RoleGroup(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=256)
-    # TODO: move to under League
+    league = models.ForeignKey(
+        "League", on_delete=models.CASCADE, null=True, blank=True
+    )
+    league_template = models.ForeignKey(
+        "LeagueTemplate", on_delete=models.CASCADE, null=True, blank=True
+    )
+
     roles: models.Manager["Role"]
 
     def __str__(self) -> str:
         return self.name
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(league__isnull=True) ^ Q(league_template__isnull=True),
+                name="either_league_or_league_template",
+            )
+        ]
 
 
 class Role(models.Model):
@@ -57,8 +103,36 @@ class Role(models.Model):
         ordering = ["role_group", "order_key"]
 
 
+class LeagueManager(models.Manager["League"]):
+    def visible(self, user: User | AnonymousUser) -> models.QuerySet["League"]:
+        if isinstance(user, User):
+            return self.filter(
+                Q(enabled=True)
+                | Q(
+                    id__in=LeagueUserPermission.objects.filter(user=user).values(
+                        "league_id"
+                    )
+                )
+            )
+        else:
+            return self.filter(enabled=True)
+
+    def event_manageable(self, user: User) -> models.QuerySet["League"]:
+        return self.filter(
+            user_permissions__permission=UserPermission.EVENT_MANAGER,
+            user_permissions__user=user,
+        ).distinct()
+
+    def manageable(self, user: User) -> models.QuerySet["League"]:
+        return self.filter(
+            user_permissions__permission=UserPermission.LEAGUE_MANAGER,
+            user_permissions__user=user,
+        ).distinct()
+
+
 class League(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    enabled = models.BooleanField(default=False)
     slug = models.SlugField(
         help_text=_(
             "The version of the league's name used in web addresses. Should be alphanumeric and contain no spaces, e.g., Central City Derby->central-city-derby"
@@ -72,6 +146,8 @@ class League(models.Model):
 
     events: models.Manager["Event"]
     user_permissions: models.Manager["LeagueUserPermission"]
+
+    objects = LeagueManager()
 
     def __str__(self) -> str:
         return self.name
@@ -107,15 +183,42 @@ class LeagueUserPermission(models.Model):
         ]
 
 
+class Subscription(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        User, related_name="subscriptions", on_delete=models.CASCADE
+    )
+    league = models.ForeignKey(
+        League, related_name="subscribers", on_delete=models.CASCADE
+    )
+
+
+class LeagueTemplate(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=256)
+    description = models.TextField()
+
+
 class EventTemplate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    league = models.ForeignKey(League, on_delete=models.CASCADE)
+    league = models.ForeignKey(League, on_delete=models.CASCADE, null=True, blank=True)
+    league_template = models.ForeignKey(
+        LeagueTemplate, on_delete=models.CASCADE, null=True, blank=True
+    )
     name = models.CharField(max_length=256)
     role_groups: models.ManyToManyField["EventTemplate", RoleGroup] = (
         models.ManyToManyField(RoleGroup, blank=True)
     )
     days = models.IntegerField()
     location = models.TextField(blank=True, null=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(league__isnull=True) ^ Q(league_template__isnull=True),
+                name="eventtemplate_either_league_or_league_template",
+            )
+        ]
 
 
 class GameTemplate(models.Model):
@@ -189,9 +292,60 @@ class CrewAssignment(models.Model):
         ]
 
 
+class EventStatus(models.IntegerChoices):
+    DRAFTING = 0, _("Drafting")
+    LINK_ONLY = 1, _("Link Only")
+    OPEN = 2, _("Open")
+    IN_PROGRESS = 3, _("In Progress")
+    COMPLETE = 4, _("Complete")
+    CANCELED = 5, _("Canceled")
+
+
+class EventManager(models.Manager["Event"]):
+    def visible(self, user: User | AnonymousUser) -> models.QuerySet["Event"]:
+        if isinstance(user, User):
+            return self.filter(
+                ~Q(status=EventStatus.DRAFTING)
+                | Q(
+                    league__in=LeagueUserPermission.objects.filter(user=user).values(
+                        "league"
+                    )
+                )
+            )
+        else:
+            return self.exclude(status=EventStatus.DRAFTING)
+
+    def listed(self, user: User | AnonymousUser) -> models.QuerySet["Event"]:
+        if isinstance(user, User):
+            return self.visible(user).filter(
+                ~Q(status=EventStatus.LINK_ONLY)
+                | Q(
+                    league__in=LeagueUserPermission.objects.filter(user=user).values(
+                        "league"
+                    )
+                )
+            )
+        else:
+            return self.visible(user).exclude(status=EventStatus.LINK_ONLY)
+
+    def open(self, user: User | AnonymousUser) -> models.QuerySet["Event"]:
+        return self.visible(user).filter(
+            status__in=[EventStatus.LINK_ONLY, EventStatus.OPEN]
+        )
+
+    def manageable(self, user: User) -> models.QuerySet["Event"]:
+        return self.filter(
+            league__user_permissions__permission=UserPermission.EVENT_MANAGER,
+            league__user_permissions__user=user,
+        ).distinct()
+
+
 class Event(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     league = models.ForeignKey(League, related_name="events", on_delete=models.CASCADE)
+    status = models.IntegerField(
+        choices=EventStatus.choices, default=EventStatus.DRAFTING
+    )
 
     role_groups: models.ManyToManyField["Event", RoleGroup] = models.ManyToManyField(
         RoleGroup, blank=True
@@ -204,6 +358,8 @@ class Event(models.Model):
     location = models.TextField()
 
     games: models.Manager["Game"]
+
+    objects = EventManager()
 
     def __str__(self) -> str:
         return self.name
@@ -301,6 +457,14 @@ class RoleGroupCrewAssignment(models.Model):
         return list(self.effective_crew_by_role_id().values())
 
 
+class GameManager(models.Manager["Game"]):
+    def manageable(self, user: User) -> models.QuerySet["Game"]:
+        return self.filter(
+            event__league__user_permissions__permission=UserPermission.LEAGUE_MANAGER,
+            event__league__user_permissions__user=user,
+        ).distinct()
+
+
 class Game(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event = models.ForeignKey(Event, related_name="games", on_delete=models.CASCADE)
@@ -309,10 +473,15 @@ class Game(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
 
+    objects = GameManager()
+
     def get_crew_assignments_by_role_group(
         self,
     ) -> dict[uuid.UUID, RoleGroupCrewAssignment]:
         return {rgca.role_group_id: rgca for rgca in self.role_groups.all()}
+
+    def __str__(self) -> str:
+        return self.name
 
     class Meta:
         constraints = [
@@ -413,9 +582,17 @@ class ApplicationFormTemplate(models.Model):
 
 class ApplicationFormManager(models.Manager["ApplicationForm"]):
     def open(self) -> models.QuerySet["ApplicationForm"]:
-        return self.filter(closed=False, hidden=False).order_by(
-            "close_date", "event__start_date"
-        )  # TODO: make this a CASE()
+        return self.filter(
+            closed=False,
+            hidden=False,
+            event__status__in=[EventStatus.OPEN, EventStatus.LINK_ONLY],
+        ).order_by("close_date", "event__start_date")  # TODO: make this a CASE()
+
+    def manageable(self, user: User) -> models.QuerySet["ApplicationForm"]:
+        return self.filter(
+            event__league__user_permissions__permission=UserPermission.EVENT_MANAGER,
+            event__league__user_permissions__user=user,
+        ).distinct()
 
 
 class ApplicationForm(models.Model):
@@ -646,6 +823,17 @@ class Question(models.Model):
         ]
 
 
+class ApplicationManager(models.Manager["Application"]):
+    def visible(self, user: User) -> models.QuerySet["Application"]:
+        return self.filter(
+            Q(user=user)
+            | Q(
+                form__event__league__user_permissions__permission=UserPermission.EVENT_MANAGER,
+                form__event__league__user_permissions__user=user,
+            ),
+        ).distinct()
+
+
 class Application(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     form = models.ForeignKey(
@@ -664,6 +852,8 @@ class Application(models.Model):
     status = models.IntegerField(choices=ApplicationStatus.choices)
 
     responses: models.Manager["ApplicationResponse"]
+
+    objects = ApplicationManager()
 
     class Meta:
         # TODO: require population of the relevant availability type for the form.

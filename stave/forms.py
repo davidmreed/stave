@@ -1,6 +1,5 @@
 from django import forms
 from . import models
-from django.http import HttpRequest
 from django.utils.translation import gettext_lazy as _
 import json
 
@@ -128,15 +127,13 @@ class CrewForm(forms.ModelForm):
 
 
 class EventForm(forms.ModelForm):
-    league = forms.ModelChoiceField(queryset=None)
-
     class Meta:
         model = models.Event
         fields = [
-            "league",
-            "role_groups",
             "name",
             "slug",
+            "status",
+            "role_groups",
             "banner",
             "start_date",
             "end_date",
@@ -144,12 +141,11 @@ class EventForm(forms.ModelForm):
         ]
 
     def __init__(self, *args, **kwargs):
-        request: HttpRequest = kwargs.pop("request")
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
-        self.fields["league"].queryset = models.League.objects.filter(
-            user_permissions__permission=models.UserPermission.LEAGUE_MANAGER,
-            user_permissions__user=request.user,
-        )
-        self.fields["league"].initial = self.fields["league"].queryset.first()
+
+class GameForm(forms.ModelForm):
+    class Meta:
+        model = models.Game
+        fields = ["name", "order_key", "start_time", "end_time"]

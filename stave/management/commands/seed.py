@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from stave import models
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timezone
 from allauth.account.models import EmailAddress
 
 
@@ -10,7 +10,15 @@ class Command(BaseCommand):
     def handle(self, *_args, **_kwargs):  # type: ignore
         self.stdout.write("seeding data...")
 
-        role_group_nso = models.RoleGroup.objects.create(name="NSO")
+        league = models.League.objects.create(
+            name="Ceres Roller Derby",
+            slug="ceres",
+            location="Ceres Station, The Belt",
+            description="The **best** roller derby in the Belt and Outer Planets",
+            website="https://derby.ceres.belt",
+            enabled=True,
+        )
+        role_group_nso = models.RoleGroup.objects.create(name="NSO", league=league)
         role_hnso = models.Role.objects.create(
             role_group=role_group_nso, name="HNSO", nonexclusive=True, order_key=1
         )
@@ -45,7 +53,7 @@ class Command(BaseCommand):
             role_group=role_group_nso, name="ALT", order_key=11
         )
 
-        role_group_so = models.RoleGroup.objects.create(name="SO")
+        role_group_so = models.RoleGroup.objects.create(name="SO", league=league)
         role_hr = models.Role.objects.create(
             role_group=role_group_so, name="HR", order_key=1
         )
@@ -71,7 +79,7 @@ class Command(BaseCommand):
             role_group=role_group_so, name="ALT", order_key=8
         )
 
-        role_group_tho = models.RoleGroup.objects.create(name="THO")
+        role_group_tho = models.RoleGroup.objects.create(name="THO", league=league)
         role_thr = models.Role.objects.create(
             role_group=role_group_tho, name="THR", order_key=1
         )
@@ -82,18 +90,11 @@ class Command(BaseCommand):
             role_group=role_group_tho, name="GTO", order_key=3
         )
 
-        league = models.League.objects.create(
-            name="Ceres Roller Derby",
-            slug="ceres",
-            location="Ceres Station, The Belt",
-            description="The **best** roller derby in the Belt and Outer Planets",
-            website="https://derby.ceres.belt",
-        )
-
         # Create a 2-day, 5-game tournament event.
         tournament = models.Event.objects.create(
             name="Outer Planets Throwdown",
             league=league,
+            status=models.EventStatus.OPEN,
             slug="outer-planets-throwdown",
             start_date=date(2218, 5, 25),
             end_date=date(2218, 5, 26),
@@ -102,38 +103,54 @@ class Command(BaseCommand):
         tournament_game_1 = models.Game.objects.create(
             event=tournament,
             name="Game 1",
-            start_time=datetime.combine(tournament.start_date, time(10, 00)),
-            end_time=datetime.combine(tournament.start_date, time(12, 00)),
+            start_time=datetime.combine(
+                tournament.start_date, time(10, 00), timezone.utc
+            ),
+            end_time=datetime.combine(
+                tournament.start_date, time(12, 00), timezone.utc
+            ),
             order_key=1,
         )
 
         tournament_game_2 = models.Game.objects.create(
             event=tournament,
             name="Game 2",
-            start_time=datetime.combine(tournament.start_date, time(12, 00)),
-            end_time=datetime.combine(tournament.start_date, time(14, 00)),
+            start_time=datetime.combine(
+                tournament.start_date, time(12, 00), timezone.utc
+            ),
+            end_time=datetime.combine(
+                tournament.start_date, time(14, 00), timezone.utc
+            ),
             order_key=2,
         )
         tournament_game_3 = models.Game.objects.create(
             event=tournament,
             name="Game 1",
-            start_time=datetime.combine(tournament.start_date, time(16, 00)),
-            end_time=datetime.combine(tournament.start_date, time(18, 00)),
+            start_time=datetime.combine(
+                tournament.start_date, time(16, 00), timezone.utc
+            ),
+            end_time=datetime.combine(
+                tournament.start_date, time(18, 00), timezone.utc
+            ),
             order_key=3,
         )
 
         tournament_game_4 = models.Game.objects.create(
             event=tournament,
             name="Game 4",
-            start_time=datetime.combine(tournament.end_date, time(12, 00)),
-            end_time=datetime.combine(tournament.end_date, time(14, 00)),
+            start_time=datetime.combine(
+                tournament.end_date, time(12, 00), timezone.utc
+            ),
+            end_time=datetime.combine(tournament.end_date, time(14, 00), timezone.utc),
             order_key=4,
         )
         tournament_game_5 = models.Game.objects.create(
             event=tournament,
             name="Game 5",
-            start_time=datetime.combine(tournament.end_date, time(14, 00)),
-            end_time=datetime.combine(tournament.end_date, time(16, 00)),
+            start_time=datetime.combine(
+                tournament.end_date, time(14, 00), timezone.utc
+            ),
+            end_time=datetime.combine(tournament.end_date, time(16, 00), timezone.utc),
             order_key=5,
         )
 
@@ -220,6 +237,7 @@ class Command(BaseCommand):
         singleheader = models.Event.objects.create(
             name="2218-01-19 Game",
             slug="2218-01-19-game",
+            status=models.EventStatus.OPEN,
             league=league,
             start_date=date(2218, 3, 20),
             end_date=date(2218, 3, 20),
@@ -228,8 +246,12 @@ class Command(BaseCommand):
         singleheader_game = models.Game.objects.create(
             event=singleheader,
             name="Game",
-            start_time=datetime.combine(singleheader.start_date, time(10, 00)),
-            end_time=datetime.combine(singleheader.start_date, time(12, 00)),
+            start_time=datetime.combine(
+                singleheader.start_date, time(10, 00), timezone.utc
+            ),
+            end_time=datetime.combine(
+                singleheader.start_date, time(12, 00), timezone.utc
+            ),
             order_key=1,
         )
         for role_group in [role_group_so, role_group_nso]:

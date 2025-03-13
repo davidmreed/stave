@@ -4,7 +4,8 @@
 <header>
     <h4 style>{{ event.name }}</h4>
     {% if request.user|can_manage_event:event %}
-    <a style="margin-right: 0.5rem;" href="{% url 'event-edit' event.league.slug event.slug %}" role="button">Edit</a>
+    <a href="{% url 'event-edit' event.league.slug event.slug %}" role="button">Edit</a>
+    <a href="{% url 'game-create' event.league.slug event.slug %}" role="button">Create Game</a>
     <a href="{% url 'form-create' event.league.slug event.slug %}" role="button">Create Form</a>
     {% endif %}
 </header>
@@ -16,6 +17,10 @@
           <dd><a href="{% url 'league-detail' event.league.slug %}">{{ event.league.name }}</a></dd>
         </div>
         {% endif %}
+        <div>
+            <dt>Status</dt>
+            <dd> {{ event.get_status_display }}</dd>
+        </div>
         {% if event.end_date != event.start_date %}
         <div>
             <dt>Start Date</dt>
@@ -73,7 +78,7 @@
 </header>
 <ul>
     {% for game in event.games.all %}
-    <li>Game {{ game.order_key }} ({{game.start_time|time}}&ndash;{{game.end_time|time}})
+    <li>Game {{ game.order_key }} ({{game.start_time|time}}&ndash;{{game.end_time|time}}) <a role="button" href="{% url 'game-edit' event.league.slug event.slug game.id %}">Edit</a>
     {% endfor %}
 {% endif %}
 

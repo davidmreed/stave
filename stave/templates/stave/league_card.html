@@ -1,29 +1,4 @@
 <article>
-<style type="text/css">
-dl {
-  display: flex;
-  justify-content: space-between;
-}
-
-/* Below is just styling. Adjust as needed. */
-dt {
- font-weight: bold;
-}
-dt,
-dd {
-  margin: 0;
-  padding: 0;
-}
-/* Small screens */
-@media screen and (max-width: 400px) {
-  dl {
-     flex-direction: column;
-  }
-  dl div {
-    padding: 1em 1em 0 1em;
-  }
-}
-</style>
 <header><h4>{{ league.name }}</h4></header>
 <a href="{% url 'league-detail' league.slug %}">Details</a>
 </article>

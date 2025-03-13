@@ -2,6 +2,7 @@ from stave import models
 from dataclasses import dataclass
 from uuid import UUID
 from django.http import HttpRequest
+from django.db.models import QuerySet
 
 
 @dataclass
@@ -48,3 +49,18 @@ class CrewBuilderInputs:
     event_crews: dict[UUID, models.Crew]
     allow_static_crews: dict[UUID, bool]
     any_static_crew_role_groups: bool
+
+
+@dataclass
+class LeagueDetailViewInputs:
+    events: QuerySet[models.Event]
+
+
+@dataclass
+class ViewApplicationContext:
+    form: models.ApplicationForm
+    application: models.Application | None
+    ApplicationStatus: type
+    user_data: dict[str, str]
+    responses_by_id: dict[UUID, models.ApplicationResponse]
+    editable: bool
