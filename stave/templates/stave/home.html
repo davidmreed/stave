@@ -51,9 +51,8 @@ You aren't managing any events.
 </article>
 {% else %}
 <article style="flex: 1fr;">
-    <header><h2>Join now</h2></header>
-    Use your Facebook or Google account, or your email address, to get started.
-    <a href="{% url 'account_signup' %}">Sign Up</a>
+    <header><h2>Join Now</h2></header>
+    {% include 'stave/login_options.html' %}
 </article>
 {% endif %}
 </div>

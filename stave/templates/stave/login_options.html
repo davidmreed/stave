@@ -1,0 +1,3 @@
+{% load socialaccount %}
+
+<p><a href="{% url 'account_login' %}">Log in</a>, or sign up via <a href="{% url 'account_signup' %}">email</a> or your <a href="{% provider_login_url 'google' process='login' %}">Google</a> account.</p>

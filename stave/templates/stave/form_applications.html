@@ -39,9 +39,15 @@
 <h2>Applications</h2>
 <a href="{% url 'crew-builder' form.event.league.slug form.event.slug form.slug %}">Crew Builder</a>
 </header>
-
 {% if not applications %}
 This form has not received any applications yet.
+{% endif %}
+
+{% if invited_unsent_count %}
+<div style="text-align: center; width: 100%">
+{{ invited_unsent_count }} need email invitations sent.
+<a role="button" href="{% url 'send-email' form.event.league.slug form.event.slug form.slug 'invitation' %}{% querystring redirect_url=request.path %}">Send Emails</a>
+</div>
 {% endif %}
 
 {% with applications|get:ApplicationStatus.APPLIED as applications %}

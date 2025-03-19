@@ -1,5 +1,5 @@
-from django.contrib import admin
 from allauth.account.decorators import secure_admin_login
+from django.contrib import admin
 
 from . import models
 
@@ -18,5 +18,9 @@ for model in [
     models.Application,
     models.ApplicationResponse,
     models.CrewAssignment,
+    models.Message,
+    models.MessageTemplate,
+    models.LeagueTemplate,
+    models.EventTemplate,
 ]:
     admin.site.register(model)

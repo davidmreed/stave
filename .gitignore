@@ -1,3 +1,4 @@
+.env
 .direnv
 *.sqlite3
 __pycache__

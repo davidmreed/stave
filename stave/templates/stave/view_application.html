@@ -2,7 +2,6 @@
 
 {% load markdownify %}
 {% load stave_tags %}
-{% load socialaccount %}
 
 {% inputs 'ViewApplicationContext' %}
 
@@ -12,7 +11,11 @@
     <h1>
         {{ form.event.name }}
     </h1>
+    {% if not application and request.user|can_manage_event:form.event %}
+    <a href="{% url 'form-update' form.event.league.slug form.event.slug form.slug %}" role="button">Edit Form</a>
+    {% endif %}
 </header>
+
 
 {% if application %}
 <header>
@@ -72,8 +75,7 @@
 <h2>Application</h2>
 
 {% if not request.user.is_authenticated and not application %}
-<p>You need to <a href="{% url 'account_signup' %}">sign up</a> or <a href="{% url 'account_login' %}">log in</a> to complete this application.</p>
-<p>Use your <a href="{% provider_login_url 'facebook' process='login' %}">Facebook</a> or <a href="{% provider_login_url 'google' process='login' %}">Google</a> account.</p>
+{% include "stave/login_options.html" %}
 <hr>
 {% endif %}
 
@@ -82,12 +84,20 @@
 
 {% if form.requires_profile_fields %}
 
-This application includes information from your profile:
+<p>This application includes information from your profile.</p>
+
+{% if editable and profile_form %}
+<p>Any changes made here will update your profile.</p>
+{{ profile_form }}
+
+{% else %}
 <ul>
 {% for profile_field in form.requires_profile_fields %}
 <li>{{ profile_field|get_profile_field_name }} {% if request.user.is_authenticated %}({{ user_data|get:profile_field }}){% endif %}</li>
 {% endfor %}
 </ul>
+{% endif %}
+<hr>
 {% endif %}
 
 {# Availability #}
@@ -97,10 +107,11 @@ This application includes information from your profile:
 
 {% elif form.application_availability_kind == form.ApplicationAvailabilityKind.BY_DAY %}
 
-This application covers the following days:
+<p>This application covers multiple days. {% if editable %}Select your availability below.{% endif %}<p>
 
 <fieldset>
 {% for day in form.event.days %}
+<div>
 <input type="checkbox"
        name="day-{{day}}"
        id="day-{{day}}"
@@ -108,15 +119,17 @@ This application covers the following days:
        {% if application and day in application.availability_by_day %} checked {% endif %}
 >
 <label for="day-{{day}}">{{day}}</label>
+</div>
 {% endfor %}
 </fieldset>
 
 {% elif form.application_availability_kind == form.ApplicationAvailabilityKind.BY_GAME %}
 
-This application covers the following games:
+<p>This application covers multiple games. {% if editable %}Select your availability below.{% endif %}</p>
 
 <fieldset>
 {% for game in form.event.games.all %}
+<div>
 <input type="checkbox"
        name="game-{{game.id}}"
        id="game-{{game.id}}"
@@ -124,11 +137,14 @@ This application covers the following games:
        {% if application and game in application.games.all %} checked {% endif %}
 >
 <label for="game-{{game.id}}">Game {{game.order_key}} ({{ game.start_time }} to {{ game.end_time }})</label>
+</div>
 {% endfor %}
 {% endif %}
 </fieldset>
 
 <hr>
+
+<p>Choose the roles you're interested in filling.</p>
 
 {% for role_group in form.role_groups.all %}
 <fieldset>
@@ -162,6 +178,7 @@ This application covers the following games:
        {% if not editable %} disabled {% endif %}
 >
 {% elif question.kind == question.QuestionKind.LONG_TEXT %}
+<div>
 <textarea
     id="{{question.id}}"
     name="{{question.id}}"
@@ -169,8 +186,10 @@ This application covers the following games:
 >
     {% if application %}{{ response.content.0 }}{% endif %}
 </textarea>
+</div>
 {% elif question.kind == question.QuestionKind.SELECT_ONE %}
 {% for option in question.options %}
+<div>
 <input type="radio"
        name="{{question.id}}"
        value="{{forloop.counter0}}"
@@ -179,9 +198,11 @@ This application covers the following games:
        {% if option == response.content.0 %} checked {% endif %}
        >
 <label for="{{question.id}}-{{forloop.counter0}}">{{option}}</label>
+</div>
 {% endfor %}
 {% elif question.kind == question.QuestionKind.SELECT_MANY %}
 {% for option in question.options %}
+<div>
 <input type="checkbox"
        name="{{question.id}}"
        value="{{forloop.counter0}}"
@@ -190,9 +211,11 @@ This application covers the following games:
        {% if option in response.content %} checked {% endif %}
 >
 <label for="{{question.id}}-{{forloop.counter0}}">{{option}}</label>
+</div>
 {% endfor %}
 
 {% if question.allow_other %}
+<div>
 <input type="checkbox"
        name="{{question.id}}-other"
        value="{{question.id}}-other"
@@ -207,12 +230,13 @@ This application covers the following games:
        {% if not editable %} disabled {% endif %}
        style="width: auto;"
 >
+</div>
 {% endif %}
 {% endif %}
 {% endwith %}
 </div>
-<hr>
 {% endfor %}
+<hr>
 <input type="submit" {% if not editable %} disabled {% endif %} value="Submit">
 </form>
 {% endblock %}

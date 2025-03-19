@@ -1,7 +1,136 @@
-from django.core.management.base import BaseCommand
-from stave import models
-from datetime import datetime, date, time, timezone
+from datetime import date, datetime, time, timezone
+
 from allauth.account.models import EmailAddress
+from django.core.management.base import BaseCommand
+
+from stave import models
+
+
+def create_templates() -> models.LeagueTemplate:
+    league_template = models.LeagueTemplate.objects.create(
+        name="Roller Derby League",
+        description="Basic setup for a roller derby league, including templates for single and doubleheaders and a multi-day tournament",
+    )
+    role_group_nso = models.RoleGroup.objects.create(
+        name="NSO", league_template=league_template
+    )
+    role_hnso = models.Role.objects.create(
+        role_group=role_group_nso, name="HNSO", nonexclusive=True, order_key=1
+    )
+    role_jt = models.Role.objects.create(
+        role_group=role_group_nso, name="JT", order_key=2
+    )
+    role_plt = models.Role.objects.create(
+        role_group=role_group_nso, name="PLT", order_key=3
+    )
+    role_plt2 = models.Role.objects.create(
+        role_group=role_group_nso, name="PLT", order_key=4
+    )
+    role_sbo = models.Role.objects.create(
+        role_group=role_group_nso, name="SBO", order_key=5
+    )
+    role_sk = models.Role.objects.create(
+        role_group=role_group_nso, name="SK", order_key=6
+    )
+    role_sk2 = models.Role.objects.create(
+        role_group=role_group_nso, name="SK", order_key=7
+    )
+    role_pbm = models.Role.objects.create(
+        role_group=role_group_nso, name="PBM", order_key=8
+    )
+    role_pbt = models.Role.objects.create(
+        role_group=role_group_nso, name="PBT", order_key=9
+    )
+    role_pbt2 = models.Role.objects.create(
+        role_group=role_group_nso, name="PBT", order_key=10
+    )
+    role_alt = models.Role.objects.create(
+        role_group=role_group_nso, name="ALT", order_key=11
+    )
+
+    role_group_so = models.RoleGroup.objects.create(
+        name="SO", league_template=league_template
+    )
+    role_hr = models.Role.objects.create(
+        role_group=role_group_so, name="HR", order_key=1
+    )
+    role_ipr = models.Role.objects.create(
+        role_group=role_group_so, name="IPR", order_key=2
+    )
+    role_jr = models.Role.objects.create(
+        role_group=role_group_so, name="JR", order_key=3
+    )
+    role_jr2 = models.Role.objects.create(
+        role_group=role_group_so, name="JR", order_key=4
+    )
+    role_opr = models.Role.objects.create(
+        role_group=role_group_so, name="OPR", order_key=5
+    )
+    role_opr2 = models.Role.objects.create(
+        role_group=role_group_so, name="OPR", order_key=6
+    )
+    role_opr3 = models.Role.objects.create(
+        role_group=role_group_so, name="OPR", order_key=7
+    )
+    role_altref = models.Role.objects.create(
+        role_group=role_group_so, name="ALT", order_key=8
+    )
+
+    role_group_tho = models.RoleGroup.objects.create(
+        name="THO", league_template=league_template
+    )
+    role_thr = models.Role.objects.create(
+        role_group=role_group_tho, name="THR", order_key=1
+    )
+    role_thnso = models.Role.objects.create(
+        role_group=role_group_tho, name="THNSO", order_key=2
+    )
+    role_gto = models.Role.objects.create(
+        role_group=role_group_tho, name="GTO", order_key=3
+    )
+
+    event_template_single_game = models.EventTemplate.objects.create(
+        league_template=league_template,
+        name="Singleheader",
+        description="A single-game event with SO and NSO roles.",
+        days=1,
+    )
+    event_template_single_game.role_groups.set([role_group_so, role_group_nso])
+    game_template_single_game = models.GameTemplate.objects.create(
+        event_template=event_template_single_game,
+        day=1,
+    )
+    game_template_single_game.role_groups.set([role_group_so, role_group_nso])
+
+    event_template_doubleheader = models.EventTemplate.objects.create(
+        league_template=league_template,
+        name="Doubleheader",
+        description="A single-day, two-game event with SO and NSO roles.",
+        days=1,
+    )
+    event_template_doubleheader.role_groups.set([role_group_so, role_group_nso])
+    game_template_doubleheader_1 = models.GameTemplate.objects.create(
+        event_template=event_template_single_game,
+        day=1,
+    )
+    game_template_doubleheader_1.role_groups.set([role_group_so, role_group_nso])
+    game_template_doubleheader_2 = models.GameTemplate.objects.create(
+        event_template=event_template_single_game,
+        day=1,
+    )
+    game_template_doubleheader_2.role_groups.set([role_group_so, role_group_nso])
+
+    event_template_tournament = models.EventTemplate.objects.create(
+        league_template=league_template,
+        name="Tournament",
+        description="A two-day event with THO, SO, and NSO roles.",
+        days=2,
+    )
+    event_template_tournament.role_groups.set(
+        [role_group_so, role_group_nso, role_group_tho]
+    )
+
+    return league_template
 
 
 class Command(BaseCommand):
@@ -10,7 +139,10 @@ class Command(BaseCommand):
     def handle(self, *_args, **_kwargs):  # type: ignore
         self.stdout.write("seeding data...")
 
-        league = models.League.objects.create(
+        league_template = create_templates()
+
+        # Instantiate the template
+        league = league_template.clone(
             name="Ceres Roller Derby",
             slug="ceres",
             location="Ceres Station, The Belt",
@@ -18,77 +150,30 @@ class Command(BaseCommand):
             website="https://derby.ceres.belt",
             enabled=True,
         )
-        role_group_nso = models.RoleGroup.objects.create(name="NSO", league=league)
-        role_hnso = models.Role.objects.create(
-            role_group=role_group_nso, name="HNSO", nonexclusive=True, order_key=1
-        )
-        role_jt = models.Role.objects.create(
-            role_group=role_group_nso, name="JT", order_key=2
-        )
-        role_plt = models.Role.objects.create(
-            role_group=role_group_nso, name="PLT", order_key=3
-        )
-        role_plt2 = models.Role.objects.create(
-            role_group=role_group_nso, name="PLT", order_key=4
-        )
-        role_sbo = models.Role.objects.create(
-            role_group=role_group_nso, name="SBO", order_key=5
-        )
-        role_sk = models.Role.objects.create(
-            role_group=role_group_nso, name="SK", order_key=6
-        )
-        role_sk2 = models.Role.objects.create(
-            role_group=role_group_nso, name="SK", order_key=7
-        )
-        role_pbm = models.Role.objects.create(
-            role_group=role_group_nso, name="PBM", order_key=8
-        )
-        role_pbt = models.Role.objects.create(
-            role_group=role_group_nso, name="PBT", order_key=9
-        )
-        role_pbt2 = models.Role.objects.create(
-            role_group=role_group_nso, name="PBT", order_key=10
-        )
-        role_alt = models.Role.objects.create(
-            role_group=role_group_nso, name="ALT", order_key=11
-        )
 
-        role_group_so = models.RoleGroup.objects.create(name="SO", league=league)
-        role_hr = models.Role.objects.create(
-            role_group=role_group_so, name="HR", order_key=1
-        )
-        role_ipr = models.Role.objects.create(
-            role_group=role_group_so, name="IPR", order_key=2
-        )
-        role_jr = models.Role.objects.create(
-            role_group=role_group_so, name="JR", order_key=3
-        )
-        role_jr2 = models.Role.objects.create(
-            role_group=role_group_so, name="JR", order_key=4
-        )
-        role_opr = models.Role.objects.create(
-            role_group=role_group_so, name="OPR", order_key=5
-        )
-        role_opr2 = models.Role.objects.create(
-            role_group=role_group_so, name="OPR", order_key=6
-        )
-        role_opr3 = models.Role.objects.create(
-            role_group=role_group_so, name="OPR", order_key=7
-        )
-        role_altref = models.Role.objects.create(
-            role_group=role_group_so, name="ALT", order_key=8
-        )
+        role_group_nso = league.role_groups.get(name="NSO")
+        role_hnso = role_group_nso.roles.get(name="HNSO")
+        role_jt = role_group_nso.roles.get(name="JT")
+        role_plt = role_group_nso.roles.get(name="PLT", order_key=3)
+        role_sbo = role_group_nso.roles.get(name="SBO")
+        role_sk = role_group_nso.roles.get(name="SK", order_key=6)
+        role_pbm = role_group_nso.roles.get(name="PBM")
+        role_pbt = role_group_nso.roles.get(name="PBT", order_key=9)
 
-        role_group_tho = models.RoleGroup.objects.create(name="THO", league=league)
-        role_thr = models.Role.objects.create(
-            role_group=role_group_tho, name="THR", order_key=1
-        )
-        role_thnso = models.Role.objects.create(
-            role_group=role_group_tho, name="THNSO", order_key=2
-        )
-        role_gto = models.Role.objects.create(
-            role_group=role_group_tho, name="GTO", order_key=3
-        )
+        role_group_so = league.role_groups.get(name="SO")
+        role_hr = role_group_so.roles.get(name="HR")
+        role_ipr = role_group_so.roles.get(name="IPR")
+        role_jr = role_group_so.roles.get(name="JR", order_key=3)
+        role_jr2 = role_group_so.roles.get(name="JR", order_key=4)
+        role_opr = role_group_so.roles.get(name="OPR", order_key=5)
+        role_opr2 = role_group_so.roles.get(name="OPR", order_key=6)
+        role_opr3 = role_group_so.roles.get(name="OPR", order_key=7)
+        role_altref = role_group_so.roles.get(name="ALT", order_key=8)
+
+        role_group_tho = league.role_groups.get(name="THO")
+        role_thr = role_group_tho.roles.get(name="THR")
+        role_thnso = role_group_tho.roles.get(name="THNSO")
+        role_gto = role_group_tho.roles.get(name="GTO")
 
         # Create a 2-day, 5-game tournament event.
         tournament = models.Event.objects.create(

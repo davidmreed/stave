@@ -8,7 +8,7 @@
     {% endif %}
     {% if user == application.user %}
     {% if application.status == ApplicationStatus.APPLIED %}
-    <input type="submit" value="Update">
+    <input type="submit" formaction="TODO" value="Update">
     <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.WITHDRAWN %}" value="Withdraw">
     {% elif application.status == ApplicationStatus.INVITED %}
     <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.CONFIRMED %}" value="Confirm">

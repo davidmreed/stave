@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load stave_tags %}
+{% inputs 'SendEmailInputs' %}
+
+{% block content %}
+<header>
+    <h1>Send {{ kind.value|title }} Email for {{ application_form }}</h1>
+</header>
+
+You can include the following merge fields in your message:
+<ul>
+    <li><code>{name}</code> (the user's preferred name)</li>
+    <li><code>{schedule}</code> (link to user's schedule)</li>
+    <li><code>{application}</code> (link to user's application)</li>
+    <li><code>{event}</code> (link to event)</li>
+</ul>
+
+<form action="{{ request.path }}" method="POST">
+    {% csrf_token %}
+    {% if redirect_url %}
+    <input type="hidden" name="redirect_url" value="{{ redirect_url }}">
+    {% endif %}
+    {{ email_form }}
+
+    <input type="submit" value="Send">
+</form>
+
+Recipients:
+<ul>
+    {% for member in members %}
+    <li>{{ member }}</li>
+    {% endfor %}
+</ul>
+
+{% endblock %}

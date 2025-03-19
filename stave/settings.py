@@ -9,23 +9,18 @@ django_stubs_ext.monkeypatch()
 
 _ = dotenv.load_dotenv()
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
-
 DEBUG = os.environ.get("DEBUG") == "True"
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "anymail.backends.resend.EmailBackend")
+ALLOWED_HOSTS = [
+    "stave.app",
+    "stave.onrailway.app",
+    "127.0.0.1",
+    "0.0.0.0",
+    "localhost",
+]
 
-ALLOWED_HOSTS = ["apollo", "127.0.0.1", "0.0.0.0"]
-
-
-# Application definition
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -44,6 +39,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     "template_partials",
     "markdownify",
+    "anymail",
     "stave",
 ]
 
@@ -87,18 +83,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "stave.wsgi.application"
 
-
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
 DATABASES = {
     "default": dj_database_url.config(
         default="sqlite:///db.sqlite3", conn_max_age=600, conn_health_checks=True
     )
 }
-
-# Password validation
-# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -115,21 +104,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.1/topics/i18n/
-
 LANGUAGE_CODE = "en-us"
-
 TIME_ZONE = "UTC"
-
 USE_I18N = True
-
 USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = ["static"]
@@ -160,3 +138,10 @@ MFA_SUPPORTED_TYPES = ["recovery_codes", "totp", "webauthn"]
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = True
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_USER_MODEL_EMAIL_FIELD = "email"
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ANYMAIL = {"RESEND_API_KEY": os.environ.get("RESEND_API_KEY")}
+DEFAULT_FROM_EMAIL = "stave@stave.app"
+SERVER_EMAIL = "stave@stave.app"

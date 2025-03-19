@@ -1,8 +1,11 @@
-from django import template
 from collections.abc import Mapping, Sequence
-from typing import Any, Callable
-from .. import models
+from typing import Any, Type
+
+from django import template
+
 from stave.templates.stave import contexts
+
+from .. import models
 
 register = template.Library()
 
@@ -13,8 +16,7 @@ class TemplateValidationException(Exception):
 
 @register.simple_tag(takes_context=True)
 def inputs(context: template.Context, model_name: str) -> str:
-    # TODO: decide how to dynamic or not this.
-    type_ = getattr(contexts, model_name)
+    type_: type = getattr(contexts, model_name)
 
     try:
         _ = type_(**(context.dicts[-1]))

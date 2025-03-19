@@ -1,7 +1,9 @@
-from django import forms
-from . import models
-from django.utils.translation import gettext_lazy as _
 import json
+
+from django import forms
+from django.utils.translation import gettext_lazy as _
+
+from . import models
 
 
 class SeparatedJSONListField(forms.JSONField):
@@ -32,18 +34,26 @@ class QuestionForm(forms.ModelForm):
         fields = ["content", "kind", "required", "options", "allow_other"]
         widgets = {"kind": forms.HiddenInput(), "content": forms.TextInput}
 
-    options = SeparatedJSONListField(widget=forms.Textarea(attrs={"rows": 5}))
+    options = SeparatedJSONListField(
+        widget=forms.Textarea(attrs={"rows": 5}),
+        help_text=_("Enter each option on a separate line"),
+    )
     allow_other = forms.BooleanField(required=False)
     kind: models.QuestionKind
 
     def __init__(self, *args, **kwargs):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
-        kind_data = kwargs.get("data", {}).get(kwargs["prefix"] + "-kind")
-        if not kind_data:
-            raise Exception("No kind specified for question")
 
-        self.kind = models.QuestionKind(int(kind_data))
+        if self.instance:
+            self.kind = self.instance.kind
+        else:
+            kind_data = kwargs.get("data", {}).get(kwargs["prefix"] + "-kind")
+            if not kind_data:
+                raise Exception("No kind specified for question")
+
+            self.kind = models.QuestionKind(int(kind_data))
+
         match self.kind:
             case models.QuestionKind.SELECT_MANY:
                 pass
@@ -75,12 +85,16 @@ class ApplicationFormForm(forms.ModelForm):
         empty_value=None,
         choices=models.ApplicationKind,
         widget=forms.RadioSelect,
+        help_text=models.ApplicationForm._meta.get_field("application_kind").help_text,
         required=True,
     )
     application_availability_kind = forms.TypedChoiceField(
         empty_value=None,
         choices=models.ApplicationAvailabilityKind,
         widget=forms.RadioSelect,
+        help_text=models.ApplicationForm._meta.get_field(
+            "application_availability_kind"
+        ).help_text,
         required=True,
     )
     requires_profile_fields = forms.TypedMultipleChoiceField(
@@ -90,6 +104,9 @@ class ApplicationFormForm(forms.ModelForm):
             for field in models.User.ALLOWED_PROFILE_FIELDS
         ],
         widget=forms.CheckboxSelectMultiple,
+        help_text=models.ApplicationForm._meta.get_field(
+            "requires_profile_fields"
+        ).help_text,
         required=False,
     )
 
@@ -140,7 +157,28 @@ class EventForm(forms.ModelForm):
             "location",
         ]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, league: models.League | None = None, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+        if league:
+            self.fields["role_groups"].queryset = league.role_groups.all()
+        elif self.instance:
+            self.fields["role_groups"].queryset = self.instance.role_groups.all()
+
+
+class EventFromTemplateForm(forms.ModelForm):
+    class Meta:
+        model = models.Event
+        fields = [
+            "name",
+            "slug",
+            "status",
+            "banner",
+            "start_date",
+            "location",
+        ]
+
+    def __init__(self, *args, league: models.League, **kwargs):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
@@ -149,3 +187,14 @@ class GameForm(forms.ModelForm):
     class Meta:
         model = models.Game
         fields = ["name", "order_key", "start_time", "end_time"]
+
+
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = models.User
+        fields = models.User.ALLOWED_PROFILE_FIELDS
+
+
+class SendEmailForm(forms.Form):
+    subject = forms.CharField(max_length=256)
+    content = forms.CharField(max_length=2048, widget=forms.Textarea)  # TODO

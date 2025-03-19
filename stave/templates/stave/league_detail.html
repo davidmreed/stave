@@ -14,19 +14,23 @@
 {% if request.user|can_manage_league_events:league %}
 <a role="button" href="{% url 'event-create' league.slug %}">Create Event</a>
 {% endif %}
-{% if not league.enabled %}
-<div style="background-color: red; color: white;">Not yet enabled by administrator. Visible only to you.</div>
-{% endif %}
 </header>
+{% if not league.enabled %}
+<div class="disabled-warning">Not yet enabled by administrator. Visible only to you.</div>
+{% endif %}
 <dl>
+    {% if league.website %}
     <div>
         <dt>Website</dt>
         <dd><a href="{{ league.website }}">Go</a></dd>
     </div>
+    {% endif %}
+    {% if league.location %}
     <div>
         <dt>Location</dt>
         <dd>{{ league.location }}</dd>
     </div>
+    {% endif %}
 </dl>
 {% if league.logo %}
 <img src="{{ league.logo.url }}" alt="{{ league.name }} logo" style="float: right;">

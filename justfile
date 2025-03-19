@@ -6,3 +6,8 @@ run:
 
 reset:
     uv run manage.py flush --noinput && uv run manage.py seed
+
+
+format:
+    ruff check --select I --fix
+    ruff format

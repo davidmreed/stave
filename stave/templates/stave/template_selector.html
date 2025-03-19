@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load stave_tags %}
+{% inputs 'TemplateSelectorInputs' %}
+
+{% block content %}
+
+<header>
+    <h1>Create New {{ object_type }}</h1>
+</header>
+<form action="{{ request.path }}" method="POST">
+    {% csrf_token %}
+    {% if templates and not selected_template %}
+    <fieldset>
+        <legend>Select a template:</legend>
+        <div>
+            <label for="no-template-id">
+            <input type="radio" id="no-template-id" name="template_id" value="" checked>
+                Don't use a template<br>
+                <small>Start from scratch, with no default configuration.</small>
+            </label>
+        </div>
+        {% for template in templates %}
+        <div>
+            <label for="{{ template.id }}">
+            <input type="radio" id="{{ template.id }}" value="{{ template.id }}" name="template_id">
+                {{ template }}<br />
+                <small>{{ template.description }}</small>
+            </label>
+        </div>
+        </div>
+        {% endfor %}
+    </fieldset>
+    <hr>
+    {% endif %}
+
+    {% if selected_template or not require_template_selection_first %}
+    {{ form }}
+    {% endif %}
+    {% if selected_template %}
+    <input type="hidden" name="template_id" value="{{ selected_template.id }}">
+    {% endif %}
+
+    <input type="submit" value="{% if not selected_template and require_template_selection_first %}Next{% else %}Create{% endif %}">
+</form>
+
+{% endblock %}

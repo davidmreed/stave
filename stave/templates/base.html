@@ -10,6 +10,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="color-scheme" content="light dark">
         <title>{% block title %}Stave{% endblock %}</title>
+        {% block resources %}{% endblock %}
     </head>
     <header>
         <nav style="display: flex; flex-direction: row; justify-content: space-between; width: 100%;">
@@ -26,11 +27,11 @@
                 {% if request.user.is_authenticated %}
                 <li><small>{{ request.user.preferred_name }}</small></li>
                 <li><a href="{% url 'my-applications' %}">My Applications</a></li>
-                <li><a href="{% url 'profile' %}">Profile</a></li>
+                <li><a href="{% url 'profile' %}">My Account</a></li>
                 <li><a href="{% url 'account_logout' %}">Logout</a></li>
                 {% else %}
                 <li><a href="{% url 'account_signup' %}">Sign Up</a></li>
-                <li><a href="{% url 'account_login' %}">Login</a></li>
+                <li><a href="{% url 'account_login' %}{% querystring next=request.path %}">Login</a></li>
                 {% endif %}
                 </ul>
             </div>
@@ -47,5 +48,5 @@
         {% block breadcrumbs %}{% endblock %}
         {% block content %}{% endblock %}
     </main>
-    <footer><small>Stave &copy; 2025 <a href="https://ktema.org">David "Stacktrace" Reed</a></small></footer>
+    <footer><small>Stave &copy; 2025 <a href="https://ktema.org">David "Stacktrace" Reed</a>. <a href="https://github.com/davidmreed/stave">Free and open source</a> for the roller derby community.</small></footer>
 </html>

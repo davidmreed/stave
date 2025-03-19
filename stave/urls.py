@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
 
 from . import views
 
@@ -48,6 +48,11 @@ urlpatterns = [
         name="form-create-question",
     ),
     path(
+        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/edit",
+        views.FormUpdateView.as_view(),
+        name="form-update",
+    ),
+    path(
         "_/<slug:league>/events/<slug:event>/create-form/",
         views.FormCreateView.as_view(),
         name="form-create",
@@ -61,6 +66,11 @@ urlpatterns = [
         "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:application_form_slug>/applications/",
         views.FormApplicationsView.as_view(),
         name="form-applications",
+    ),
+    path(
+        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:application_form_slug>/email/<str:email_type>/",
+        views.SendEmailView.as_view(),
+        name="send-email",
     ),
     path("my-applications", views.MyApplicationsView.as_view(), name="my-applications"),
     path(

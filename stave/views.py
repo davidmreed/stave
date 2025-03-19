@@ -1,44 +1,50 @@
+import dataclasses
+import itertools
 from collections import defaultdict
-from django.db.models import QuerySet
-from django.shortcuts import render, get_object_or_404
+from collections.abc import Mapping
+from dataclasses import asdict, is_dataclass
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
+from uuid import UUID
+
+from django import views
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
+from django.db.models import QuerySet
+from django.forms import modelform_factory
 from django.http import (
     HttpRequest,
     HttpResponse,
-    HttpResponseRedirect,
     HttpResponseBadRequest,
+    HttpResponseRedirect,
 )
-from django.views import generic
-from django import views
-from django.urls import reverse
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, render
+from django.template.loader import render_to_string
+from django.urls import reverse, reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme
-from typing import Any, TYPE_CHECKING
-from collections.abc import Mapping
-import itertools
-from uuid import UUID
-from . import models, settings, forms
-from stave.templates.stave import contexts
-from dataclasses import asdict, is_dataclass
-from django.contrib.auth.mixins import LoginRequiredMixin
-from datetime import datetime
-import dataclasses
 from django.utils.translation import gettext_lazy
+from django.views import generic
+
+from stave.templates.stave import contexts
+
+from . import forms, models, settings
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
 
 
-class TypedContextView[T: Mapping[str, Any] | DataclassInstance](generic.DetailView):
+class TypedContextMixin[T: dict[str, Any] | DataclassInstance]:
     def get_context(self) -> T: ...
 
     def get_context_data(self, **kwargs: dict[str, Any]) -> dict[str, Any]:
-        context = super().get_context_data(**kwargs)
+        context: dict[str, Any] = super().get_context_data(**kwargs)
 
         typed_context = self.get_context()
         if is_dataclass(typed_context):
-            context.update(asdict(typed_context))
+            _ = context.update(asdict(typed_context))
         else:
-            context.update(typed_context)
+            _ = context.update(typed_context)
 
         return context
 
@@ -103,26 +109,82 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
         )
 
 
-class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
-    template_name = "stave/league_edit.html"
-    form_class = forms.EventForm
+class EventCreateView(
+    LoginRequiredMixin,
+    TypedContextMixin[contexts.TemplateSelectorInputs],
+    generic.edit.CreateView,
+):
+    template_name = "stave/template_selector.html"
+    league: models.League
+    selected_template: models.EventTemplate | None
 
-    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
-        _ = get_object_or_404(
+    def setup(self, request: HttpRequest, *args, **kwargs) -> None:
+        super().setup(request, *args, **kwargs)
+
+        self.league = get_object_or_404(
             models.League.objects.event_manageable(self.request.user),
-            slug=kwargs.get("league"),
+            slug=self.kwargs.get("league"),
+        )
+        self.selected_template = None
+        if "template_id" in request.POST:
+            self.selected_template = get_object_or_404(
+                self.league.event_templates.all(), pk=request.POST["template_id"]
+            )
+
+    def get_form_class(self) -> type:
+        if self.selected_template:
+            return forms.EventFromTemplateForm
+
+        return forms.EventForm
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["league"] = self.league
+
+        # If we're just moving to the second screen, we don't want
+        # to validate the form yet (since the user hasn't had a chance
+        # to do any entry).
+
+        if "slug" not in self.request.POST and "data" in kwargs:
+            # This form submission wasn't from a page that had the form rendered.
+            del kwargs["data"]
+            del kwargs["files"]
+
+        return kwargs
+
+    def get_context(self) -> contexts.TemplateSelectorInputs:
+        return contexts.TemplateSelectorInputs(
+            templates=self.league.event_templates.all(),
+            object_type="Event",
+            selected_template=self.selected_template,
+            require_template_selection_first=True,
         )
 
-        return super().get(request, *args, **kwargs)
+    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        if not self.selected_template:
+            # This is the first stage of the form, where the user has to select a template.
+            # We don't want to call form_valid() because the user hasn't
+            # actually filled out the model form yet.
+            self.object = None
+            return self.render_to_response(self.get_context_data())
 
-    def form_valid(self, form: forms.EventForm) -> HttpResponse:
-        league = get_object_or_404(
-            models.League.objects.event_manageable(self.request.user),
-            slug=self.kwargs["league"],
-        )
+        return super().post(request, *args, **kwargs)
 
-        form.instance.league_id = league.id
-        return super().form_valid(form)
+    def form_valid(
+        self, form: forms.EventForm | forms.EventFromTemplateForm
+    ) -> HttpResponse:
+        with transaction.atomic():
+            if self.selected_template:
+                # We're cloning an event template.
+                event = self.selected_template.clone(**form.cleaned_data)
+            else:
+                event = form.save(commit=False)
+                event.league = self.league
+                event.save()
+
+            self.object = event
+
+            return HttpResponseRedirect(self.get_success_url())
 
 
 class CrewCreateView(LoginRequiredMixin, views.View):
@@ -130,7 +192,7 @@ class CrewCreateView(LoginRequiredMixin, views.View):
         self, request: HttpRequest, league_slug: str, event_slug: str, form_slug: str
     ) -> HttpResponse:
         form = get_object_or_404(
-            models.ApplicationForm.objects.manageable(),
+            models.ApplicationForm.objects.manageable(request.user),
             event__league__slug=league_slug,
             event__slug=event_slug,
             slug=form_slug,
@@ -203,24 +265,52 @@ class LeagueUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
         return models.League.objects.manageable(self.request.user)
 
 
-class LeagueCreateView(LoginRequiredMixin, generic.edit.CreateView):
-    template_name = "stave/league_edit.html"
+class LeagueCreateView(
+    LoginRequiredMixin,
+    TypedContextMixin[contexts.TemplateSelectorInputs],
+    generic.edit.CreateView,
+):
+    template_name = "stave/template_selector.html"
     form_class = forms.LeagueForm
 
-    def form_valid(self, form: forms.LeagueForm) -> HttpResponse:
-        ret = super().form_valid(form)
-
-        # Make the current user a league manager
-        _ = models.LeagueUserPermission.objects.create(
-            league=self.object,
-            user=self.request.user,
-            permission=models.UserPermission.LEAGUE_MANAGER,
+    def get_context(self) -> contexts.TemplateSelectorInputs:
+        return contexts.TemplateSelectorInputs(
+            templates=models.LeagueTemplate.objects.all(),
+            object_type="League",
+            require_template_selection_first=False,
+            selected_template=None,
         )
 
-        return ret
+    def form_valid(self, form: forms.LeagueForm) -> HttpResponse:
+        with transaction.atomic():
+            if template_id := self.request.POST.get("template_id"):
+                # We're cloning a league template.
+                template = get_object_or_404(models.LeagueTemplate, pk=template_id)
+                league = template.clone(**form.cleaned_data)
+            else:
+                league = form.save()
+
+            # Make the current user a league manager
+            _ = models.LeagueUserPermission.objects.create(
+                league=league,
+                user=self.request.user,
+                permission=models.UserPermission.LEAGUE_MANAGER,
+            )
+
+            # Make the current user an event manager
+            _ = models.LeagueUserPermission.objects.create(
+                league=league,
+                user=self.request.user,
+                permission=models.UserPermission.EVENT_MANAGER,
+            )
+            self.object = league
+
+            return HttpResponseRedirect(self.get_success_url())
 
 
-class LeagueDetailView(TypedContextView[contexts.LeagueDetailViewInputs]):
+class LeagueDetailView(
+    TypedContextMixin[contexts.LeagueDetailViewInputs], generic.DetailView
+):
     template_name = "stave/league_detail.html"
     model = models.League
 
@@ -249,10 +339,35 @@ class EventListView(generic.ListView):
         return models.Event.objects.visible(self.request.user)
 
 
+class FormUpdateView(LoginRequiredMixin, views.View):
+    def get(
+        self, request: HttpRequest, league_slug: str, event_slug: str, form_slug: str
+    ) -> HttpResponse:
+        form = get_object_or_404(
+            models.ApplicationForm.objects.manageable(request.user),
+            slug=form_slug,
+            event__slug=event_slug,
+            event__league__slug=league_slug,
+        )
+        app_form_form = forms.ApplicationFormForm(instance=form)
+        question_formset = forms.QuestionFormSet(queryset=form.form_questions.all())
+
+        return render(
+            request,
+            "stave/form_edit.html",
+            context={
+                "form": app_form_form,
+                "event": form.event,
+                "question_formset": question_formset,
+                "QuestionKind": models.QuestionKind,
+            },
+        )
+
+
 class FormCreateView(LoginRequiredMixin, views.View):
     def get(self, request: HttpRequest, league: str, event: str) -> HttpResponse:
         event_ = get_object_or_404(
-            models.Event.objects.manageable(),
+            models.Event.objects.manageable(request.user),
             league__slug=league,
             slug=event,
         )
@@ -277,7 +392,7 @@ class FormCreateView(LoginRequiredMixin, views.View):
     ) -> HttpResponse:
         # TODO: status
         event_ = get_object_or_404(
-            models.Event.objects.manageable(),
+            models.Event.objects.manageable(request.user),
             league__slug=league,
             slug=event,
         )
@@ -345,12 +460,23 @@ class FormCreateView(LoginRequiredMixin, views.View):
         )
 
 
-class ProfileView(LoginRequiredMixin, generic.TemplateView):
+class ProfileView(
+    LoginRequiredMixin,
+    generic.edit.UpdateView,
+):
     template_name = "stave/profile.html"
+    model = models.User
+    fields = models.User.ALLOWED_PROFILE_FIELDS
+    success_url = reverse_lazy("profile")
+
+    def get_object(self) -> models.User:
+        return self.request.user
 
 
 class SingleApplicationView(
-    LoginRequiredMixin, TypedContextView[contexts.ViewApplicationContext]
+    LoginRequiredMixin,
+    TypedContextMixin[contexts.ViewApplicationContext],
+    generic.DetailView,
 ):
     template_name = "stave/view_application.html"
     model = models.Application
@@ -364,6 +490,7 @@ class SingleApplicationView(
             ApplicationStatus=models.ApplicationStatus,
             application=application,
             form=application.form,
+            profile_form=None,
             user_data={
                 key: str(getattr(application.user, key))
                 for key in application.form.requires_profile_fields
@@ -376,31 +503,43 @@ class SingleApplicationView(
         )
 
 
-class FormApplicationsView(LoginRequiredMixin, generic.ListView):
+class FormApplicationsView(
+    LoginRequiredMixin,
+    TypedContextMixin[contexts.FormApplicationsInputs],
+    generic.ListView,
+):
     template_name = "stave/form_applications.html"
     model = models.Application
 
-    def get_context_data(self, **kwargs: dict[str, Any]):
-        context = super().get_context_data(**kwargs)
+    def get_context(self) -> contexts.FormApplicationsInputs:
         form = get_object_or_404(
             models.ApplicationForm,
             slug=self.kwargs["application_form_slug"],
             event__slug=self.kwargs["event_slug"],
             event__league__slug=self.kwargs["league_slug"],
         )
-        context["form"] = form
-        context["applications"] = {
+        applications = {
             key: list(group)
             for key, group in itertools.groupby(
                 self.get_queryset().order_by("status"), lambda i: i.status
             )
         }
-        context["ApplicationStatus"] = models.ApplicationStatus
-        return context
+        return contexts.FormApplicationsInputs(
+            form=form,
+            applications=applications,
+            ApplicationStatus=models.ApplicationStatus,
+            invited_unsent_count=len(
+                [
+                    a
+                    for a in applications[models.ApplicationStatus.INVITED]
+                    if not a.invitation_email_sent
+                ],
+            ),
+        )
 
     def get_queryset(self) -> QuerySet[models.Application]:
         form = get_object_or_404(
-            models.ApplicationForm,
+            models.ApplicationForm.objects.manageable(self.request.user),
             slug=self.kwargs["application_form_slug"],
             event__slug=self.kwargs["event_slug"],
             event__league__slug=self.kwargs["league_slug"],
@@ -412,7 +551,7 @@ class ApplicationStatusView(LoginRequiredMixin, views.View):
     def post(
         self, request: HttpRequest, pk: UUID, status: models.ApplicationStatus
     ) -> HttpResponse:
-        application = get_object_or_404(
+        application: models.Application = get_object_or_404(
             models.Application.objects.visible(request.user),
             pk=pk,
         )
@@ -463,11 +602,13 @@ class SetGameCrewView(LoginRequiredMixin, views.View):
         role_group_id: UUID,
         crew_id: UUID | None = None,
     ) -> HttpResponse:
-        game = get_object_or_404(
+        game: models.Game = get_object_or_404(
             models.Game.objects.manageable(request.user),
             pk=game_id,
         )
-        rgca = get_object_or_404(game.role_groups, role_group_id=role_group_id)
+        rgca: models.RoleGroupCrewAssignment = get_object_or_404(
+            game.role_groups, role_group_id=role_group_id
+        )
         if crew_id:
             crew = get_object_or_404(
                 models.Crew.objects.filter(
@@ -487,7 +628,7 @@ class SetGameCrewView(LoginRequiredMixin, views.View):
         ):
             return HttpResponseRedirect(redirect_url)
         else:
-            return HttpResponseRedirect(game.event.get_absolute_url())  # TODO
+            return HttpResponseRedirect(game.event.get_absolute_url())
 
 
 class CrewBuilderView(LoginRequiredMixin, views.View):
@@ -498,7 +639,7 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         event_slug: str,
         application_form_slug: str,
     ) -> HttpResponse:
-        application_form = get_object_or_404(
+        application_form: models.ApplicationForm = get_object_or_404(
             models.ApplicationForm.objects.manageable(request.user),
             slug=application_form_slug,
             event__slug=event_slug,
@@ -547,7 +688,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         crew_id: UUID,
         role_id: UUID,
     ) -> HttpResponse:
-        application_form = get_object_or_404(
+        application_form: models.ApplicationForm = get_object_or_404(
             models.ApplicationForm.objects.manageable(request.user),
             slug=application_form_slug,
             event__slug=event_slug,
@@ -596,7 +737,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         if not application_id:
             return HttpResponseBadRequest("invalid application id")
 
-        application_form = get_object_or_404(
+        application_form: models.ApplicationForm = get_object_or_404(
             models.ApplicationForm.objects.manageable(request.user),
             slug=application_form_slug,
             event__slug=event_slug,
@@ -613,8 +754,8 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             return HttpResponseBadRequest("multiple matching applications")
 
         _ = models.CrewAssignment.objects.get_or_create(
-            role_id=role_id,
-            crew_id=crew_id,
+            role=role,
+            crew=crew,
             user=applications[0].user,
         )
 
@@ -634,11 +775,27 @@ class ApplicationFormView(views.View):
             event__slug=event,
             event__league__slug=league,
         )
+        if request.user.is_authenticated:
+            existing_application = form.applications.filter(user=request.user).first()
+            if existing_application:
+                return HttpResponseRedirect(existing_application.get_absolute_url())
 
-        context = ViewApplicationContext(
+        if request.user.is_authenticated:
+            profile_form_class = modelform_factory(
+                models.User, fields=form.requires_profile_fields
+            )
+            profile_form = profile_form_class(
+                instance=request.user,
+                prefix="profile",
+            )
+        else:
+            profile_form = None
+
+        context = contexts.ViewApplicationContext(
             ApplicationStatus=models.ApplicationStatus,
             application=None,
             form=form,
+            profile_form=profile_form,
             user_data={
                 key: str(getattr(request.user, key))
                 for key in form.requires_profile_fields
@@ -660,12 +817,24 @@ class ApplicationFormView(views.View):
         app = None
 
         with transaction.atomic():
-            form = get_object_or_404(
-                models.ApplicationForm,
+            form: models.ApplicationForm = get_object_or_404(
+                models.ApplicationForm.objects.open(),
                 slug=application_form,
                 event__slug=event,
                 event__league__slug=league,
             )
+
+            # Update the user Profile if needed
+            profile_form_class = modelform_factory(
+                models.User, fields=form.requires_profile_fields
+            )
+            profile_form = profile_form_class(
+                instance=request.user, prefix="profile", data=request.POST
+            )
+            if not profile_form.is_valid():
+                return HttpResponseBadRequest("bad profile")
+
+            profile_form.save()
 
             # Construct and persist an Application, ApplicationResponse, and RoleAssignments
 
@@ -748,3 +917,129 @@ class ApplicationFormView(views.View):
                     )
 
             return HttpResponseRedirect(reverse("view-application", args=[app.id]))
+
+
+class SendEmailView(LoginRequiredMixin, views.View):
+    def get(
+        self,
+        request: HttpRequest,
+        league_slug: str,
+        event_slug: str,
+        application_form_slug: str,
+        email_type: str,
+    ) -> HttpResponse:
+        application_form: models.ApplicationForm = get_object_or_404(
+            models.ApplicationForm.objects.manageable(request.user),
+            event__league__slug=league_slug,
+            event__slug=event_slug,
+            slug=application_form_slug,
+        )
+
+        try:
+            email_type = models.SendEmailContextType(email_type)
+        except ValueError:
+            return HttpResponseBadRequest(f"invalid email_type {email_type}")
+
+        initial = {}
+        if message_template := application_form.get_template_for_context_type(
+            email_type
+        ):
+            initial["content"] = message_template.content
+
+        email_form = forms.SendEmailForm()
+
+        return render(
+            request,
+            "stave/send_email.html",
+            asdict(
+                contexts.SendEmailInputs(
+                    email_form=email_form,
+                    kind=models.SendEmailContextType(email_type),
+                    application_form=application_form,
+                    members=application_form.get_user_queryset_for_context_type(
+                        email_type
+                    ),
+                    redirect_url=request.GET.get("redirect_url"),
+                )
+            ),
+        )
+
+    def post(
+        self,
+        request: HttpRequest,
+        league_slug: str,
+        event_slug: str,
+        application_form_slug: str,
+        email_type: str,
+    ) -> HttpResponse:
+        application_form: models.ApplicationForm = get_object_or_404(
+            models.ApplicationForm.objects.manageable(request.user),
+            event__league__slug=league_slug,
+            event__slug=event_slug,
+            slug=application_form_slug,
+        )
+
+        try:
+            email_type = models.SendEmailContextType(email_type)
+        except ValueError:
+            return HttpResponseBadRequest(f"invalid email_type {email_type}")
+
+        email_form = forms.SendEmailForm(data=request.POST)
+
+        if email_form.is_valid():
+            # Construct and render the template and persist a Message for each user.
+            content: str = email_form.cleaned_data["content"]
+            subject: str = email_form.cleaned_data["subject"]
+
+            domain = "stave.app"  # FIXME: dynamic
+
+            with transaction.atomic():
+                for user in application_form.get_user_queryset_for_context_type(
+                    email_type
+                ):
+                    application = application_form.applications.get(user=user)
+                    # Substitute values for any of the user's tags.
+                    # Note that the content will be sanitized when we
+                    # render Markdown into HTML.
+                    this_message_content = content.replace(
+                        "{name}", user.preferred_name
+                    )
+                    this_message_content = this_message_content.replace(
+                        "{schedule}", "TODO"
+                    )
+
+                    this_message_content = this_message_content.replace(
+                        "{application}",
+                        domain + application.get_absolute_url(),
+                    )
+                    this_message_content = this_message_content.replace(
+                        "{event}",
+                        domain + application_form.event.get_absolute_url(),
+                    )
+
+                    content_html = render_to_string(
+                        "stave/email/invitation.html",
+                        {"content": this_message_content, "domain": domain},
+                    )
+                    content_plain_text = render_to_string(
+                        "stave/email/invitation.txt",
+                        {"content": this_message_content, "domain": domain},
+                    )
+
+                    _ = models.Message.objects.create(
+                        user=user,
+                        subject=subject,
+                        content_plain_text=content_plain_text,
+                        content_html=content_html,
+                    )
+                    application.invitation_email_sent = True
+                    application.save()
+
+        messages.info(request, gettext_lazy("Your emails are being sent"))
+        redirect_url = request.POST.get("redirect_url")
+        if redirect_url and url_has_allowed_host_and_scheme(
+            redirect_url, settings.ALLOWED_HOSTS
+        ):
+            return HttpResponseRedirect(redirect_url)
+
+        return HttpResponseRedirect(application_form.event.get_absolute_url())

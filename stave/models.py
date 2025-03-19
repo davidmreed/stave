@@ -1,10 +1,12 @@
+import enum
+import json
 import uuid
 from collections.abc import Iterable
-from datetime import timedelta
-import json
-from django.db import models
-from django.db.models import Q, F
+from datetime import timedelta, datetime
+import copy
 from django.contrib.auth.models import AbstractUser, AnonymousUser
+from django.db import models
+from django.db.models import Q
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -16,10 +18,13 @@ class CertificationLevel(models.TextChoices):
     LEVEL_3 = "Level 3", _("Level 3")
 
 
+# TODO: should this be AbstractBaseUser?
 class User(AbstractUser):
     ALLOWED_PROFILE_FIELDS = [
         "preferred_name",
+        "legal_name",
         "pronouns",
+        "league_affiliation",
         "game_history_url",
         "wftda_insurance_number",
         "nso_certification_level",
@@ -27,9 +32,12 @@ class User(AbstractUser):
     ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     preferred_name = models.CharField(max_length=256, verbose_name=_("preferred name"))
+    legal_name = models.CharField(max_length=256, blank=True, null=True)
     pronouns = models.CharField(
         max_length=32, blank=True, null=True, verbose_name=_("pronouns")
     )
+    email = models.CharField(max_length=256)
+    league_affiliation = models.CharField(max_length=256, default=_("Independent"))
     game_history_url = models.URLField(
         verbose_name=_("game history URL"), blank=True, null=True
     )
@@ -62,16 +70,37 @@ class RoleGroup(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=256)
     league = models.ForeignKey(
-        "League", on_delete=models.CASCADE, null=True, blank=True
+        "League",
+        related_name="role_groups",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
     )
     league_template = models.ForeignKey(
-        "LeagueTemplate", on_delete=models.CASCADE, null=True, blank=True
+        "LeagueTemplate",
+        related_name="role_groups",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
     )
 
     roles: models.Manager["Role"]
 
     def __str__(self) -> str:
         return self.name
+
+    def clone(self, league: "League") -> "RoleGroup":
+        new_object = copy.copy(self)
+        new_object.id = new_object.pk = None
+        new_object._state.adding = True
+        new_object.league = league
+        new_object.league_template = None
+        new_object.save()
+
+        for role in self.roles.all():
+            role.clone(new_object)
+
+        return new_object
 
     class Meta:
         constraints = [
@@ -93,6 +122,15 @@ class Role(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    def clone(self, role_group: RoleGroup) -> "Role":
+        new_object = copy.copy(self)
+        new_object.id = new_object.pk = None
+        new_object._state.adding = True
+        new_object.role_group = role_group
+        new_object.save()
+
+        return new_object
 
     class Meta:
         constraints = [
@@ -145,6 +183,7 @@ class League(models.Model):
     website = models.URLField(null=True, blank=True)
 
     events: models.Manager["Event"]
+    event_templates: models.Manager["EventTemplate"]
     user_permissions: models.Manager["LeagueUserPermission"]
 
     objects = LeagueManager()
@@ -198,19 +237,71 @@ class LeagueTemplate(models.Model):
     name = models.CharField(max_length=256)
     description = models.TextField()
 
+    role_groups: models.Manager[RoleGroup]
+    event_templates: models.Manager["EventTemplate"]
+    message_templates: models.Manager["MessageTemplate"]
+    application_form_templates: models.Manager["ApplicationFormTemplate"]
+
+    def __str__(self) -> str:
+        return self.name
+
+    def clone(self, **kwargs) -> League:
+        league = League.objects.create(**kwargs)
+
+        # Copy Role Groups
+        role_group_map = {}
+        for role_group in self.role_groups.all():
+            new_role_group = role_group.clone(league)
+            role_group_map[role_group.id] = new_role_group.id
+
+        # Copy Event Templates
+        event_template_map = {}
+        for event_template in self.event_templates.all():
+            new_event_template = event_template.clone_as_template(
+                league, role_group_map
+            )
+            event_template_map[event_template.id] = new_event_template.id
+
+        # Copy Message Templates
+        message_template_map = {}
+        for message_template in self.message_templates.all():
+            new_message_template = message_template.clone_as_template(league)
+            message_template_map[message_template.id] = new_message_template.id
+
+        # Copy Application Form Templates
+        for application_form_template in self.application_form_templates.all():
+            _ = application_form_template.clone_as_template(
+                league, event_template_map, message_template_map
+            )
+
+        return league
+
 
 class EventTemplate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    league = models.ForeignKey(League, on_delete=models.CASCADE, null=True, blank=True)
+    league = models.ForeignKey(
+        League,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="event_templates",
+    )
     league_template = models.ForeignKey(
-        LeagueTemplate, on_delete=models.CASCADE, null=True, blank=True
+        LeagueTemplate,
+        related_name="event_templates",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
     )
     name = models.CharField(max_length=256)
+    description = models.TextField()
     role_groups: models.ManyToManyField["EventTemplate", RoleGroup] = (
         models.ManyToManyField(RoleGroup, blank=True)
     )
     days = models.IntegerField()
     location = models.TextField(blank=True, null=True)
+
+    game_templates: models.Manager["GameTemplate"]
 
     class Meta:
         constraints = [
@@ -220,16 +311,96 @@ class EventTemplate(models.Model):
             )
         ]
 
+    def __str__(self) -> str:
+        return self.name
+
+    def clone_as_template(
+        self, league: League, role_group_map: dict[uuid.UUID, uuid.UUID]
+    ) -> "EventTemplate":
+        new_object = copy.copy(self)
+        new_object.id = new_object.pk = None
+        new_object._state.adding = True
+        new_object.league = league
+        new_object.league_template = None
+        new_object.save()
+
+        # Copy Role Group assignments
+        new_role_group_ids = {
+            role_group_map[role_group.id] for role_group in self.role_groups.all()
+        }
+        new_object.role_groups.set(new_role_group_ids)
+
+        # Copy Game Templates
+        for game_template in self.game_templates.all():
+            _ = game_template.clone_as_template(new_object, role_group_map)
+
+        return new_object
+
+    def clone(self, **kwargs) -> "Event":
+        values = {
+            "league": self.league,
+            "location": self.location,
+        }
+        values.update(kwargs)
+        if start_date := values.get("start_date"):
+            values["end_date"] = start_date + timedelta(days=self.days - 1)
+
+        new_object = Event.objects.create(
+            **values,
+        )
+        new_object.role_groups.set(self.role_groups.all())
+
+        return new_object
+
 
 class GameTemplate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    event_template = models.ForeignKey(EventTemplate, on_delete=models.CASCADE)
+    event_template = models.ForeignKey(
+        EventTemplate, related_name="game_templates", on_delete=models.CASCADE
+    )
     day = models.IntegerField()
-    start_time = models.TimeField()
-    end_time = models.TimeField()
+    start_time = models.TimeField(blank=True, null=True)
+    end_time = models.TimeField(blank=True, null=True)
     role_groups: models.ManyToManyField["GameTemplate", RoleGroup] = (
         models.ManyToManyField(RoleGroup, blank=True)
     )
+
+    def clone_as_template(
+        self, event_template: EventTemplate, role_group_map: dict[uuid.UUID, uuid.UUID]
+    ) -> "GameTemplate":
+        new_object = copy.copy(self)
+        new_object.id = new_object.pk = None
+        new_object._state.adding = True
+        new_object.event_template = event_template
+        new_object.save()
+
+        # Copy Role Group assignments
+        new_role_group_ids = {
+            role_group_map[role_group.id] for role_group in self.role_groups.all()
+        }
+        new_object.role_groups.set(new_role_group_ids)
+
+        return new_object
+
+    def clone(self, event: "Event", **kwargs) -> "Game":
+        new_object = Game.objects.create(
+            event=event,
+            start_time=datetime.combine(
+                event.start_date + timedelta(days=self.day - 1), self.start_time
+            ),
+            end_time=datetime.combine(
+                event.start_date + timedelta(days=self.day - 1), self.end_time
+            ),
+            **kwargs,
+        )
+
+        # Copy Role Group assignments
+        new_role_group_ids = {
+            role_group_map[role_group.id] for role_group in self.role_groups.all()
+        }
+        new_object.role_groups.set(new_role_group_ids)
+
+        return new_object
 
 
 class CrewKind(models.IntegerChoices):
@@ -351,7 +522,11 @@ class Event(models.Model):
         RoleGroup, blank=True
     )
     name = models.CharField(max_length=256)
-    slug = models.SlugField()
+    slug = models.SlugField(
+        help_text=_(
+            "The version of the event's name used in web addresses. Should be alphanumeric and contain no spaces, e.g., Summer Throwdown->summer-throwdown"
+        )
+    )
     banner = models.ImageField(blank=True, null=True)
     start_date = models.DateField()
     end_date = models.DateField()
@@ -504,9 +679,49 @@ class ApplicationStatus(models.IntegerChoices):
 class MessageTemplate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     league = models.ForeignKey(
-        League, related_name="message_templates", on_delete=models.CASCADE
+        League,
+        related_name="message_templates",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
+    league_template = models.ForeignKey(
+        LeagueTemplate,
+        related_name="message_templates",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
     )
     content = models.TextField()
+
+    def clone_as_template(self, league: League) -> "MessageTemplate":
+        new_object = copy.copy(self)
+        new_object.id = new_object.pk = None
+        new_object._state.adding = True
+        new_object.league = league
+        new_object.league_template = None
+        new_object.save()
+
+        return new_object
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(league__isnull=True) ^ Q(league_template__isnull=True),
+                name="messagetemplate_either_league_or_league_template",
+            )
+        ]
+
+
+class Message(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    subject = models.CharField(max_length=256)
+    content_plain_text = models.TextField()
+    content_html = models.TextField()
+    user = models.ForeignKey(User, related_name="messages", on_delete=models.CASCADE)
+    sent = models.BooleanField(default=False)
+    sent_date = models.DateTimeField(null=True)
+    tries = models.IntegerField(default=0)
 
 
 # Application models
@@ -538,7 +753,16 @@ class ApplicationAvailabilityKind(models.IntegerChoices):
 class ApplicationFormTemplate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     league = models.ForeignKey(
-        League, related_name="application_form_templates", on_delete=models.CASCADE
+        League,
+        related_name="application_form_templates",
+        on_delete=models.CASCADE,
+        null=True,
+    )
+    league_template = models.ForeignKey(
+        LeagueTemplate,
+        related_name="application_form_templates",
+        on_delete=models.CASCADE,
+        null=True,
     )
     name = models.CharField(max_length=256)
 
@@ -579,20 +803,96 @@ class ApplicationFormTemplate(models.Model):
         EventTemplate, blank=True, related_name="application_form_templates"
     )
 
+    def clone(self, event: Event, **kwargs) -> "ApplicationForm":
+        values = {
+            "league": self.league,
+            "application_kind": self.application_kind,  # TODO: app availability kind?
+            "hidden": self.hidden,
+            "intro_text": self.intro_text,
+            "requires_profile_fields": self.requires_profile_fields,
+            "confirmed_email_template": self.confirmed_email_template,
+            "assigned_email_template": self.assigned_email_template,
+            "rejected_email_template": self.rejected_email_template,
+            "event": event,
+        }
+        values.update(kwargs)
+        new_object = ApplicationForm.objects.create(**values)
+
+        # Assign Role Groups
+        new_object.role_groups.set(self.role_groups.all())
+
+        return new_object
+
+    def clone_as_template(
+        self,
+        league: League,
+        email_template_map: dict[uuid.UUID, uuid.UUID],
+        event_template_map: dict[uuid.UUID, uuid.UUID],
+    ) -> "ApplicationFormTemplate":
+        new_object = copy.copy(self)
+        new_object.id = new_object.pk = None
+        new_object._state.adding = True
+        new_object.league = league
+        new_object.league_template = None
+
+        new_object.confirmed_email_template_id = email_template_map[
+            new_object.confirmed_email_template_id
+        ]
+        new_object.assigned_email_template_id = email_template_map[
+            new_object.assigned_email_template_id
+        ]
+        new_object.rejected_email_template_id = email_template_map[
+            new_object.rejected_email_template_id
+        ]
+
+        for question in self.form_questions.all():
+            new_question = copy.copy(question)
+            new_question.id = new_object.pk = None
+            new_question._state.adding = True
+            new_question.application_form_template = new_object
+            new_question.save()
+
+        new_object.save()
+        new_event_template_ids = {
+            event_template_map[event_template.id]
+            for event_template in self.event_templates.all()
+        }
+        new_object.event_templates.set(new_event_template_ids)
+
+        return new_object
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(league__isnull=True) ^ Q(league_template__isnull=True),
+                name="either_league_or_league_template_app_form_template",
+            )
+        ]
+
 
 class ApplicationFormManager(models.Manager["ApplicationForm"]):
     def open(self) -> models.QuerySet["ApplicationForm"]:
         return self.filter(
             closed=False,
             hidden=False,
-            event__status__in=[EventStatus.OPEN, EventStatus.LINK_ONLY],
+            event__status=EventStatus.OPEN,
         ).order_by("close_date", "event__start_date")  # TODO: make this a CASE()
 
     def manageable(self, user: User) -> models.QuerySet["ApplicationForm"]:
-        return self.filter(
-            event__league__user_permissions__permission=UserPermission.EVENT_MANAGER,
-            event__league__user_permissions__user=user,
-        ).distinct()
+        return (
+            self.filter(
+                event__league__user_permissions__permission=UserPermission.EVENT_MANAGER,
+                event__league__user_permissions__user=user,
+            )
+            .distinct()
+            .exclude(event__status__in=[EventStatus.CANCELED, EventStatus.COMPLETE])
+        )
+
+
+class SendEmailContextType(enum.Enum):
+    INVITATION = "invitation"
+    SCHEDULE = "schedule"
+    REJECTION = "rejection"
 
 
 class ApplicationForm(models.Model):
@@ -603,42 +903,76 @@ class ApplicationForm(models.Model):
     event = models.ForeignKey(
         Event, related_name="application_forms", on_delete=models.CASCADE
     )
-    slug = models.SlugField()
+    slug = models.SlugField(
+        help_text=_(
+            "Form name used in web addresses. Should be alphanumeric and contain no spaces, e.g., apply or apply-nso"
+        )
+    )
 
     application_kind = models.IntegerField(
-        choices=ApplicationKind.choices, null=False, blank=False
+        choices=ApplicationKind.choices,
+        null=False,
+        blank=False,
+        verbose_name=_("application process"),
+        help_text=_(
+            "Choose Confirm Only to contact applicants only once, when the schedule is finalized. Choose Confirm then Assign to send acceptance messages first, then follow with a schedule."
+        ),
     )
     application_availability_kind = models.IntegerField(
-        choices=ApplicationAvailabilityKind.choices, null=False, blank=False
+        choices=ApplicationAvailabilityKind.choices,
+        null=False,
+        blank=False,
+        verbose_name=_("availability type"),
+        help_text=_(
+            "You can request availability at the level of the whole event, whole days, or by individual game. Single-game events must use Entire Event."
+        ),
     )
     role_groups: models.ManyToManyField["ApplicationForm", RoleGroup] = (
-        models.ManyToManyField(RoleGroup)
+        models.ManyToManyField(
+            RoleGroup,
+            help_text=_(
+                "The role groups covered by this form. You can select any or all of the role groups assigned to the event. Each role group can appear on only one form."
+            ),
+        )
     )
     closed = models.BooleanField(default=False)
     close_date = models.DateField(null=True, blank=True)
-    hidden = models.BooleanField(default=False)
-    intro_text = models.TextField()
+    hidden = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Hidden forms are accessible only by direct link, and aren't listed on Stave."
+        ),
+    )
+    intro_text = models.TextField(
+        help_text=_(
+            "Introduce the event to your applicants. You don't need to include dates or locations, because these are recorded on the event already. You can use Markdown to format this text."
+        )
+    )
     requires_profile_fields: models.JSONField[list[str]] = models.JSONField(
-        default=list, blank=True
+        default=list,
+        blank=True,
+        help_text=_(
+            "You can accept standard fields from the user's profile without requiring them to re-type their information."
+        ),
     )
     objects = ApplicationFormManager()
-    confirmed_email_template = models.ForeignKey(
+    invitation_email_template = models.ForeignKey(
         MessageTemplate,
-        related_name="application_form_confirmed",
+        related_name="application_form_invitation",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
     )
-    assigned_email_template = models.ForeignKey(
+    schedule_email_template = models.ForeignKey(
         MessageTemplate,
-        related_name="application_form_assigned",
+        related_name="application_form_schedule",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
     )
-    rejected_email_template = models.ForeignKey(
+    rejection_email_template = models.ForeignKey(
         MessageTemplate,
-        related_name="application_form_rejected",
+        related_name="application_form_rejection",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -754,6 +1088,39 @@ class ApplicationForm(models.Model):
 
         return applications
 
+    def get_template_for_context_type(
+        self, context: SendEmailContextType
+    ) -> MessageTemplate | None:
+        match context:
+            case SendEmailContextType.INVITATION:
+                return self.invitation_email_template
+            case SendEmailContextType.SCHEDULE:
+                return self.schedule_email_template
+            case SendEmailContextType.REJECTION:
+                return self.rejection_email_template
+
+    def get_user_queryset_for_context_type(
+        self, context: SendEmailContextType
+    ) -> models.QuerySet[User]:
+        match context:
+            case SendEmailContextType.INVITATION:
+                return User.objects.filter(
+                    id__in=self.applications.filter(
+                        status=ApplicationStatus.INVITED, invitation_email_sent=False
+                    ).values("user_id")
+                )
+            case SendEmailContextType.SCHEDULE:
+                # A Schedule email goes to any user who's assigned to a crew
+                # on our Event where the crew matches one of our Role Groups.
+                return User.objects.filter()
+                # TODO
+            case SendEmailContextType.REJECTION:
+                return User.objects.filter(
+                    id__in=self.applications.filter(
+                        status=ApplicationStatus.REJECTED, rejection_email_sent=False
+                    ).values("user_id")
+                )
+
     class Meta:
         ordering = ["slug"]
         constraints = [
@@ -850,6 +1217,9 @@ class Application(models.Model):
     )
     roles: models.ManyToManyField["Application", Role] = models.ManyToManyField(Role)
     status = models.IntegerField(choices=ApplicationStatus.choices)
+    invitation_email_sent = models.BooleanField(default=False)
+    decline_email_set = models.BooleanField(default=False)
+    schedule_email_sent = models.BooleanField(default=False)
 
     responses: models.Manager["ApplicationResponse"]
 
@@ -867,7 +1237,10 @@ class Application(models.Model):
     def __str__(self) -> str:
         return f"{self.form}: {self.user}"
 
-    def get_user_data(self) -> dict:
+    def get_absolute_url(self) -> str:
+        return reverse("view-application", args=[self.id])
+
+    def get_user_data(self) -> dict[str, str]:
         return {
             key: getattr(self.user, key) for key in self.form.requires_profile_fields
         }

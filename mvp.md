@@ -1,7 +1,9 @@
 - Login
   - Facebook
-  - Google
-  - Profile form
+  + Google
+  + Profile form
+  - Deletion
+  - Multiple profiles
 
 - Application forms
   - Easy create account
@@ -11,9 +13,9 @@
 + League page
   + Basic data, link, logo
 
-- Crew Builder
-  - Static crews
-  - Assign static crew to game
++ Crew Builder
+  + Static crews
+  + Assign static crew to game
   + Manage single game staffing
 
 + Authentication
@@ -49,3 +51,15 @@
 - Disable availability options for single-game events
 
 - Allow for multiple tracks - simultaneous games - assess availability with potential time overlap
+
+- Make logo and banner images work.
+
+- External signups on calendar
+- Invite users by email
+- Manually create/assign users with confirmation flow
+
+- Final security checks
+- Timezone setup
+
+- Build Docker image
+- Launch on railway
