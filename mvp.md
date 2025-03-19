@@ -45,9 +45,8 @@
 + Event-wide roles
 - User confirmation
 
-- Templates
++ Templates
 - Cron jobs (post MVP?)
-- Enforce app process
 - Disable availability options for single-game events
 
 - Allow for multiple tracks - simultaneous games - assess availability with potential time overlap
