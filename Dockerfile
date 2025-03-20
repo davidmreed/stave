@@ -16,4 +16,4 @@ RUN uv sync --frozen
 COPY --chown=app:app . .
 
 RUN uv run manage.py collectstatic --noinput
-ENTRYPOINT ["/home/app/docker/entrypoint.sh"]
+CMD ["/home/app/docker/entrypoint.sh"]

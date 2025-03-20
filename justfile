@@ -4,6 +4,9 @@ migrate:
 run:
     uv run manage.py runserver 0.0.0.0:8888
 
+run-prod:
+    docker/entrypoint.sh
+
 reset:
     uv run manage.py flush --noinput && uv run manage.py seed
 

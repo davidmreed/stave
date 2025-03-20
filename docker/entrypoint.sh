@@ -1,4 +1,5 @@
 #!/bin/sh
+
 uv run manage.py migrate
 uv run manage.py create_templates
 
