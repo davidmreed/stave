@@ -15,8 +15,7 @@ DEBUG = os.environ.get("DEBUG") == "True"
 EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "anymail.backends.resend.EmailBackend")
 
 ALLOWED_HOSTS = [
-    "stave.app",
-    "stave.onrailway.app",
+    "https://stave.app",
     "127.0.0.1",
     "0.0.0.0",
     "localhost",
@@ -143,6 +142,7 @@ SOCIALACCOUNT_PROVIDERS = {
         "OAUTH_PKCE_ENABLED": True,
     }
 }
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
 MFA_PASSKEY_LOGIN_ENABLED = True
 MFA_PASSKEY_SIGNUP_ENABLED = True
 MFA_SUPPORTED_TYPES = ["recovery_codes", "totp", "webauthn"]
