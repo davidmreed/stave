@@ -10,7 +10,7 @@ django_stubs_ext.monkeypatch()
 _ = dotenv.load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 DEBUG = os.environ.get("DEBUG") == "True"
 EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "anymail.backends.resend.EmailBackend")
 ALLOWED_HOSTS = [
@@ -110,7 +110,8 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
-STATICFILES_DIRS = ["static"]
+STATIC_ROOT = "static"
+STATICFILES_DIRS = ["stave/static"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -145,3 +146,6 @@ ACCOUNT_AUTHENTICATION_METHOD = "email"
 ANYMAIL = {"RESEND_API_KEY": os.environ.get("RESEND_API_KEY")}
 DEFAULT_FROM_EMAIL = "stave@stave.app"
 SERVER_EMAIL = "stave@stave.app"
+
+
+STAVE_EMAIL_MAX_TRIES = 3

@@ -1,9 +1,12 @@
 from . import models, settings
 from datetime import datetime, timedelta, timezone
 from django.core.mail import EmailMultiAlternatives
+from rocketry import Rocketry
+
+app = Rocketry(execution="main")
 
 
-# Minutely
+@app.task("every minute")
 def send_emails():
     for message in models.Message.objects.filter(
         sent=False, tries__lt=settings.STAVE_EMAIL_MAX_TRIES
@@ -12,7 +15,7 @@ def send_emails():
             email = EmailMultiAlternatives(
                 subject=message.subject,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                to=mes.user.email,
+                to=message.user.email,
                 body=message.content_plain_text,
             )
             email.attach_alternative(message.content_html, "text/html")
@@ -27,14 +30,14 @@ def send_emails():
         message.save()
 
 
-# Daily
+@app.task("every day")
 def delete_old_messages():
     _ = models.Message.objects.filter(
         sent=True, send_date__leq=datetime.now(tz=timezone.utc) - timedelta(days=7)
     ).delete()
 
 
-# Hourly
+@app.task("every hour")
 def update_event_statuses():
     # These are date-based, not hour-based - TODO
     _ = models.Event.objects.filter(

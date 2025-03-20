@@ -1,0 +1,6 @@
+.env
+venv
+.venv
+db.sqlite3
+flake.nix
+flake.lock
