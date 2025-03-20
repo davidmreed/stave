@@ -24,6 +24,18 @@ wheels = [
 ]
 
 [[package]]
+name = "apscheduler"
+version = "3.11.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tzlocal" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4e/00/6d6814ddc19be2df62c8c898c4df6b5b1914f3bd024b780028caa392d186/apscheduler-3.11.0.tar.gz", hash = "sha256:4c622d250b0955a65d5d0eb91c33e6d43fd879834bf541e0a18661ae60460133", size = 107347 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d0/ae/9a053dd9229c0fde6b1f1f33f609ccff1ee79ddda364c756a924c6d8563b/APScheduler-3.11.0-py3-none-any.whl", hash = "sha256:fc134ca32e50f5eadcc4938e3a4545ab19131435e851abb40b34d63d5141c6da", size = 64004 },
+]
+
+[[package]]
 name = "asgiref"
 version = "3.8.1"
 source = { registry = "https://pypi.org/simple" }
@@ -228,6 +240,19 @@ wheels = [
 [package.optional-dependencies]
 resend = [
     { name = "svix" },
+]
+
+[[package]]
+name = "django-apscheduler"
+version = "0.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "apscheduler" },
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/64/6b/873899c2da113187b74f0cccdf4c16660e07bfbbcae72621c4758e0958bf/django_apscheduler-0.7.0.tar.gz", hash = "sha256:30d61a2ba98615922fc2c9782f84bba342ec0c5ed63384d686d71ea90a1a4318", size = 473051 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e0/19/c3d2dea21a6afdc93689b9f769ff3694cac810e4a09c24ab423dd1613e6c/django_apscheduler-0.7.0-py3-none-any.whl", hash = "sha256:869d489775420245c9455d55e35f663c856a33ebfc996d92938f786ffb8730ce", size = 24690 },
 ]
 
 [[package]]
@@ -585,19 +610,6 @@ wheels = [
 ]
 
 [[package]]
-name = "redbird"
-version = "0.7.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pydantic" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4c/12/6cbd6fc135a478ebc77e8ac2dd949a1c503d038a9181881a52c3e4ad6395/redbird-0.7.1.tar.gz", hash = "sha256:9ef1098f2a0e68afe40349475018f7694b05bdf92250772cd8d0126f26de58a9", size = 154874 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b6/47/af2f7054e12d038115adc51073d2ce280ee4f4e368ad5a085eb149504ced/redbird-0.7.1-py3-none-any.whl", hash = "sha256:6a1fe83fa9dfc0c5b9cb256b54376c299c423f2daba7bcbc081a820ff5b3c6c1", size = 60115 },
-]
-
-[[package]]
 name = "requests"
 version = "2.32.3"
 source = { registry = "https://pypi.org/simple" }
@@ -623,20 +635,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/42/f2/05f29bc3913aea15eb670be136045bf5c5bbf4b99ecb839da9b422bb2c85/requests-oauthlib-2.0.0.tar.gz", hash = "sha256:b3dffaebd884d8cd778494369603a9e7b58d29111bf6b41bdc2dcd87203af4e9", size = 55650 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3b/5d/63d4ae3b9daea098d5d6f5da83984853c1bbacd5dc826764b249fe119d24/requests_oauthlib-2.0.0-py2.py3-none-any.whl", hash = "sha256:7dd8a5c40426b779b0868c404bdef9768deccf22749cde15852df527e6269b36", size = 24179 },
-]
-
-[[package]]
-name = "rocketry"
-version = "2.5.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pydantic" },
-    { name = "python-dateutil" },
-    { name = "redbird" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b1/ac/d66cd3d76d4ef6f4a72311e6c8968673104b4057e4c3f210cdb612b48491/rocketry-2.5.1.tar.gz", hash = "sha256:11d1fb3d2856c5b2727bb4814c4f2bfbd2803067eebeac872d34a4c7a6756825", size = 327548 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/23/7a/afeff59c7c1e418633d96e854a1e5c3da9b49cc2ef952fb9bee335d9bed3/rocketry-2.5.1-py3-none-any.whl", hash = "sha256:d8755e909026ba401174218bc0a0958044973244cd07e1405e80f85512440253", size = 216717 },
 ]
 
 [[package]]
@@ -700,6 +698,7 @@ dependencies = [
     { name = "django" },
     { name = "django-allauth", extra = ["mfa", "socialaccount"] },
     { name = "django-anymail", extra = ["resend"] },
+    { name = "django-apscheduler" },
     { name = "django-extensions" },
     { name = "django-htmx" },
     { name = "django-ical" },
@@ -711,7 +710,6 @@ dependencies = [
     { name = "pillow" },
     { name = "psycopg2-binary" },
     { name = "python-dotenv" },
-    { name = "rocketry" },
     { name = "ruff" },
 ]
 
@@ -721,6 +719,7 @@ requires-dist = [
     { name = "django", specifier = ">=5.1.4" },
     { name = "django-allauth", extras = ["mfa", "socialaccount"], specifier = ">=65.3.1" },
     { name = "django-anymail", extras = ["resend"], specifier = ">=12.0" },
+    { name = "django-apscheduler", specifier = ">=0.7.0" },
     { name = "django-extensions", specifier = ">=3.2.3" },
     { name = "django-htmx", specifier = ">=1.21.0" },
     { name = "django-ical", specifier = ">=1.9.2" },
@@ -732,7 +731,6 @@ requires-dist = [
     { name = "pillow", specifier = ">=11.1.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
-    { name = "rocketry", specifier = ">=2.5.1" },
     { name = "ruff", specifier = ">=0.9.1" },
 ]
 
@@ -809,6 +807,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e1/34/943888654477a574a86a98e9896bae89c7aa15078ec29f490fef2f1e5384/tzdata-2024.2.tar.gz", hash = "sha256:7d85cc416e9382e69095b7bdf4afd9e3880418a2413feec7069d533d6b4e31cc", size = 193282 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a6/ab/7e5f53c3b9d14972843a647d8d7a853969a58aecc7559cb3267302c94774/tzdata-2024.2-py2.py3-none-any.whl", hash = "sha256:a48093786cdcde33cad18c2555e8532f34422074448fbc874186f0abd79565cd", size = 346586 },
+]
+
+[[package]]
+name = "tzlocal"
+version = "5.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tzdata", marker = "platform_system == 'Windows'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8b/2e/c14812d3d4d9cd1773c6be938f89e5735a1f11a9f184ac3639b93cef35d5/tzlocal-5.3.1.tar.gz", hash = "sha256:cceffc7edecefea1f595541dbd6e990cb1ea3d19bf01b2809f362a03dd7921fd", size = 30761 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c2/14/e2a54fabd4f08cd7af1c07030603c3356b74da07f7cc056e600436edfa17/tzlocal-5.3.1-py3-none-any.whl", hash = "sha256:eb1a66c3ef5847adf7a834f1be0800581b683b5608e74f86ecbcef8ab91bb85d", size = 18026 },
 ]
 
 [[package]]

@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "template_partials",
     "markdownify",
     "anymail",
+    "django_apscheduler",
     "stave",
 ]
 

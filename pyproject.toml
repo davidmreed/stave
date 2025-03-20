@@ -19,9 +19,9 @@ dependencies = [
     "dj-database-url>=2.3.0",
     "django-ical>=1.9.2",
     "django-anymail[resend]>=12.0",
-    "rocketry>=2.5.1",
     "gunicorn>=23.0.0",
     "psycopg2-binary>=2.9.10",
+    "django-apscheduler>=0.7.0",
 ]
 
 
