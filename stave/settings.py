@@ -13,6 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 DEBUG = os.environ.get("DEBUG") == "True"
 EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "anymail.backends.resend.EmailBackend")
+
 ALLOWED_HOSTS = [
     "stave.app",
     "stave.onrailway.app",
@@ -21,6 +22,7 @@ ALLOWED_HOSTS = [
     "localhost",
 ]
 
+CSRF_TRUSTED_ORIGINS = ["https://*.kcabi3mb.up.railway.app", "https://*.stave.app"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
