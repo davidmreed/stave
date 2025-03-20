@@ -5,30 +5,51 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0023_alter_user_email'),
+        ("stave", "0023_alter_user_email"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='eventtemplate',
-            name='league_template',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='event_templates', to='stave.leaguetemplate'),
+            model_name="eventtemplate",
+            name="league_template",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="event_templates",
+                to="stave.leaguetemplate",
+            ),
         ),
         migrations.AlterField(
-            model_name='gametemplate',
-            name='event_template',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='game_templates', to='stave.eventtemplate'),
+            model_name="gametemplate",
+            name="event_template",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="game_templates",
+                to="stave.eventtemplate",
+            ),
         ),
         migrations.AlterField(
-            model_name='rolegroup',
-            name='league',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='role_groups', to='stave.league'),
+            model_name="rolegroup",
+            name="league",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="role_groups",
+                to="stave.league",
+            ),
         ),
         migrations.AlterField(
-            model_name='rolegroup',
-            name='league_template',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='role_groups', to='stave.leaguetemplate'),
+            model_name="rolegroup",
+            name="league_template",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="role_groups",
+                to="stave.leaguetemplate",
+            ),
         ),
     ]

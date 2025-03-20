@@ -1,9 +1,10 @@
+import copy
 import enum
 import json
 import uuid
 from collections.abc import Iterable
-from datetime import timedelta, datetime
-import copy
+from datetime import datetime, timedelta
+
 from django.contrib.auth.models import AbstractUser, AnonymousUser
 from django.db import models
 from django.db.models import Q

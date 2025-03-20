@@ -5,15 +5,20 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0025_applicationformtemplate_league_template_and_more'),
+        ("stave", "0025_applicationformtemplate_league_template_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='eventtemplate',
-            name='league',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='event_templates', to='stave.league'),
+            model_name="eventtemplate",
+            name="league",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="event_templates",
+                to="stave.league",
+            ),
         ),
     ]

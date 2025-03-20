@@ -4,16 +4,15 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0026_alter_eventtemplate_league'),
+        ("stave", "0026_alter_eventtemplate_league"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='eventtemplate',
-            name='description',
-            field=models.TextField(default=''),
+            model_name="eventtemplate",
+            name="description",
+            field=models.TextField(default=""),
             preserve_default=False,
         ),
     ]

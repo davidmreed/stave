@@ -1,8 +1,9 @@
-from . import models, settings
 from datetime import datetime, timedelta, timezone
-from django.core.mail import EmailMultiAlternatives
 
+from django.core.mail import EmailMultiAlternatives
 from django_apscheduler.util import close_old_connections
+
+from . import models, settings
 
 
 @close_old_connections

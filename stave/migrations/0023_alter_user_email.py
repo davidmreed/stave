@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0022_remove_applicationform_assigned_email_template_and_more'),
+        ("stave", "0022_remove_applicationform_assigned_email_template_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='user',
-            name='email',
+            model_name="user",
+            name="email",
             field=models.CharField(max_length=256),
         ),
     ]

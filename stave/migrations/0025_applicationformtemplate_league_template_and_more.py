@@ -5,48 +5,83 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0024_alter_eventtemplate_league_template_and_more'),
+        ("stave", "0024_alter_eventtemplate_league_template_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='applicationformtemplate',
-            name='league_template',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='application_form_templates', to='stave.leaguetemplate'),
+            model_name="applicationformtemplate",
+            name="league_template",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="application_form_templates",
+                to="stave.leaguetemplate",
+            ),
         ),
         migrations.AddField(
-            model_name='messagetemplate',
-            name='league_template',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='message_templates', to='stave.leaguetemplate'),
+            model_name="messagetemplate",
+            name="league_template",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="message_templates",
+                to="stave.leaguetemplate",
+            ),
         ),
         migrations.AlterField(
-            model_name='applicationformtemplate',
-            name='league',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='application_form_templates', to='stave.league'),
+            model_name="applicationformtemplate",
+            name="league",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="application_form_templates",
+                to="stave.league",
+            ),
         ),
         migrations.AlterField(
-            model_name='gametemplate',
-            name='end_time',
+            model_name="gametemplate",
+            name="end_time",
             field=models.TimeField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='gametemplate',
-            name='start_time',
+            model_name="gametemplate",
+            name="start_time",
             field=models.TimeField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='messagetemplate',
-            name='league',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='message_templates', to='stave.league'),
+            model_name="messagetemplate",
+            name="league",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="message_templates",
+                to="stave.league",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='applicationformtemplate',
-            constraint=models.CheckConstraint(condition=models.Q(('league__isnull', True), ('league_template__isnull', True), _connector='XOR'), name='either_league_or_league_template_app_form_template'),
+            model_name="applicationformtemplate",
+            constraint=models.CheckConstraint(
+                condition=models.Q(
+                    ("league__isnull", True),
+                    ("league_template__isnull", True),
+                    _connector="XOR",
+                ),
+                name="either_league_or_league_template_app_form_template",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='messagetemplate',
-            constraint=models.CheckConstraint(condition=models.Q(('league__isnull', True), ('league_template__isnull', True), _connector='XOR'), name='messagetemplate_either_league_or_league_template'),
+            model_name="messagetemplate",
+            constraint=models.CheckConstraint(
+                condition=models.Q(
+                    ("league__isnull", True),
+                    ("league_template__isnull", True),
+                    _connector="XOR",
+                ),
+                name="messagetemplate_either_league_or_league_template",
+            ),
         ),
     ]
