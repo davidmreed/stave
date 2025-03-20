@@ -51,7 +51,7 @@ class Command(BaseCommand):
         logger.info("Added job 'send_emails'.")
 
         _ = scheduler.add_job(
-            jobs.update_event_statuses(),
+            jobs.update_event_statuses,
             trigger=CronTrigger(hour="*"),
             id="update_event_statuses",
             max_instances=1,
