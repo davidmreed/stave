@@ -32,7 +32,7 @@ def send_emails():
 @close_old_connections
 def delete_old_messages():
     _ = models.Message.objects.filter(
-        sent=True, send_date__leq=datetime.now(tz=timezone.utc) - timedelta(days=7)
+        sent=True, send_date__lte=datetime.now(tz=timezone.utc) - timedelta(days=7)
     ).delete()
 
 
@@ -41,10 +41,10 @@ def update_event_statuses():
     # These are date-based, not hour-based - TODO
     _ = models.Event.objects.filter(
         status__in=[models.EventStatus.LINK_ONLY, models.EventStatus.OPEN],
-        start_date__leq=datetime.now(tz=timezone.utc),
+        start_date__lte=datetime.now(tz=timezone.utc),
     ).update(status=models.EventStatus.IN_PROGRESS)
 
     _ = models.Event.objects.filter(
         status=models.EventStatus.IN_PROGRESS,
-        end_date__leq=datetime.now(tz=timezone.utc),
+        end_date__lte=datetime.now(tz=timezone.utc),
     ).update(status=models.EventStatus.COMPLETE)
