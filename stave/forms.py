@@ -38,7 +38,10 @@ class QuestionForm(forms.ModelForm):
         widget=forms.Textarea(attrs={"rows": 5}),
         help_text=_("Enter each option on a separate line"),
     )
-    allow_other = forms.BooleanField(required=False)
+    allow_other = forms.BooleanField(
+        required=False,
+        help_text=_('Allow the user to choose "Other" and enter a custom response.'),
+    )
     kind: models.QuestionKind
 
     def __init__(self, *args, **kwargs):
