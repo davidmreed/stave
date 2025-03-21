@@ -126,9 +126,9 @@ class EventCreateView(
             slug=self.kwargs.get("league"),
         )
         self.selected_template = None
-        if "template_id" in request.POST:
+        if template_id := request.POST.get("template_id"):
             self.selected_template = get_object_or_404(
-                self.league.event_templates.all(), pk=request.POST["template_id"]
+                self.league.event_templates.all(), pk=template_id
             )
 
     def get_form_class(self) -> type:
