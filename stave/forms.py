@@ -122,9 +122,13 @@ class ApplicationFormForm(forms.ModelForm):
         ]
         widgets = {"role_groups": forms.CheckboxSelectMultiple}
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, event: models.Event | None = None, *args, **kwargs):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
+        if event:
+            self.fields["role_groups"].queryset = event.role_groups.all()
+        elif self.instance:
+            self.fields["role_groups"].queryset = self.instance.role_groups.all()
 
 
 class LeagueForm(forms.ModelForm):

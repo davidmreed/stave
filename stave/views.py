@@ -371,7 +371,7 @@ class FormCreateView(LoginRequiredMixin, views.View):
             league__slug=league,
             slug=event,
         )
-        app_form_form = forms.ApplicationFormForm()
+        app_form_form = forms.ApplicationFormForm(event=event_)
         question_formset = forms.QuestionFormSet(
             queryset=models.Question.objects.none()
         )
@@ -397,7 +397,7 @@ class FormCreateView(LoginRequiredMixin, views.View):
             slug=event,
         )
 
-        app_form_form = forms.ApplicationFormForm(request.POST)
+        app_form_form = forms.ApplicationFormForm(event=event_, request.POST)
         question_formset = forms.QuestionFormSet(request.POST)
 
         # TODO: implement Save and Continue
