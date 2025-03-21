@@ -46,7 +46,7 @@
 - User confirmation
 
 + Templates
-- Cron jobs (post MVP?)
++ Cron jobs (post MVP?)
 - Disable availability options for single-game events
 
 - Allow for multiple tracks - simultaneous games - assess availability with potential time overlap
@@ -60,5 +60,5 @@
 - Final security checks
 - Timezone setup
 
-- Build Docker image
-- Launch on railway
++ Build Docker image
++ Launch on railway
