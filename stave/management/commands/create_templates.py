@@ -4,10 +4,10 @@ from stave import models
 
 
 def create_templates() -> models.LeagueTemplate:
-    league_template = models.LeagueTemplate.objects.create(
+    league_template = models.LeagueTemplate.objects.get_or_create(
         name="Roller Derby League",
         description="Basic setup for a roller derby league, including templates for single and doubleheaders and a multi-day tournament",
-    )
+    )[0]
     role_group_nso = models.RoleGroup.objects.get_or_create(
         name="NSO", league_template=league_template
     )[0]
