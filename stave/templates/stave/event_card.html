@@ -1,10 +1,10 @@
 {% load stave_tags %}
-{% inputs 'EventDetailInputs' %}
+{% inputs 'EventCardInputs' %}
 
 <article>
 <header>
     <h4 style>{{ event.name }}</h4>
-    {% if request.user|can_manage_event:event %}
+    {% if user|can_manage_event:event %}
     <a href="{% url 'event-edit' event.league.slug event.slug %}" role="button">Edit</a>
     <a href="{% url 'game-create' event.league.slug event.slug %}" role="button">Create Game</a>
     <a href="{% url 'form-create' event.league.slug event.slug %}" role="button">Create Form</a>
@@ -64,7 +64,7 @@
     {% for form in application_forms %}
     <li>{{ form.role_groups.all|commalist }}
     <a href="{% url 'application-form' event.league.slug event.slug form.slug %}">View Form</a>
-    {% if request.user|can_manage_event:event %}
+    {% if user|can_manage_event:event %}
     <a href="{% url 'form-applications' event.league.slug event.slug form.slug %}">View Applications</a>
     <a href="{% url 'crew-builder' event.league.slug event.slug form.slug %}">Crew Builder</a>
     {% endif %}

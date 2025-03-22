@@ -99,7 +99,7 @@ class EventDetailView(
             event=self.get_object(),
             application_forms=models.ApplicationForm.objects.listed(
                 self.request.user
-            ).filter(event=event),
+            ).filter(event=self.get_object()),
         )
 
     def get_queryset(self) -> QuerySet[models.Event]:

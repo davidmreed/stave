@@ -2,6 +2,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any, Type
 
 from django import template
+from django.db.models import QuerySet
 
 from stave.templates.stave import contexts
 
@@ -55,6 +56,13 @@ def can_manage_event(user: models.User, event: models.Event) -> bool:
             permission=models.UserPermission.EVENT_MANAGER,
         ).exists()
     return False
+
+
+@register.filter
+def listed_application_forms(
+    user: models.User, event: models.Event
+) -> QuerySet[models.ApplicationForm]:
+    return models.ApplicationForm.objects.listed(user).filter(event=event)
 
 
 @register.filter

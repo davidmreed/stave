@@ -3,9 +3,7 @@
 {% block content %}
 <h1>Events</h1>
 {% for event in event_list %}
-{% with show_host=True show_details=True %}
-{% include "stave/event_card.html" %}
-{% endwith %}
+{% include "stave/event_card.html" with user=request.user event=event application_forms=None show_host=True show_details=True show_games=False show_forms=False only %}
 {% endfor %}
 
 {% endblock %}

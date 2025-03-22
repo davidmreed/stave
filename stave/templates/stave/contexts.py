@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
+from django.contrib.auth.models import AnonymousUser
 from django.db.models import QuerySet
 from django.http import HttpRequest
 
@@ -97,4 +98,13 @@ class TemplateSelectorInputs:
 @dataclass
 class EventDetailInputs:
     event: models.Event
-    application_forms: QuerySet[models.ApplicationForm]
+    application_forms: QuerySet[models.ApplicationForm] | None
+
+
+@dataclass
+class EventCardInputs(EventDetailInputs):
+    user: models.User | AnonymousUser
+    show_host: bool
+    show_details: bool
+    show_forms: bool
+    show_games: bool
