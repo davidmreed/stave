@@ -131,7 +131,7 @@ class ApplicationFormForm(forms.ModelForm):
         if event:
             self.fields["role_groups"].queryset = event.role_groups.all()
         elif self.instance:
-            self.fields["role_groups"].queryset = self.instance.role_groups.all()
+            self.fields["role_groups"].queryset = self.instance.event.role_groups.all()
 
 
 class LeagueForm(forms.ModelForm):

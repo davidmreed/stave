@@ -236,7 +236,9 @@
 {% endwith %}
 </div>
 {% endfor %}
+{% if form.form_questions.all %}
 <hr>
+{% endif %}
 <input type="submit" {% if not editable %} disabled {% endif %} value="Submit">
 </form>
 {% endblock %}

@@ -298,7 +298,8 @@ class EventTemplate(models.Model):
     description = models.TextField()
     role_groups: models.ManyToManyField["EventTemplate", RoleGroup] = (
         models.ManyToManyField(RoleGroup, blank=True)
-    )
+    )  # TODO: validate that Role Groups are associated to the same
+    # League or League Template we are.
     days = models.IntegerField()
     location = models.TextField(blank=True, null=True)
 
@@ -365,6 +366,9 @@ class GameTemplate(models.Model):
     role_groups: models.ManyToManyField["GameTemplate", RoleGroup] = (
         models.ManyToManyField(RoleGroup, blank=True)
     )
+    # TODO: validate that Role Groups have the same League as we do.
+    # TODO: validate that Role Groups assigned to us are a strict subset
+    # of those assigned to our Event
 
     def clone_as_template(
         self, event_template: EventTemplate, role_group_map: dict[uuid.UUID, uuid.UUID]
@@ -420,9 +424,11 @@ class Crew(models.Model):
     role_group = models.ForeignKey(
         RoleGroup, related_name="crews", on_delete=models.CASCADE
     )
+    # TODO: validate that our Role Group is also assigned to our Event.
     kind = models.IntegerField(
         choices=CrewKind.choices, blank=False, null=False, default=CrewKind.GAME_CREW
     )
+    # TODO: validate that this field is consistent with our other data.
 
     assignments: models.Manager["CrewAssignment"]
     event_role_group_assignments: models.Manager["EventRoleGroupCrewAssignment"]
@@ -453,6 +459,7 @@ class CrewAssignment(models.Model):
     role = models.ForeignKey(
         Role, related_name="crew_assignments", on_delete=models.CASCADE
     )
+    # TODO: validate that our Role is a member of the Role Group for our Crew
     assignment_sent = models.BooleanField(default=False)
 
     class Meta:
@@ -522,6 +529,7 @@ class Event(models.Model):
     role_groups: models.ManyToManyField["Event", RoleGroup] = models.ManyToManyField(
         RoleGroup, blank=True
     )
+    # TODO: validate that our Role Groups are assigned to our League
     name = models.CharField(max_length=256)
     slug = models.SlugField(
         help_text=_(
@@ -580,7 +588,7 @@ class EventRoleGroupCrewAssignment(models.Model):
 
         return super().save(*args, **kwargs)
 
-    class Meta:
+    class Meta:  # TODO: enforce validation
         constraints = [
             # models.CheckConstraint(condition=Q(crew__event=F("event")), name="crew_must_match_event"),
             # models.CheckConstraint(condition=Q(role_group__in=F("event__role_groups")), name="role_group_must_be_assigned_to_event")

@@ -327,7 +327,7 @@ class Command(BaseCommand):
             start_date=date(2218, 3, 20),
             end_date=date(2218, 3, 20),
         )
-
+        singleheader.role_groups.set([role_group_so, role_group_nso])
         singleheader_game = models.Game.objects.create(
             event=singleheader,
             name="Game",
