@@ -397,7 +397,7 @@ class FormCreateView(LoginRequiredMixin, views.View):
             slug=event,
         )
 
-        app_form_form = forms.ApplicationFormForm(event=event_, request.POST)
+        app_form_form = forms.ApplicationFormForm(event=event_, data=request.POST)
         question_formset = forms.QuestionFormSet(request.POST)
 
         # TODO: implement Save and Continue
