@@ -92,3 +92,9 @@ class TemplateSelectorInputs:
     object_type: str
     selected_template: models.LeagueTemplate | models.EventTemplate | None
     require_template_selection_first: bool
+
+
+@dataclass
+class EventDetailInputs:
+    event: models.Event
+    application_forms: QuerySet[models.ApplicationForm]

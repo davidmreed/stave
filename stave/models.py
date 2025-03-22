@@ -872,22 +872,49 @@ class ApplicationFormTemplate(models.Model):
 
 
 class ApplicationFormManager(models.Manager["ApplicationForm"]):
-    def open(self) -> models.QuerySet["ApplicationForm"]:
-        return self.filter(
-            closed=False,
-            hidden=False,
-            event__status=EventStatus.OPEN,
+    def listed(self, user: User | AnonymousUser) -> models.QuerySet["ApplicationForm"]:
+        """ApplicationForms that are listed on the homepage and other timelines"""
+        return (
+            self.manageable(user)
+            | self.filter(
+                closed=False,
+                hidden=False,
+                event__status=EventStatus.OPEN,
+                event__league__enabled=True,
+            )
         ).order_by("close_date", "event__start_date")  # TODO: make this a CASE()
 
-    def manageable(self, user: User) -> models.QuerySet["ApplicationForm"]:
-        return (
-            self.filter(
-                event__league__user_permissions__permission=UserPermission.EVENT_MANAGER,
-                event__league__user_permissions__user=user,
+    def accessible(
+        self, user: User | AnonymousUser
+    ) -> models.QuerySet["ApplicationForm"]:
+        """ApplicationForms that can be accessed by a user who knows the URL"""
+        return self.filter(
+            event__league__enabled=True,
+        ).exclude(event__status=EventStatus.DRAFTING) | self.manageable(user)
+
+    def submittable(
+        self, user: User | AnonymousUser
+    ) -> models.QuerySet["ApplicationForm"]:
+        return self.filter(
+            closed=False,
+            event__status__in=[EventStatus.OPEN, EventStatus.LINK_ONLY],
+            event__league__enabled=True,
+        ) | self.manageable(user)
+
+    def manageable(
+        self, user: User | AnonymousUser
+    ) -> models.QuerySet["ApplicationForm"]:
+        if isinstance(user, AnonymousUser):
+            return self.none()
+        else:
+            return (
+                self.filter(
+                    event__league__user_permissions__permission=UserPermission.EVENT_MANAGER,
+                    event__league__user_permissions__user=user,
+                )
+                .distinct()
+                .exclude(event__status__in=[EventStatus.CANCELED, EventStatus.COMPLETE])
             )
-            .distinct()
-            .exclude(event__status__in=[EventStatus.CANCELED, EventStatus.COMPLETE])
-        )
 
 
 class SendEmailContextType(enum.Enum):

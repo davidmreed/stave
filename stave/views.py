@@ -63,7 +63,7 @@ class HomeView(generic.TemplateView):
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
 
-        application_forms = models.ApplicationForm.objects.open()
+        application_forms = models.ApplicationForm.objects.listed(self.request.user)
         if self.request.user.is_authenticated:
             application_forms = application_forms.exclude(
                 applications__user=self.request.user
@@ -87,10 +87,20 @@ class HomeView(generic.TemplateView):
         return context
 
 
-class EventDetailView(generic.DetailView):
+class EventDetailView(
+    TypedContextMixin[contexts.EventDetailInputs], generic.DetailView
+):
     template_name = "stave/event_detail.html"
     model = models.Event
     slug_url_kwarg = "event"
+
+    def get_context(self) -> contexts.EventDetailInputs:
+        return contexts.EventDetailInputs(
+            event=self.get_object(),
+            application_forms=models.ApplicationForm.objects.listed(
+                self.request.user
+            ).filter(event=event),
+        )
 
     def get_queryset(self) -> QuerySet[models.Event]:
         return models.Event.objects.visible(user=self.request.user).filter(
@@ -770,7 +780,7 @@ class ApplicationFormView(views.View):
         self, request: HttpRequest, application_form: str, event: str, league: str
     ) -> HttpResponse:
         form = get_object_or_404(
-            models.ApplicationForm,
+            models.ApplicationForm.objects.accessible(request.user),
             slug=application_form,
             event__slug=event,
             event__league__slug=league,
@@ -803,7 +813,10 @@ class ApplicationFormView(views.View):
             if request.user.is_authenticated
             else {},
             responses_by_id={},
-            editable=request.user.is_authenticated,
+            editable=request.user.is_authenticated
+            and models.ApplicationForm.objects.submittable(request.user)
+            .filter(id=form.id)
+            .exists(),
         )
 
         return render(request, "stave/view_application.html", asdict(context))
@@ -812,13 +825,14 @@ class ApplicationFormView(views.View):
         self, request: HttpRequest, application_form: str, event: str, league: str
     ) -> HttpResponse:
         # TODO: if this is an edit to an existing application, replace data.
-        # TODO: enforce authentication
-        # FIXME
         app = None
+
+        if not request.user.is_authenticated:
+            return HttpResponseBadRequest("login first")  # TODO
 
         with transaction.atomic():
             form: models.ApplicationForm = get_object_or_404(
-                models.ApplicationForm.objects.open(),
+                models.ApplicationForm.objects.submittable(request.user),
                 slug=application_form,
                 event__slug=event,
                 event__league__slug=league,
@@ -832,7 +846,7 @@ class ApplicationFormView(views.View):
                 instance=request.user, prefix="profile", data=request.POST
             )
             if not profile_form.is_valid():
-                return HttpResponseBadRequest("bad profile")
+                return HttpResponseBadRequest("bad profile")  # TODO
 
             profile_form.save()
 

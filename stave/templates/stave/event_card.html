@@ -1,4 +1,5 @@
 {% load stave_tags %}
+{% inputs 'EventDetailinputs' %}
 
 <article>
 <header>
@@ -60,7 +61,7 @@
         <h5>Application Forms</h5>
     </header>
     <ul>
-{% for form in event.application_forms.all %}
+    {% for form in application_forms %}
     <li>{{ form.role_groups.all|commalist }}
     <a href="{% url 'application-form' event.league.slug event.slug form.slug %}">View Form</a>
     {% if request.user|can_manage_event:event %}
