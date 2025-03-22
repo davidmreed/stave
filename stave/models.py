@@ -881,7 +881,7 @@ class ApplicationFormManager(models.Manager["ApplicationForm"]):
                 hidden=False,
                 event__status=EventStatus.OPEN,
                 event__league__enabled=True,
-            )
+            ).distinct()
         ).order_by("close_date", "event__start_date")  # TODO: make this a CASE()
 
     def accessible(
@@ -890,7 +890,7 @@ class ApplicationFormManager(models.Manager["ApplicationForm"]):
         """ApplicationForms that can be accessed by a user who knows the URL"""
         return self.filter(
             event__league__enabled=True,
-        ).exclude(event__status=EventStatus.DRAFTING) | self.manageable(user)
+        ).exclude(event__status=EventStatus.DRAFTING).distinct() | self.manageable(user)
 
     def submittable(
         self, user: User | AnonymousUser
@@ -899,7 +899,7 @@ class ApplicationFormManager(models.Manager["ApplicationForm"]):
             closed=False,
             event__status__in=[EventStatus.OPEN, EventStatus.LINK_ONLY],
             event__league__enabled=True,
-        ) | self.manageable(user)
+        ).distinct() | self.manageable(user)
 
     def manageable(
         self, user: User | AnonymousUser
