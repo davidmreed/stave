@@ -170,7 +170,7 @@ class EventForm(forms.ModelForm):
         if league:
             self.fields["role_groups"].queryset = league.role_groups.all()
         elif self.instance:
-            self.fields["role_groups"].queryset = self.instance.role_groups.all()
+            self.fields["role_groups"].queryset = self.instance.league.role_groups.all()
 
 
 class EventFromTemplateForm(forms.ModelForm):
