@@ -19,10 +19,10 @@
     <hr>
     {% endfor %}
     <div>
-        <input type="submit" formaction="{{ url_base }}/{{ QuestionKind.SHORT_TEXT }}" formnovalidate value="Add Short Text">
-        <input type="submit" formaction="{{ url_base }}/{{ QuestionKind.LONG_TEXT }}" formnovalidate value="Add Long Text">
-        <input type="submit" formaction="{{ url_base }}/{{ QuestionKind.SELECT_ONE }}" formnovalidate value="Add Single Choice">
-        <input type="submit" formaction="{{ url_base }}/{{ QuestionKind.SELECT_MANY }}" formnovalidate value="Add Multiple Choice">
+        <input type="submit" formaction="{{ url_base }}{{ QuestionKind.SHORT_TEXT }}" formnovalidate value="Add Short Text">
+        <input type="submit" formaction="{{ url_base }}{{ QuestionKind.LONG_TEXT }}" formnovalidate value="Add Long Text">
+        <input type="submit" formaction="{{ url_base }}{{ QuestionKind.SELECT_ONE }}" formnovalidate value="Add Single Choice">
+        <input type="submit" formaction="{{ url_base }}{{ QuestionKind.SELECT_MANY }}" formnovalidate value="Add Multiple Choice">
     </div>
     <hr>
     <input type="submit" value="Save" method="POST">

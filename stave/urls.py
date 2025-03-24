@@ -28,12 +28,12 @@ urlpatterns = [
         name="event-detail",
     ),
     path(
-        "_/<slug:league>/events/<slug:event>/edit",
+        "_/<slug:league>/events/<slug:event>/edit/",
         view=views.EventUpdateView.as_view(),
         name="event-edit",
     ),
     path(
-        "_/<slug:league_slug>/events/<slug:event_slug>/games/<uuid:pk>",
+        "_/<slug:league_slug>/events/<slug:event_slug>/games/<uuid:pk>/",
         view=views.GameUpdateView.as_view(),
         name="game-edit",
     ),
@@ -43,17 +43,17 @@ urlpatterns = [
         name="game-create",
     ),
     path(
-        "_/<slug:league_slug>/events/<slug:event_slug>/create-form/<int:kind>",
+        "_/<slug:league_slug>/events/<slug:event_slug>/create-form/<int:kind>/",
         views.FormCreateUpdateView.as_view(),
         name="form-create-question",
     ),
     path(
-        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/edit",
+        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/edit/",
         views.FormCreateUpdateView.as_view(),
         name="form-update",
     ),
     path(
-        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/edit/<int:kind>",
+        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/edit/<int:kind>/",
         views.FormCreateUpdateView.as_view(),
         name="form-update-question",
     ),
