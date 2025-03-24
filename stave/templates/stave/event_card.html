@@ -7,8 +7,6 @@
     {% if user|can_manage_event:event %}
     <div class="header-buttons">
     <a href="{% url 'event-edit' event.league.slug event.slug %}" role="button">Edit Event</a>
-    <a href="{% url 'game-create' event.league.slug event.slug %}" role="button">Create Game</a>
-    <a href="{% url 'form-create' event.league.slug event.slug %}" role="button">Create Form</a>
     </div>
     {% endif %}
 </header>
@@ -61,6 +59,9 @@
     {% if show_forms %}
     <header>
         <h5>Application Forms</h5>
+        <div class="header-buttons">
+            <a href="{% url 'form-create' event.league.slug event.slug %}" role="button">Create Form</a>
+        </div>
     </header>
     {% for form in application_forms %}
     <h6>{{ form.role_groups.all|commalist }}</h6>
@@ -69,16 +70,23 @@
     <a href="{% url 'form-applications' event.league.slug event.slug form.slug %}">Applications</a>
     <a href="{% url 'crew-builder' event.league.slug event.slug form.slug %}">Crew Builder</a>
     {% endif %}
+    {% empty %}
+    No application forms are currently open.
 {% endfor %}
 {% endif %}
 
-{% if show_games and event.games.all|length > 1 %}
+{% if show_games and event.games.all|length != 1 %}
 <header>
     <h5>Games</h5>
+    <div class="header-buttons">
+        <a href="{% url 'game-create' event.league.slug event.slug %}" role="button">Create Game</a>
+    </div>
 </header>
     {% for game in event.games.all %}
     <h6>Game {{ game.order_key }} ({{game.start_time|time}}&ndash;{{game.end_time|time}})</h6>
     <a role="button" href="{% url 'game-edit' event.league.slug event.slug game.id %}">Edit</a>
+    {% empty %}
+    No games scheduled yet.
     {% endfor %}
 {% endif %}
 
