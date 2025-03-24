@@ -105,22 +105,18 @@ Crew: {{ rgca.crew }}
 <form class="inline" action="{% url 'set-game-crew' form.event.league.slug form.event.slug form.slug game.id role_group.id %}" method="POST">
     {% csrf_token %}
     <input type="hidden" name="redirect_url" value="{{ request.path }}">
-    <div role="group">
     <input type="submit" value="Unassign">
-    </div>
 </form>
 {% elif static_crews|get:role_group_id %}
 Assign:
 <form class="inline" action="" method="POST">
     {% csrf_token %}
     <input type="hidden" name="redirect_url" value="{{ request.path }}">
-<div role="group">
 {% for static_crew in static_crews|get:role_group_id %}
     <input type="submit"
            formaction="{% url 'set-game-crew' form.event.league.slug form.event.slug form.slug game.id role_group.id static_crew.id %}"
            value="{{ static_crew }}">
 {% endfor %}
-</div>
 </form>
 {% endif %}
 </div>

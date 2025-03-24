@@ -17,8 +17,7 @@
         <nav style="display: flex; flex-direction: row; justify-content: space-between; width: 100%;">
             <div>
             <ul>
-                <li><strong>Stave</strong> <small>for Roller Derby</small></li>
-                <li><a href="{% url 'home' %}">Home</a></li>
+                <li><a href="{% url 'home' %}"><strong>Stave</strong></a> <small>for Roller Derby</small></li>
                 <li><a href="{% url 'league-list' %}">Leagues</a></li>
                 <li><a href="{% url 'event-list' %}">Events</a></li>
             </ul>
@@ -26,7 +25,6 @@
             <div>
                 <ul>
                 {% if request.user.is_authenticated %}
-                <li><small>{{ request.user.preferred_name }}</small></li>
                 <li><a href="{% url 'my-applications' %}">My Applications</a></li>
                 <li><a href="{% url 'profile' %}">My Account</a></li>
                 <li><a href="{% url 'account_logout' %}">Logout</a></li>

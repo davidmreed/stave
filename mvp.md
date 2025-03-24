@@ -10,18 +10,11 @@
   + Edit + update profile data inline
   - Elide role selection if there is exactly one Role Group & Role in scope
 
-+ League page
-  + Basic data, link, logo
-
-+ Crew Builder
-  + Static crews
-  + Assign static crew to game
-  + Manage single game staffing
-
 + Authentication
   + One authenticated role - staff manager
     + Crew Builder
     + Apps viewer
+  - Mark roles as eligible to manage their forms.
 
 - Notifications
   - Email sending on status changes
@@ -47,6 +40,8 @@
 
 + Templates
 + Cron jobs (post MVP?)
+- Auto-close forms on a given date.
+- Auto-send emails on close date or other date
 - Disable availability options for single-game events
 
 - Allow for multiple tracks - simultaneous games - assess availability with potential time overlap
@@ -57,8 +52,8 @@
 - Invite users by email
 - Manually create/assign users with confirmation flow
 
-- Final security checks
 - Timezone setup
-
-+ Build Docker image
-+ Launch on railway
+- Fix app form to use actual Django Forms + harden.
+- Make the base layout and homepage work on mobile
+- About page
+- Privacy policy

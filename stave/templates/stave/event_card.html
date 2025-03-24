@@ -5,9 +5,11 @@
 <header>
     <h4 style>{{ event.name }}</h4>
     {% if user|can_manage_event:event %}
-    <a href="{% url 'event-edit' event.league.slug event.slug %}" role="button">Edit</a>
+    <div class="header-buttons">
+    <a href="{% url 'event-edit' event.league.slug event.slug %}" role="button">Edit Event</a>
     <a href="{% url 'game-create' event.league.slug event.slug %}" role="button">Create Game</a>
     <a href="{% url 'form-create' event.league.slug event.slug %}" role="button">Create Form</a>
+    </div>
     {% endif %}
 </header>
 
@@ -60,26 +62,23 @@
     <header>
         <h5>Application Forms</h5>
     </header>
-    <ul>
     {% for form in application_forms %}
-    <li>{{ form.role_groups.all|commalist }}
-    <a href="{% url 'application-form' event.league.slug event.slug form.slug %}">View Form</a>
+    <h6>{{ form.role_groups.all|commalist }}</h6>
+    <a href="{% url 'application-form' event.league.slug event.slug form.slug %}">Form</a>
     {% if user|can_manage_event:event %}
-    <a href="{% url 'form-applications' event.league.slug event.slug form.slug %}">View Applications</a>
+    <a href="{% url 'form-applications' event.league.slug event.slug form.slug %}">Applications</a>
     <a href="{% url 'crew-builder' event.league.slug event.slug form.slug %}">Crew Builder</a>
     {% endif %}
-    </li>
 {% endfor %}
-    </ul>
 {% endif %}
 
 {% if show_games and event.games.all|length > 1 %}
 <header>
     <h5>Games</h5>
 </header>
-<ul>
     {% for game in event.games.all %}
-    <li>Game {{ game.order_key }} ({{game.start_time|time}}&ndash;{{game.end_time|time}}) <a role="button" href="{% url 'game-edit' event.league.slug event.slug game.id %}">Edit</a>
+    <h6>Game {{ game.order_key }} ({{game.start_time|time}}&ndash;{{game.end_time|time}})</h6>
+    <a role="button" href="{% url 'game-edit' event.league.slug event.slug game.id %}">Edit</a>
     {% endfor %}
 {% endif %}
 
