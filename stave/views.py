@@ -550,7 +550,7 @@ class FormApplicationsView(
             invited_unsent_count=len(
                 [
                     a
-                    for a in applications[models.ApplicationStatus.INVITED]
+                    for a in applications.get(models.ApplicationStatus.INVITED, [])
                     if not a.invitation_email_sent
                 ],
             ),
