@@ -5,10 +5,18 @@ import dj_database_url
 import django_stubs_ext
 import dotenv
 
+import sentry_sdk
+
 django_stubs_ext.monkeypatch()
 
 _ = dotenv.load_dotenv()
 
+_ = sentry_sdk.init(
+    dsn=os.environ.get("SENTRY_DSN"),
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+)
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 DEBUG = os.environ.get("DEBUG") == "True"

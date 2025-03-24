@@ -57,3 +57,4 @@
 + Make the base layout and homepage work on mobile
 - About page
 - Privacy policy
+- set up Sentry

@@ -23,6 +23,7 @@ dependencies = [
     "psycopg2-binary>=2.9.10",
     "django-apscheduler>=0.7.0",
     "whitenoise>=6.9.0",
+    "sentry-sdk[django]>=2.24.0",
 ]
 
 
