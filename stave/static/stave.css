@@ -11,6 +11,7 @@ article h1, h2, h3, h4, h5, h6 {
 
 header a[role=button] {
     padding: 0.25rem;
+    margin-left:0.25rem;
     align-content: center;
     height: 80%;
     vertical-align: middle;
@@ -36,6 +37,10 @@ fieldset legend {
 
 body header nav {
     border-bottom: 0.25rem solid var(--pico-primary);
+}
+
+td.highlighted-cell {
+    background-color: rgb(from var(--pico-primary) r g b / 0.1);
 }
 
 dl {
@@ -67,18 +72,6 @@ a {
     font-size: 60%;
     margin-bottom: 0.25rem;
     /* TODO: update template to just use <small> */
-}
-/* FIXME: this doesn't work */
-td div[role=group] input {
-    font-size: 100%;
-    padding: 0.25rem;
-}
-
-td div[role=group] a {
-    font-size: 100%;
-    padding: 0.25rem;
-    vertical-align: middle;
-    font-weight: bold;
 }
 
 .disabled-warning {

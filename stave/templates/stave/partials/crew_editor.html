@@ -11,7 +11,7 @@
 {% for role in role_group.roles.all %}
 <tr>
     <td>{{ role.name }}</td>
-    <td>
+    <td {% if role.id not in crew_assignments %}class="highlighted-cell"{% endif %}>
         {% if role.id in crew_assignments %}
         {% with crew_assignments|get:role.id as assignment %}
         {{ assignment.user.preferred_name }}
