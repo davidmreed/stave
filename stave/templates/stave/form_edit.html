@@ -4,7 +4,7 @@
 <header>
     <h1>Application Form for {{ event }}</h1>
 </header>
-<form method="post" action="{% url 'form-create' event.league.slug event.slug %}">
+<form method="post" action="{{ url_base }}">
     {% csrf_token %}
     {{ form }}
     <hr>
@@ -18,14 +18,13 @@
     </div>
     <hr>
     {% endfor %}
-    <div role="group">
-        <input type="submit" formaction="{% url 'form-create-question' event.league.slug event.slug QuestionKind.SHORT_TEXT %}" formnovalidate value="Add Short Text">
-        <input type="submit" formaction="{% url 'form-create-question' event.league.slug event.slug QuestionKind.LONG_TEXT %}" formnovalidate value="Add Long Text">
-        <input type="submit" formaction="{% url 'form-create-question' event.league.slug event.slug QuestionKind.SELECT_ONE %}" formnovalidate value="Add Single Choice">
-        <input type="submit" formaction="{% url 'form-create-question' event.league.slug event.slug QuestionKind.SELECT_MANY %}" formnovalidate value="Add Multiple Choice">
+    <div>
+        <input type="submit" formaction="{{ url_base }}/{{ QuestionKind.SHORT_TEXT }}" formnovalidate value="Add Short Text">
+        <input type="submit" formaction="{{ url_base }}/{{ QuestionKind.LONG_TEXT }}" formnovalidate value="Add Long Text">
+        <input type="submit" formaction="{{ url_base }}/{{ QuestionKind.SELECT_ONE }}" formnovalidate value="Add Single Choice">
+        <input type="submit" formaction="{{ url_base }}/{{ QuestionKind.SELECT_MANY }}" formnovalidate value="Add Multiple Choice">
     </div>
     <hr>
-    <input type="submit" value="Save">
-    <input type="submit" value="Save and Continue Editing">
+    <input type="submit" value="Save" method="POST">
 </form>
 {% endblock %}

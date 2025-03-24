@@ -349,123 +349,133 @@ class EventListView(generic.ListView):
         return models.Event.objects.visible(self.request.user)
 
 
-class FormUpdateView(LoginRequiredMixin, views.View):
+class FormCreateUpdateView(LoginRequiredMixin, views.View):
     def get(
-        self, request: HttpRequest, league_slug: str, event_slug: str, form_slug: str
+        self,
+        request: HttpRequest,
+        league_slug: str,
+        event_slug: str,
+        form_slug: str | None = None,
     ) -> HttpResponse:
-        form = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user),
-            slug=form_slug,
-            event__slug=event_slug,
-            event__league__slug=league_slug,
-        )
-        app_form_form = forms.ApplicationFormForm(instance=form)
-        question_formset = forms.QuestionFormSet(queryset=form.form_questions.all())
-
-        return render(
-            request,
-            "stave/form_edit.html",
-            context={
-                "form": app_form_form,
-                "event": form.event,
-                "question_formset": question_formset,
-                "QuestionKind": models.QuestionKind,
-            },
-        )
-
-
-class FormCreateView(LoginRequiredMixin, views.View):
-    def get(self, request: HttpRequest, league: str, event: str) -> HttpResponse:
-        event_ = get_object_or_404(
+        event = get_object_or_404(
             models.Event.objects.manageable(request.user),
-            league__slug=league,
-            slug=event,
+            league__slug=league_slug,
+            slug=event_slug,
         )
-        app_form_form = forms.ApplicationFormForm(event=event_)
-        question_formset = forms.QuestionFormSet(
-            queryset=models.Question.objects.none()
-        )
+
+        form = None
+        question_queryset = models.Question.objects.none()
+        if form_slug:
+            form = get_object_or_404(
+                models.ApplicationForm.objects.manageable(request.user),
+                slug=form_slug,
+                event__slug=event_slug,
+                event__league__slug=league_slug,
+            )
+            question_queryset = form.form_questions.all()
+
+        app_form_form = forms.ApplicationFormForm(event=event, instance=form)
+        question_formset = forms.QuestionFormSet(queryset=question_queryset)
 
         return render(
             request,
             "stave/form_edit.html",
             context={
                 "form": app_form_form,
-                "event": event_,
+                "event": event,
                 "question_formset": question_formset,
                 "QuestionKind": models.QuestionKind,
+                "url_base": request.path,
             },
         )
 
     def post(
-        self, request: HttpRequest, league: str, event: str, **kwargs
+        self,
+        request: HttpRequest,
+        league_slug: str,
+        event_slug: str,
+        form_slug: str | None = None,
+        kind: models.QuestionKind | None = None,
     ) -> HttpResponse:
         # TODO: status
-        event_ = get_object_or_404(
+        event: models.Event = get_object_or_404(
             models.Event.objects.manageable(request.user),
-            league__slug=league,
-            slug=event,
+            league__slug=league_slug,
+            slug=event_slug,
         )
 
-        app_form_form = forms.ApplicationFormForm(event=event_, data=request.POST)
-        question_formset = forms.QuestionFormSet(request.POST)
+        form: models.ApplicationForm | None = None
+        question_queryset = models.Question.objects.none()
+        url_base = reverse("form-create", args=[league_slug, event_slug])
+        if form_slug:
+            form: models.ApplicationForm = get_object_or_404(
+                models.ApplicationForm.objects.manageable(request.user),
+                slug=form_slug,
+                event__slug=event_slug,
+                event__league__slug=league_slug,
+            )
+            question_queryset = form.form_questions.all()
+            url_base = reverse("form-update", args=[league_slug, event_slug, form_slug])
 
-        # TODO: implement Save and Continue
-        # Determine if the user took a form-wide action, like Save or Save and Continue,
-        # or if they asked to add a question.
-        if (
-            "kind" not in kwargs
-            and app_form_form.is_valid()
-            and question_formset.is_valid()
-        ):
-            with transaction.atomic():
-                app_form = app_form_form.save(commit=False)
-                app_form.event = event_
-                app_form.role_groups.set(
-                    models.RoleGroup.objects.filter(
-                        league=app_form.event.league,
-                        id__in=app_form_form.cleaned_data["role_groups"],
-                    )
-                )
-                app_form.save()
+        app_form_form = forms.ApplicationFormForm(
+            event=event, data=request.POST, instance=form
+        )
+        question_formset = forms.QuestionFormSet(
+            request.POST, queryset=question_queryset
+        )
 
-                for i, instance in enumerate(question_formset.save(commit=False)):
-                    instance.application_form = app_form
-                    instance.order_key = i
-                    instance.save()
-
-            return HttpResponseRedirect(app_form.get_absolute_url())
-        elif "kind" in kwargs:
-            kind: int = kwargs["kind"]
+        if kind:
+            # The user asked to add a question.
             if kind in models.QuestionKind.values:
                 new_data = question_formset.data.copy()
                 try:
                     count = int(new_data["form-TOTAL_FORMS"])
                     new_data[f"form-{count}-id"] = ""
                     new_data[f"form-{count}-kind"] = str(kind)
-                    if kind in [
-                        models.QuestionKind.SELECT_ONE,
-                        models.QuestionKind.SELECT_MANY,
-                    ]:
-                        new_data[f"form-{count}-options"] = "[]"
+                    new_data[f"form-{count}-options"] = "[]"
 
                     count += 1
                     new_data["form-TOTAL_FORMS"] = str(count)
                 except (KeyError, ValueError):
-                    return HttpResponseBadRequest()
+                    return HttpResponseBadRequest("invalid question data")
 
-                question_formset = forms.QuestionFormSet(data=new_data)
-            else:
-                return HttpResponseBadRequest()
+                question_formset = forms.QuestionFormSet(
+                    data=new_data, queryset=question_queryset
+                )
+                # TODO: make the question forms not have errors when they're first created.
+        elif app_form_form.is_valid() and question_formset.is_valid():
+            # We did a save action, _without_ adding a question.
+            app_form_form.save()
+            # Commit the forms.
+            with transaction.atomic():
+                app_form_form.instance.event = event
+                app_form = app_form_form.save()
 
+                index = 0
+                for question_form in question_formset.forms:
+                    question_form.instance.application_form = app_form
+                    if not question_form.cleaned_data.get(
+                        "DELETE",
+                        False,  # should import this TODO
+                    ):
+                        question_form.instance.order_key = index
+                        index += 1
+
+                question_formset.save_existing_objects()
+                question_formset.save_new_objects()
+
+            return HttpResponseRedirect(app_form.get_absolute_url())
+
+        # We either did a question add, or we had invalid forms. Re-render.
         return render(
             request,
             "stave/form_edit.html",
             context={
                 "form": app_form_form,
-                "event": event_,
+                "event": event,
                 "question_formset": question_formset,
                 "QuestionKind": models.QuestionKind,
+                "url_base": url_base,
             },
         )
 

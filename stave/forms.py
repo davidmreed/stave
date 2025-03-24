@@ -36,6 +36,7 @@ class QuestionForm(forms.ModelForm):
 
     options = SeparatedJSONListField(
         widget=forms.Textarea(attrs={"rows": 5}),
+        required=False,
         help_text=_("Enter each option on a separate line"),
     )
     allow_other = forms.BooleanField(
@@ -50,7 +51,8 @@ class QuestionForm(forms.ModelForm):
 
         if self.instance:
             self.kind = self.instance.kind
-        else:
+
+        if not self.kind:
             kind_data = kwargs.get("data", {}).get(kwargs["prefix"] + "-kind")
             if not kind_data:
                 raise Exception("No kind specified for question")
@@ -76,6 +78,21 @@ class QuestionForm(forms.ModelForm):
                 return _("Select One Option")
             case models.QuestionKind.SELECT_MANY:
                 return _("Select Multiple Options")
+
+    def clean_options(self):
+        options = self.cleaned_data["options"]
+        if not options and self.kind in [
+            models.QuestionKind.SELECT_ONE,
+            models.QuestionKind.SELECT_MANY,
+        ]:
+            raise forms.ValidationError(
+                _(
+                    "One or more options is required for Select One and Select Many questions."
+                ),
+                code="required",
+            )
+
+        return options or []
 
 
 QuestionFormSet = forms.modelformset_factory(
