@@ -122,6 +122,7 @@ class ApplicationFormForm(forms.ModelForm):
             "application_availability_kind",
             "hidden",
             "intro_text",
+            "requires_profile_fields",
         ]
         widgets = {"role_groups": forms.CheckboxSelectMultiple}
 
