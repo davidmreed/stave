@@ -445,7 +445,6 @@ class FormCreateUpdateView(LoginRequiredMixin, views.View):
                 # TODO: make the question forms not have errors when they're first created.
         elif app_form_form.is_valid() and question_formset.is_valid():
             # We did a save action, _without_ adding a question.
-            app_form_form.save()
             # Commit the forms.
             with transaction.atomic():
                 app_form_form.instance.event = event
