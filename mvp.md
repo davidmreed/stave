@@ -54,6 +54,6 @@
 
 - Timezone setup
 - Fix app form to use actual Django Forms + harden.
-- Make the base layout and homepage work on mobile
++ Make the base layout and homepage work on mobile
 - About page
 - Privacy policy

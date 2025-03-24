@@ -3,9 +3,9 @@
 
 {% block content %}
 
-<div style="display: flex; gap: 1rem; ">
+<div style="display: flex; gap: 1rem; flex-wrap: wrap;">
 
-<article style="{% if request.user.is_authenticated %}flex: 1fr;{% else %}flex: 2fr;{% endif %}">
+<article style="flex: 1 1 auto;">
     <header><h2>Open Applications</h2></header>
 
 <ul>
@@ -21,7 +21,7 @@ There aren't any open applications for you right now.
 
 {% if request.user.is_authenticated %}
 
-<article style="flex: 1fr;">
+<article style="flex: 1 1 auto;">
     <header>
         <h2>My Applications</h2>
     </header>
@@ -37,7 +37,7 @@ You don't have any open applications right now.
 </ul>
 </article>
 
-<article style="flex: 1fr;">
+<article style="flex: 1 1 auto;">
     <header>
         <h2>My Events</h2>
     </header>

@@ -10,6 +10,13 @@ header h1, h2, h3, h4, h5, h6 {
     flex: 1;
 }
 
+header nav {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+}
+
 article h1, h2, h3, h4, h5, h6 {
     margin-bottom: 0;
 }
@@ -102,5 +109,14 @@ a {
 
     header small {
         display: none;
+    }
+    header nav {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        width: 100%;
+    }
+    header nav li {
+        padding: 0.25rem;
     }
 }
