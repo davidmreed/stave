@@ -1118,9 +1118,7 @@ class ApplicationForm(models.Model):
                 self.application_availability_kind
                 == ApplicationAvailabilityKind.BY_GAME
             ):
-                applications = applications.filter(
-                    availability_by_game__contains=context
-                )
+                applications = applications.filter(availability_by_game=context)
 
         return applications
 
