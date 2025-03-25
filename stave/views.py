@@ -87,6 +87,14 @@ class HomeView(generic.TemplateView):
         return context
 
 
+class AboutView(generic.TemplateView):
+    template_name = "stave/about.html"
+
+
+class PrivacyPolicyView(generic.TemplateView):
+    template_name = "stave/privacy.html"
+
+
 class EventDetailView(
     TypedContextMixin[contexts.EventDetailInputs], generic.DetailView
 ):
