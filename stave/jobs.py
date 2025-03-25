@@ -33,7 +33,7 @@ def send_emails():
 @close_old_connections
 def delete_old_messages():
     _ = models.Message.objects.filter(
-        sent=True, send_date__lte=datetime.now(tz=timezone.utc) - timedelta(days=7)
+        sent=True, sent_date__lte=datetime.now(tz=timezone.utc) - timedelta(days=7)
     ).delete()
 
 

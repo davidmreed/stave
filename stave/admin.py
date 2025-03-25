@@ -22,5 +22,6 @@ for model in [
     models.MessageTemplate,
     models.LeagueTemplate,
     models.EventTemplate,
+    models.LeagueUserPermission,
 ]:
     admin.site.register(model)

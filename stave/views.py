@@ -274,6 +274,9 @@ class GameCreateView(LoginRequiredMixin, generic.edit.CreateView):
         form.instance.event_id = event.id
         return super().form_valid(form)
 
+    def get_success_url(self) -> str:
+        return self.object.event.get_absolute_url()
+
 
 class LeagueUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     template_name = "stave/league_edit.html"
