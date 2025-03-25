@@ -180,3 +180,23 @@ ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
 LOGIN_REDIRECT_URL = "/"
 
 STAVE_EMAIL_MAX_TRIES = 3
+
+MARKDOWNIFY = {
+    "default": {
+        "WHITELIST_TAGS": [
+            "a",
+            "abbr",
+            "acronym",
+            "b",
+            "blockquote",
+            "code",
+            "em",
+            "i",
+            "li",
+            "ol",
+            "strong",
+            "ul",
+            "p",
+        ]
+    }
+}
