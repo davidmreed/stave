@@ -249,6 +249,9 @@ class GameUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     def get_queryset(self) -> QuerySet[models.Game]:
         return models.Game.objects.manageable(self.request.user)
 
+    def get_success_url(self) -> str:
+        return self.object.event.get_absolute_url()
+
 
 class GameCreateView(LoginRequiredMixin, generic.edit.CreateView):
     template_name = "stave/league_edit.html"
