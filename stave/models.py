@@ -1119,7 +1119,7 @@ class ApplicationForm(models.Model):
                 == ApplicationAvailabilityKind.BY_GAME
             ):
                 applications = applications.filter(
-                    availability_by_game__includes=context
+                    availability_by_game__contains=context
                 )
 
         return applications
