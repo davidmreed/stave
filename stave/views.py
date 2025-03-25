@@ -891,11 +891,13 @@ class ApplicationFormView(views.View):
                 form.application_availability_kind
                 == models.ApplicationAvailabilityKind.BY_GAME
             ):
-                app.availability_by_game = [  # TODO
-                    game
-                    for game in form.event.games.all()
-                    if f"game-{game.id}" in request.POST
-                ]
+                app.availability_by_game.set(
+                    [
+                        game
+                        for game in form.event.games.all()
+                        if f"game-{game.id}" in request.POST
+                    ]
+                )
             app.roles.set(
                 [
                     role
@@ -905,8 +907,8 @@ class ApplicationFormView(views.View):
                     if f"role-{role.id}" in request.POST
                 ]
             )
-            app.save()
 
+            app.save()
             # Question answers
             for question in form.form_questions.all():
                 if str(question.id) in request.POST:
