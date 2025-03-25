@@ -17,18 +17,21 @@
     <input type="submit" value="Update">
     <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.WITHDRAWN %}" value="Withdraw">
     {% endif %}
-    {% else %}
+    {% endif %}
     {% if application.status == ApplicationStatus.APPLIED %}
     {% if application.form.event.application_kind == ApplicationKind.CONFIRM_ONLY %}
     <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.CONFIRMED %}" value="Confirm">
     {% else %}
     <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.INVITED %}" value="Invite">
     {% endif %}
+    {% if user != application.user %}
     <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.WITHDRAWN %}" value="Mark Withdrawn">
+    {% endif %}
     {% elif application.status == ApplicationStatus.INVITED %}
     <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.CONFIRMED %}" value="Mark Confirmed">
     <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.DECLINED %}" value="Mark Declined">
     {% elif application.status == ApplicationStatus.CONFIRMED %}
+    {% if user != application.user %}
     <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.WITHDRAWN %}" value="Mark Withdrawn">
     {% endif %}
     {% endif %}
