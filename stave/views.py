@@ -552,11 +552,26 @@ class FormApplicationsView(
             event__slug=self.kwargs["event_slug"],
             event__league__slug=self.kwargs["league_slug"],
         )
+
+        queryset = (
+            self.get_queryset()
+            .order_by("status")
+            .prefetch_related(
+                "form",
+                "form__event",
+                "form__event__league",
+                "user",
+                "roles",
+                "form__role_groups",
+                "form__role_groups__roles",
+                "form__form_questions",
+                "responses",
+            )
+        )
+
         applications = {
             key: list(group)
-            for key, group in itertools.groupby(
-                self.get_queryset().order_by("status"), lambda i: i.status
-            )
+            for key, group in itertools.groupby(queryset, lambda i: i.status)
         }
         return contexts.FormApplicationsInputs(
             form=form,
