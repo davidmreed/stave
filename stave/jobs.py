@@ -16,7 +16,7 @@ def send_emails():
             email = EmailMultiAlternatives(
                 subject=message.subject,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                to=message.user.email,
+                to=[message.user.email],
                 body=message.content_plain_text,
             )
             email.attach_alternative(message.content_html, "text/html")
