@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import logging
 
 from django.core.mail import EmailMultiAlternatives
 from django_apscheduler.util import close_old_connections
@@ -21,7 +22,8 @@ def send_emails():
             email.attach_alternative(message.content_html, "text/html")
 
             _ = email.send()
-        except Exception:
+        except Exception as e:
+            logging.getLogger().error(f"Could not send message {message}: {e}")
             message.tries += 1
         else:
             message.sent_date = datetime.now(tz=timezone.utc)
