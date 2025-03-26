@@ -102,10 +102,16 @@ DATABASES = {
 }
 
 STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+
+MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/images")
+MEDIA_URL = "/media/"
 
 AUTH_PASSWORD_VALIDATORS = [
     {

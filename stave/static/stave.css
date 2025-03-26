@@ -58,6 +58,11 @@ td.highlighted-cell {
     background-color: rgb(from var(--pico-primary) r g b / 0.1);
 }
 
+td.highlighted-cell-user {
+    background-color: rgb(from var(--pico-primary) r g b / 0.2);
+    font-weight: bold;
+}
+
 dl {
     display: flex;
     gap: 0.5rem;

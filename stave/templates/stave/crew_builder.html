@@ -22,7 +22,7 @@
         Staffing for {{ event.name }}
     </h1>
     {% if editable %}
-    <a role="button" href="TODO">Send Schedule Emails</a>
+    <a role="button" href="{% url 'send-email' form.event.league.slug form.event.slug form.slug 'schedule' %}{% querystring redirect_url=request.path %}">Send Schedule Emails</a>
     {% endif %}
 </header>
 
@@ -140,7 +140,7 @@ No static crews yet.
                                                 </div>
                                             </form>
                                         {% endif %}
-                                {% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=rgca.effective_crew_by_role_id role_group=role_group crew=rgca.crew_overrides only %}
+                                {% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=rgca.effective_crew_by_role_id role_group=role_group crew=rgca.crew_overrides focus_user_id=focus_user_id only %}
                             {% endif %}
                             {% endwith %}
                             {% endwith %}

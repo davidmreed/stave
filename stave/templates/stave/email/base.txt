@@ -5,3 +5,4 @@
 --
 Sent by Stave ({{ domain }}{% url 'home' %}) in response to your application | Manage Your Account: {{ domain }}{% url 'profile' %}
 {% endblock %}
+{% endautoescape %}

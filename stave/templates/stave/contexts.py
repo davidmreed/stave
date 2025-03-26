@@ -34,6 +34,7 @@ class CrewEditorInputs:
     crew: models.Crew
     crew_assignments: dict[UUID, models.CrewAssignment]
     editable: bool
+    focus_user_id: UUID | None
 
 
 @dataclass

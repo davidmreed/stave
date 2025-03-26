@@ -1034,7 +1034,7 @@ class ApplicationForm(models.Model):
         at least one of the Role Groups from this form."""
         return self.event.games.filter(
             role_groups__role_group__in=self.role_groups.all()
-        ).distinct()  # TODO: is this correct?
+        ).distinct()
 
     def __str__(self) -> str:
         role_group_names = [rg.name for rg in self.role_groups.all()]
@@ -1105,6 +1105,7 @@ class ApplicationForm(models.Model):
                 )
             )
         elif isinstance(context, Event):
+            # FIXME: this does not work.
             applications = applications.exclude(
                 user__in=User.objects.filter(
                     crews__crew__event_role_groups__event=context
@@ -1155,18 +1156,23 @@ class ApplicationForm(models.Model):
                     id__in=self.applications.filter(
                         status=ApplicationStatus.INVITED, invitation_email_sent=False
                     ).values("user_id")
-                )
+                ).distinct()
             case SendEmailContextType.SCHEDULE:
                 # A Schedule email goes to any user who's assigned to a crew
                 # on our Event where the crew matches one of our Role Groups.
-                return User.objects.filter()
-                # TODO
+                return User.objects.filter(
+                    id__in=CrewAssignment.objects.filter(
+                        crew__event=self.event,
+                        crew__role_group__in=self.role_groups.all(),
+                    ).values("user_id")
+                ).distinct()
+
             case SendEmailContextType.REJECTION:
                 return User.objects.filter(
                     id__in=self.applications.filter(
                         status=ApplicationStatus.REJECTED, rejection_email_sent=False
                     ).values("user_id")
-                )
+                ).distinct()
 
     class Meta:
         ordering = ["slug"]
@@ -1274,7 +1280,6 @@ class Application(models.Model):
 
     class Meta:
         # TODO: require population of the relevant availability type for the form.
-        # FIXME: this constraint does not appear to work.
         constraints = [
             models.UniqueConstraint(
                 fields=["form", "user"], name="one_app_per_event_per_user"

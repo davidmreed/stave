@@ -3,5 +3,5 @@
 
 {% block footer %}
 --
-Sent by <a href="https://{{ domain }}{% url 'home' %}">Stave</a> in response to your application | <a href="https://{{ domain }}{% url 'profile' %}">Manage Your Account</a>
+Sent by <a href="{{ domain }}{% url 'home' %}">Stave</a> in response to your application | <a href="{{ domain }}{% url 'profile' %}">Manage Your Account</a>
 {% endblock %}

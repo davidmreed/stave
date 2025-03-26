@@ -1,7 +1,6 @@
 import dataclasses
 import itertools
 from collections import defaultdict
-from collections.abc import Mapping
 from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
@@ -18,6 +17,7 @@ from django.http import (
     HttpResponse,
     HttpResponseBadRequest,
     HttpResponseRedirect,
+    HttpResponseForbidden,
 )
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
@@ -677,12 +677,28 @@ class ScheduleView(LoginRequiredMixin, views.View):
         # has permission to view that schedule.
 
         # Must be a user staffed on the event to view, or a manager.
-        # TODO
         event: models.Event = get_object_or_404(
-            models.Event.objects.manageable(request.user),
+            models.Event.objects.all(),
             slug=event_slug,
             league__slug=league_slug,
         )
+
+        manageable = (
+            models.Event.objects.manageable(request.user).filter(id=event.id).exists()
+        )
+        staffed = (
+            models.User.objects.filter(
+                id__in=models.CrewAssignment.objects.filter(
+                    crew__event=event,
+                ).values("user_id")
+            )
+            .distinct()
+            .filter(id=request.user.id)
+            .exists()
+        )
+
+        if not manageable and not staffed:
+            return HttpResponseForbidden()
 
         role_groups = event.role_groups.all()
         if role_group_ids:
@@ -1096,7 +1112,7 @@ class SendEmailView(LoginRequiredMixin, views.View):
             content: str = email_form.cleaned_data["content"]
             subject: str = email_form.cleaned_data["subject"]
 
-            domain = "stave.app"  # FIXME: dynamic
+            domain = "https://stave.app"  # FIXME: dynamic
 
             with transaction.atomic():
                 for user in application_form.get_user_queryset_for_context_type(
@@ -1106,20 +1122,36 @@ class SendEmailView(LoginRequiredMixin, views.View):
                     # Substitute values for any of the user's tags.
                     # Note that the content will be sanitized when we
                     # render Markdown into HTML.
+                    # TODO: we should sanitize the strings first and substitute after rendering.
                     this_message_content = content.replace(
                         "{name}", user.preferred_name
                     )
                     this_message_content = this_message_content.replace(
-                        "{schedule}", "TODO"
+                        "{schedule}",
+                        "`"
+                        + domain
+                        + reverse(
+                            "event-user-role-group-schedule",
+                            args=[
+                                application_form.event.league.slug,
+                                application_form.event.slug,
+                                user.id,
+                                ",".join(
+                                    str(rg.id)
+                                    for rg in application_form.role_groups.all()
+                                ),
+                            ],
+                        )
+                        + "`",
                     )
 
                     this_message_content = this_message_content.replace(
                         "{application}",
-                        domain + application.get_absolute_url(),
+                        "`" + domain + application.get_absolute_url() + "`",
                     )
                     this_message_content = this_message_content.replace(
                         "{event}",
-                        domain + application_form.event.get_absolute_url(),
+                        "`" + domain + application_form.event.get_absolute_url() + "`",
                     )
 
                     content_html = render_to_string(

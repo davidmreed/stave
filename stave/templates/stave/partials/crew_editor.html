@@ -13,15 +13,18 @@
 {% for role in role_group.roles.all %}
 <tr>
     <td>{{ role.name }}</td>
-    <td {% if role.id not in crew_assignments %}class="highlighted-cell"{% endif %}>
-        {% if role.id in crew_assignments %}
-        {% with crew_assignments|get:role.id as assignment %}
+    {% with crew_assignments|get:role.id as assignment %}
+    <td
+        {% if role.id not in crew_assignments %}class="highlighted-cell"{% endif %}
+        {% if assignment and assignment.user_id == focus_user_id %}class="highlighted-cell-user"{% endif %}
+        >
+        {% if assignment %}
         {{ assignment.user.preferred_name }}
-        {% endwith %}
         {% else %}
         Open
         {% endif %}
     </td>
+    {% endwith %}
     {% if editable %}
     <td>
         <a href="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug crew.id role.id %}">
