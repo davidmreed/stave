@@ -359,10 +359,8 @@ class Command(BaseCommand):
             username: str, preferred_name: str, admin: bool, pronouns: str
         ) -> models.User:
             user = models.User.objects.create(
-                username=username,
                 preferred_name=preferred_name,
                 pronouns=pronouns,
-                is_staff=admin,
                 is_superuser=admin,
             )
             user.set_password(username)

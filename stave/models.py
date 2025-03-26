@@ -5,7 +5,7 @@ import uuid
 from collections.abc import Iterable
 from datetime import datetime, timedelta
 
-from django.contrib.auth.models import AbstractUser, AnonymousUser
+from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
 from django.db import models
 from django.db.models import Q
 from django.urls import reverse
@@ -19,7 +19,7 @@ class CertificationLevel(models.TextChoices):
     LEVEL_3 = "Level 3", _("Level 3")
 
 
-class User(AbstractUser):
+class User(AbstractBaseUser):
     ALLOWED_PROFILE_FIELDS = [
         "preferred_name",
         "legal_name",
@@ -30,11 +30,11 @@ class User(AbstractUser):
         "nso_certification_level",
         "so_certification_level",
     ]
-
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = []
+    USERNAME_FIELD = "id"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    is_superuser = models.BooleanField(default=False)
+    is_staff = models.BooleanField(default=False)
     preferred_name = models.CharField(max_length=256, verbose_name=_("preferred name"))
     legal_name = models.CharField(max_length=256, blank=True, null=True)
     pronouns = models.CharField(
