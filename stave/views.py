@@ -574,7 +574,8 @@ class FormApplicationsView(
         applications = {
             key: list(group)
             for key, group in itertools.groupby(
-                form.applications.all().order_by("status"), lambda i: i.status
+                sorted(form.applications.all(), key=lambda a: a.status),
+                lambda a: a.status,
             )
         }
         return contexts.FormApplicationsInputs(
