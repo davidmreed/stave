@@ -6,7 +6,7 @@
     <td>{{ application.get_user_data|get:field }}</td>
 {% endfor %}
 {# Roles #}
-{% for role_group in form.role_groups.all %}
+{% for role_group in application.form.role_groups.all %}
     <td>
         {% for role in application.roles.all %}
             {% if role.role_group == role_group %}
