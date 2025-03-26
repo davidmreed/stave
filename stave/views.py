@@ -9,6 +9,7 @@ from uuid import UUID
 from django import views
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import BadRequest
 from django.db import transaction
 from django.db.models import QuerySet
 from django.forms import modelform_factory
@@ -929,7 +930,6 @@ class ApplicationFormView(views.View):
     def post(
         self, request: HttpRequest, application_form: str, event: str, league: str
     ) -> HttpResponse:
-        # TODO: if this is an edit to an existing application, replace data.
         app = None
 
         if not request.user.is_authenticated:
@@ -951,14 +951,18 @@ class ApplicationFormView(views.View):
                 instance=request.user, prefix="profile", data=request.POST
             )
             if not profile_form.is_valid():
-                return HttpResponseBadRequest("bad profile")  # TODO
+                messages.error(request, "Your profile data was invalid")
+
+                return HttpResponseRedirect(request.path)  # TODO
 
             profile_form.save()
 
             # Construct and persist an Application, ApplicationResponse, and RoleAssignments
 
             app = models.Application(
-                form=form, user=request.user, status=models.ApplicationStatus.APPLIED
+                form=form,
+                user=request.user,
+                status=models.ApplicationStatus.APPLIED,
             )
 
             # Pull out Availability information
@@ -969,26 +973,36 @@ class ApplicationFormView(views.View):
                 app.availability_by_day = [
                     day for day in form.event.days() if f"day-{day}" in request.POST
                 ]
+                if not app.availability_by_day:
+                    messages.error(request, "Select at least one day of availability")
+                    return HttpResponseRedirect(request.path)
             elif (
                 form.application_availability_kind
                 == models.ApplicationAvailabilityKind.BY_GAME
             ):
-                app.availability_by_game.set(
-                    [
-                        game
-                        for game in form.event.games.all()
-                        if f"game-{game.id}" in request.POST
-                    ]
-                )
-            app.roles.set(
-                [
-                    role
-                    for role in models.Role.objects.filter(
-                        role_group__in=form.role_groups.all()
-                    )
-                    if f"role-{role.id}" in request.POST
+                games = [
+                    game
+                    for game in form.event.games.all()
+                    if f"game-{game.id}" in request.POST
                 ]
-            )
+                if not games:
+                    messages.error(request, "Select at least one game of availability")
+                    return HttpResponseRedirect(request.path)
+
+                app.availability_by_game.set(games)
+
+            roles = [
+                role
+                for role in models.Role.objects.filter(
+                    role_group__in=form.role_groups.all()
+                )
+                if f"role-{role.id}" in request.POST
+            ]
+            if not roles:
+                messages.error(request, "Select at least one role")
+                return HttpResponseRedirect(request.path)
+
+            app.roles.set(roles)
 
             app.save()
             # Question answers
@@ -999,7 +1013,7 @@ class ApplicationFormView(views.View):
                         len(values) != 1
                         and question.kind != question.QuestionKind.SELECT_MANY
                     ):
-                        return HttpResponseBadRequest()
+                        raise BadRequest()
                     if question.kind in (
                         models.QuestionKind.SHORT_TEXT,
                         models.QuestionKind.LONG_TEXT,
@@ -1011,13 +1025,13 @@ class ApplicationFormView(views.View):
                         try:
                             answers = [question.options[int(v)] for v in values]
                         except (ValueError, IndexError):
-                            return HttpResponseBadRequest()
+                            raise BadRequest()
 
                         if f"{question.id}-other" in request.POST:
                             if not question.allow_other or not request.POST.get(
                                 f"{question.id}-other-value"
                             ):
-                                return HttpResponse("bad other")
+                                raise BadRequest("bad other")
                             else:
                                 answers.append(
                                     request.POST[f"{question.id}-other-value"]
@@ -1026,16 +1040,14 @@ class ApplicationFormView(views.View):
                         content = answers
 
                     if question.required and not content:
-                        return HttpResponseBadRequest("Missing content")
+                        raise BadRequest("Missing content")
 
                     response = models.ApplicationResponse(
                         application=app, question=question, content=content
                     )
                     response.save()
                 else:
-                    return HttpResponseBadRequest(
-                        f"missing question {question.content}"
-                    )
+                    raise BadRequest(f"missing question {question.content}")
 
             return HttpResponseRedirect(reverse("view-application", args=[app.id]))
 
