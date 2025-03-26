@@ -19,7 +19,6 @@ class CertificationLevel(models.TextChoices):
     LEVEL_3 = "Level 3", _("Level 3")
 
 
-# TODO: should this be AbstractBaseUser?
 class User(AbstractUser):
     ALLOWED_PROFILE_FIELDS = [
         "preferred_name",
@@ -31,6 +30,10 @@ class User(AbstractUser):
         "nso_certification_level",
         "so_certification_level",
     ]
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     preferred_name = models.CharField(max_length=256, verbose_name=_("preferred name"))
     legal_name = models.CharField(max_length=256, blank=True, null=True)
