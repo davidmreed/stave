@@ -664,6 +664,66 @@ class SetGameCrewView(LoginRequiredMixin, views.View):
             return HttpResponseRedirect(game.event.get_absolute_url())
 
 
+class ScheduleView(LoginRequiredMixin, views.View):
+    def get(
+        self,
+        request: HttpRequest,
+        league_slug: str,
+        event_slug: str,
+        role_group_ids: str | None = None,
+        user_id: UUID | None = None,
+    ) -> HttpResponse:
+        # Determine what type of schedule is requested, and whether the user
+        # has permission to view that schedule.
+
+        # Must be a user staffed on the event to view, or a manager.
+        # TODO
+        event: models.Event = get_object_or_404(
+            models.Event.objects.manageable(request.user),
+            slug=event_slug,
+            league__slug=league_slug,
+        )
+
+        role_groups = event.role_groups.all()
+        if role_group_ids:
+            role_groups = role_groups.filter(id__in=role_group_ids.split(","))
+
+        games = event.games.filter(role_groups__role_group__in=role_groups).distinct()
+
+        static_crews_by_role_group_id = defaultdict(list)
+        for crew in event.static_crews():
+            static_crews_by_role_group_id[crew.role_group_id].append(crew)
+
+        event_crews_by_role_group_id = defaultdict(list)
+        for crew in event.event_crews():
+            event_crews_by_role_group_id[crew.role_group_id].append(crew)
+
+        allow_static_crews_by_role_group_id = {
+            role_group.id: (role_group.id not in event_crews_by_role_group_id)
+            for role_group in event.role_groups.all()
+        }
+        any_static_crew_role_groups = any(allow_static_crews_by_role_group_id.values())
+
+        return render(
+            request,
+            "stave/crew_builder.html",
+            context=asdict(
+                contexts.CrewBuilderInputs(
+                    editable=False,
+                    form=None,
+                    event=event,
+                    role_groups=role_groups,
+                    games=games,
+                    focus_user_id=user_id,
+                    static_crews=static_crews_by_role_group_id,
+                    event_crews=event_crews_by_role_group_id,
+                    allow_static_crews=allow_static_crews_by_role_group_id,
+                    any_static_crew_role_groups=any_static_crew_role_groups,
+                )
+            ),
+        )
+
+
 class CrewBuilderView(LoginRequiredMixin, views.View):
     def get(
         self,
@@ -696,14 +756,20 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         return render(
             request,
             "stave/crew_builder.html",
-            {
-                "request": request,
-                "form": application_form,
-                "static_crews": static_crews_by_role_group_id,
-                "event_crews": event_crews_by_role_group_id,
-                "allow_static_crews": allow_static_crews_by_role_group_id,
-                "any_static_crew_role_groups": any_static_crew_role_groups,
-            },
+            context=asdict(
+                contexts.CrewBuilderInputs(
+                    editable=True,
+                    form=application_form,
+                    event=application_form.event,
+                    role_groups=application_form.role_groups.all(),
+                    games=application_form.games(),
+                    focus_user_id=None,
+                    static_crews=static_crews_by_role_group_id,
+                    event_crews=event_crews_by_role_group_id,
+                    allow_static_crews=allow_static_crews_by_role_group_id,
+                    any_static_crew_role_groups=any_static_crew_role_groups,
+                )
+            ),
         )
 
 

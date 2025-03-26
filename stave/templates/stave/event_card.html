@@ -55,6 +55,7 @@
     {% if show_details %}
     <a href="{% url 'event-detail' event.league.slug event.slug %}">Details</a>
     {% endif %}
+    <a href="{% url 'event-schedule' event.league.slug event.slug %}">Staffing Schedule</a>
 
     {% if show_forms %}
     <header>
@@ -69,6 +70,7 @@
     {% if user|can_manage_event:event %}
     <a href="{% url 'form-applications' event.league.slug event.slug form.slug %}">Applications</a>
     <a href="{% url 'crew-builder' event.league.slug event.slug form.slug %}">Crew Builder</a>
+    <a href="{{ form.get_schedule_url }}">Staffing Schedule</a>
     {% endif %}
     {% empty %}
     No application forms are currently open.

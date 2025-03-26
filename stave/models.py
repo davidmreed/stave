@@ -565,6 +565,12 @@ class Event(models.Model):
             for i in range((self.end_date - self.start_date).days + 1)
         ]
 
+    def event_crews(self) -> models.QuerySet[Crew]:
+        return self.crews.filter(kind=CrewKind.EVENT_CREW)
+
+    def static_crews(self) -> models.QuerySet[Crew]:
+        return self.crews.filter(kind=CrewKind.GAME_CREW)
+
 
 class EventRoleGroupCrewAssignment(models.Model):
     event = models.ForeignKey(
@@ -1018,14 +1024,10 @@ class ApplicationForm(models.Model):
     applications: models.Manager["Application"]
 
     def event_crews(self) -> models.QuerySet[Crew]:
-        return self.event.crews.filter(kind=CrewKind.EVENT_CREW).filter(
-            role_group__in=self.role_groups.all()
-        )
+        return self.event.event_crews().filter(role_group__in=self.role_groups.all())
 
     def static_crews(self) -> models.QuerySet[Crew]:
-        return self.event.crews.filter(kind=CrewKind.GAME_CREW).filter(
-            role_group__in=self.role_groups.all()
-        )
+        return self.event.static_crews().filter(role_group__in=self.role_groups.all())
 
     def games(self) -> models.QuerySet[Game]:
         """Return those games from this form's event which have
@@ -1043,6 +1045,17 @@ class ApplicationForm(models.Model):
             "application-form",
             args=[self.event.league.slug, self.event.slug, self.slug],
         )
+
+    def get_schedule_url(self) -> str | None:
+        if self.role_groups.all():
+            return reverse(
+                "event-role-group-schedule",
+                args=[
+                    self.event.league.slug,
+                    self.event.slug,
+                    ",".join(str(rg.id) for rg in self.role_groups.all()),
+                ],
+            )
 
     def get_crew_builder_url(self) -> str:
         return reverse(

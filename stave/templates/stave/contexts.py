@@ -29,10 +29,11 @@ class ApplicationTableRowInputs:
 
 @dataclass
 class CrewEditorInputs:
-    form: models.ApplicationForm
+    form: models.ApplicationForm | None
     role_group: models.RoleGroup
     crew: models.Crew
     crew_assignments: dict[UUID, models.CrewAssignment]
+    editable: bool
 
 
 @dataclass
@@ -46,12 +47,16 @@ class CrewBuilderDetailInputs:
 
 @dataclass
 class CrewBuilderInputs:
-    form: models.ApplicationForm
-    request: HttpRequest
+    event: models.Event
+    form: models.ApplicationForm | None  # Not required for schedule view only
+    role_groups: QuerySet[models.RoleGroup]
+    games: QuerySet[models.Game]
+    focus_user_id: UUID | None
     static_crews: dict[UUID, models.Crew]
     event_crews: dict[UUID, models.Crew]
     allow_static_crews: dict[UUID, bool]
     any_static_crew_role_groups: bool
+    editable: bool
 
 
 @dataclass

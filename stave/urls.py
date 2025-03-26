@@ -116,4 +116,20 @@ urlpatterns = [
         views.SetGameCrewView.as_view(),
         name="set-game-crew",
     ),
+    # Schedule URLs
+    path(
+        "_/<slug:league_slug>/events/<slug:event_slug>/schedule/",
+        views.ScheduleView.as_view(),
+        name="event-schedule",
+    ),
+    path(
+        "_/<slug:league_slug>/events/<slug:event_slug>/schedule/user/<uuid:user_id>/",
+        views.ScheduleView.as_view(),
+        name="event-user-schedule",
+    ),
+    path(
+        "_/<slug:league_slug>/events/<slug:event_slug>/schedule/role-groups/<str:role_group_ids>",
+        views.ScheduleView.as_view(),
+        name="event-role-group-schedule",
+    ),
 ]

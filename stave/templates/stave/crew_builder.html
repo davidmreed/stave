@@ -3,51 +3,58 @@
 {% load stave_tags %}
 {% inputs 'CrewBuilderInputs' %}
 
-{% block breadcrumbs %}
-<nav role="breadcrumbs">
-    <li><a href="{{ form.event.league.get_absolute_url }}">{{ form.event.league }}</a></li>
-    <li><a href="{{ form.event.get_absolute_url }}">{{ form.event }}</a><li>
-    <li><a href="{{ form.get_absolute_url }}">{{ form }}</a></li>
-    <li><a href="{{ form.get_crew_builder_url }}">Crew Builder: {{ form.role_groups.all|commalist }}</a></li>
-</nav>
-{% endblock %}
-
 {% block content %}
+
+<style type="text/css">
+    .crew-container, .game-container {
+        flex: 0 1 auto;
+    }
+    .crews-container, .day-container {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 2rem;
+    }
+</style>
 
 <header>
     <h1>
-        Staffing for {{ form.event.name }}
+        Staffing for {{ event.name }}
     </h1>
+    {% if editable %}
     <a role="button" href="TODO">Send Schedule Emails</a>
+    {% endif %}
 </header>
 
 {# Static crews #}
 {# Only available on multi-game events #}
 {# Not available on forms that only do event-wide role groups #}
 
-{% if any_static_crew_role_groups %}
-{% if static_crews or form.event.games.all|length > 1 %}
+{% if any_static_crew_role_groups and editable %}
+{% if static_crews or event.games.all|length > 1 %}
 <header>
 <h4>Static Crews</h4>
 </header>
 
-{% for role_group in form.role_groups.all %}
+{% for role_group in role_groups %}
 {% if allow_static_crews|get:role_group.id %}
 <header>
     <h5>{{ role_group }}</h5>
+    {% if editable %}
 <form class="inline" method="POST" action="{% url 'crew-builder-add-crew' form.event.league.slug form.event.slug form.slug %}">
     {% csrf_token %}
     <input type="hidden" name="redirect_url" value="{{ request.path }}">
     <input type="hidden" name="role_group_id" value="{{ role_group.id }}">
     <input type="submit" value="Add {{role_group }} Crew">
 </form>
+{% endif %}
 </header>
-<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 2rem;">
+<div class="crews-container">
 
 {% for crew in static_crews|get:role_group.id %}
-<div style="flex: 1fr;">
-    <h6>{{ crew }} ({{ crew.role_group }})</h6>
-{% include 'stave/partials/crew_editor.html' with form=form crew=crew crew_assignments=crew.get_assignments_by_role_id role_group=crew.role_group only %}
+<div class="crew-container">
+    <h6>{{ crew }}</h6>
+{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew=crew crew_assignments=crew.get_assignments_by_role_id role_group=crew.role_group only %}
 </div>
 {% empty %}
 No static crews yet.
@@ -58,80 +65,95 @@ No static crews yet.
 {% endif %}
 {% endif %}
 
+{# End of flex container #}
+
 {# Event-wide roles #}
 
-{% for role_group in form.role_groups.all %}
+{% for role_group in role_groups %}
+<div class="crews-container">
 {% if role_group.id in event_crews %}
 {% for crew in event_crews|get:role_group.id %}
 {% with crew.get_assignments_by_role_id as crew_assignments %}
-<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 2rem;">
-<div style="flex: 1fr;">
+<div class="crew-container">
 <h4>{{ crew }}</h4>
-{% include 'stave/partials/crew_editor.html' with form=form crew_assignments=crew_assignments role_group=role_group crew=crew only %}
+{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=crew_assignments role_group=role_group crew=crew only %}
+</div>
 {% endwith %}
 {% endfor %}
 {% endif %}
+</div>
 {% endfor %}
+
+{# End of flex container #}
 
 {# Per-game roles #}
 
-{% for day in form.event.days %}
-<div style="flex: 1fr;">
-{% if form.event.days|length > 1 and form.games %}
-<h2>{{ day }}</h2>
-{% endif %}
+{% for day in event.days %}
+    {% if event.days|length > 1 and games %}
+        <h2>{{ day }}</h2>
+    {% endif %}
 
-{% for game in form.games %}
-{% if game.start_time.date|date:"Y-m-d" == day %}
-<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 4rem;">
-{% if form.games|length > 1 %}
-<div style="flex: 1fr;">
-<h3>Game {{ game.order_key }} ({{ game.start_time.time }}&ndash;{{ game.end_time.time }})</h3>
-{% endif %}
+    <div class="day-container">
+        {% for game in games %}
+            {% if game.start_time.date|date:"Y-m-d" == day %}
+                <div class="game-container">
+                    {% if games|length > 1 %}
+                        <h3>
+                            Game {{ game.order_key }} ({{ game.start_time.time }}&ndash;{{ game.end_time.time }})
+                        </h3>
+                    {% endif %}
+                    <div class="crews-container">
 
-<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 2rem;">
-{% with game.get_crew_assignments_by_role_group as role_group_assignments %}
-{% for role_group in form.role_groups.all %}
-{% with role_group.id as role_group_id %}
-{% with role_group_assignments|get:role_group_id as rgca %}
-{% if rgca %}
-<div style="flex: 1fr;">
-<header>
-<h4>{{ role_group.name }}</h4>
-</header>
-<div>
-{% if rgca.crew %}
-Crew: {{ rgca.crew }}
-<form class="inline" action="{% url 'set-game-crew' form.event.league.slug form.event.slug form.slug game.id role_group.id %}" method="POST">
-    {% csrf_token %}
-    <input type="hidden" name="redirect_url" value="{{ request.path }}">
-    <input type="submit" value="Unassign">
-</form>
-{% elif static_crews|get:role_group_id %}
-Assign:
-<form class="inline" action="" method="POST">
-    {% csrf_token %}
-    <input type="hidden" name="redirect_url" value="{{ request.path }}">
-{% for static_crew in static_crews|get:role_group_id %}
-    <input type="submit"
-           formaction="{% url 'set-game-crew' form.event.league.slug form.event.slug form.slug game.id role_group.id static_crew.id %}"
-           value="{{ static_crew }}">
+                    {% with game.get_crew_assignments_by_role_group as role_group_assignments %}
+                    {% for role_group in role_groups %}
+                        <div class="crew-container">
+                            {% with role_group.id as role_group_id %}
+                            {% with role_group_assignments|get:role_group_id as rgca %}
+                            {% if rgca %}
+                                    <header>
+                                        <h4>
+                                            {{ role_group.name }}{% if rgca.crew %} ({{ rgca.crew }}){% endif %}
+                                        </h4>
+                                        {% if rgca.crew and editable %}
+                                            <form class="inline" action="{% url 'set-game-crew' form.event.league.slug form.event.slug form.slug game.id role_group.id %}" method="POST">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="redirect_url" value="{{ request.path }}">
+                                                <input type="submit" value="Unassign Crew">
+                                            </form>
+                                        {% endif %}
+                                    </header>
+                                        {% if not rgca.crew and static_crews|get:role_group_id and editable %}
+                                            <form class="inline" action="" method="POST">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="redirect_url" value="{{ request.path }}">
+                                                <div style="display: flex; flex-direction: col; flex-wrap: wrap; gap: 0.5rem;">
+                                                    <div style="flex: 1 1 auto;">
+                                                        Assign:
+                                                    </div>
+                                                    {% for static_crew in static_crews|get:role_group_id %}
+                                                        <div style="flex: 1 1 auto;">
+                                                            <input type="submit"
+                                                                   formaction="{% url 'set-game-crew' form.event.league.slug form.event.slug form.slug game.id role_group.id static_crew.id %}"
+                                                                   value="{{ static_crew }}">
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </form>
+                                        {% endif %}
+                                {% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=rgca.effective_crew_by_role_id role_group=role_group crew=rgca.crew_overrides only %}
+                            {% endif %}
+                            {% endwith %}
+                            {% endwith %}
+                        </div>
+                        {# end of flex item for role group #}
+                    {% endfor %}
+                    {% endwith %}
+                    </div>
+                </div>{# end of flex container for game #}
+                {% endif %}
+        {% endfor %}
+    </div>
+    {# end of flex container for day #}
 {% endfor %}
-</form>
-{% endif %}
-</div>
-{% include 'stave/partials/crew_editor.html' with form=form crew_assignments=rgca.effective_crew_by_role_id role_group=role_group crew=rgca.crew_overrides only %}
-</div>
-{% endif %}
-{% endwith %}
-{% endwith %}
-{% endfor %}
-{% endwith %}
-</div>
-{% endif %}
-{% endfor %}
-</div>
-{% endfor %}
-</div>
 
 {% endblock %}

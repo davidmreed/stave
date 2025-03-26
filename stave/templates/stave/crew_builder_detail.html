@@ -3,16 +3,6 @@
 {% load stave_tags %}
 {% inputs 'CrewBuilderDetailInputs' %}
 
-{% block breadcrumbs %}
-<nav role="breadcrumbs">
-    <li><a href="{{ event.league.get_absolute_url }}">{{ event.league }}</a></li>
-    <li><a href="{{ event.get_absolute_url }}">{{ event }}</a><li>
-    <li><a href="{{ form.get_crew_builder_url }}">Crew Builder: {{ form.role_groups.all|commalist }}</a></li>
-    <li>{% if game %}{{ game.event }}{% if game.event.games.all|length != 1 %} (Game {{ game.order_key }}){% endif %}{% else %}{{ event }}{% endif %}</li>
-    <li>{{ role.name }}</li>
-</nav>
-{% endblock %}
-
 {% block content %}
 <header>
     <h1>

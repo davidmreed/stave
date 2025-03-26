@@ -5,7 +5,9 @@
 <thead>
     <th>Role Name</th>
     <th>Assignment</th>
+    {% if editable %}
     <th>Actions</th>
+    {% endif %}
 </thead>
 <tbody>
 {% for role in role_group.roles.all %}
@@ -20,11 +22,13 @@
         Open
         {% endif %}
     </td>
+    {% if editable %}
     <td>
         <a href="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug crew.id role.id %}">
             {% if role.id in crew_assignments %}Reassign{% else %}Assign{% endif %}
         </a>
     </td>
+    {% endif %}
 </tr>
 {% endfor %}
 </tbody>
