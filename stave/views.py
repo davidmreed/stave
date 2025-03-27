@@ -566,7 +566,7 @@ class FormApplicationsView(
                 "role_groups__roles",
                 "form_questions",
             )
-        ).get()
+        ).first()
 
         if not form:
             raise Http404()
