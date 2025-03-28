@@ -363,6 +363,7 @@ class Command(BaseCommand):
                 preferred_name=preferred_name,
                 pronouns=pronouns,
                 is_superuser=admin,
+                is_staff=admin,
             )
             user.set_password(username)
             user.save()
