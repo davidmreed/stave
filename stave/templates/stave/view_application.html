@@ -128,7 +128,7 @@
 <p>This application covers multiple games. {% if editable %}Select your availability below.{% endif %}</p>
 
 <fieldset>
-{% for game in form.event.games.all %}
+{% for game in form.games.all %}
 <div>
 <input type="checkbox"
        name="game-{{game.id}}"
