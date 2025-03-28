@@ -898,12 +898,18 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
 
         # If there's already a user assigned, we want to replace them in the
         # target role.
-        (assignment, _) = models.CrewAssignment.objects.get_or_create(
+        assignment = models.CrewAssignment.objects.filter(
             role=role,
             crew=crew,
-        )
-        assignment.user = applications[0].user
-        assignment.save()
+        ).first()
+
+        if assignment:
+            assignment.user = applications[0].user
+            assignment.save()
+        else:
+            _ = models.CrewAssignment.objects.create(
+                role=role, crew=crew, user=applications[0].user
+            )
 
         # Redirect the user to the base Crew Builder for this crew
         return HttpResponseRedirect(
