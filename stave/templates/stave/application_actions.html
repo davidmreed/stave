@@ -16,7 +16,7 @@
             <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.WITHDRAWN %}" value="Withdraw">
         {% endif %}
     {% endif %}
-    {% if can_manage_events %}
+    {% if can_manage_event %}
         {% if application.status == ApplicationStatus.APPLIED %}
             {% if application.form.event.application_kind == ApplicationKind.CONFIRM_ONLY %}
                 <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.CONFIRMED %}" value="Confirm">
