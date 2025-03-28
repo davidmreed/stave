@@ -1,4 +1,5 @@
 import copy
+from collections import defaultdict
 import enum
 import json
 import uuid
@@ -1303,8 +1304,12 @@ class Application(models.Model):
     def responses_by_question(self) -> dict[uuid.UUID, "ApplicationResponse"]:
         return {response.question_id: response for response in self.responses.all()}
 
-    def role_names(self) -> set[str]:
-        return set(r.name for r in self.roles.all())
+    def role_names_by_role_group_id(self) -> dict[str, set[str]]:
+        names = defaultdict(set)
+        for r in self.roles.all():
+            names[r.role_group_id].add(r.name)
+
+        return names
 
 
 class ApplicationResponse(models.Model):

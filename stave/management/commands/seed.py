@@ -159,6 +159,7 @@ class Command(BaseCommand):
         role_sk = role_group_nso.roles.get(name="SK", order_key=6)
         role_pbm = role_group_nso.roles.get(name="PBM")
         role_pbt = role_group_nso.roles.get(name="PBT", order_key=9)
+        role_alt = role_group_nso.roles.get(name="ALT")
 
         role_group_so = league.role_groups.get(name="SO")
         role_hr = role_group_so.roles.get(name="HR")
@@ -460,7 +461,16 @@ class Command(BaseCommand):
 
         create_tournament_app(
             josep,
-            [role_hnso, role_jt, role_plt, role_sbo, role_pbm, role_sk, role_pbt],
+            [
+                role_hnso,
+                role_jt,
+                role_plt,
+                role_sbo,
+                role_pbm,
+                role_sk,
+                role_pbt,
+                role_alt,
+            ],
             [d for d in app_form.event.days()],
             "OPA",
             ["red", "blue"],

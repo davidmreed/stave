@@ -156,7 +156,7 @@
        name="role-{{role.list.0.id}}"
        id="role-{{role.list.0.id}}"
        {% if not editable %} disabled {% endif %}
-       {% if application and role.grouper in application.role_names %} checked {% endif %}
+       {% if application and role.grouper in application.role_names_by_role_group_id|get:role_group.id %} checked {% endif %}
        >
 <label for="role-{{role.list.0.id}}">{{role.grouper}}</label>
 <div>
