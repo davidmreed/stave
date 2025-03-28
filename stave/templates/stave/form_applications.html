@@ -14,7 +14,7 @@
 {% endblock %}
 
 {% block content %}
-
+{% with request.user|can_manage_event:form.event as can_manage_event %}
 <form method="POST" action="{{ request.path }}">
 {% csrf_token %}
 <input type="hidden" name="redirect_url" id="redirect_url" value="{{ request.path }}">
@@ -26,7 +26,7 @@
         {% for application in applications %}
         <tr>
             <td>
-                {% include "stave/application_actions.html" with user=request.user application=application ApplicationStatus=ApplicationStatus include_view=True only %}
+                {% include "stave/application_actions.html" with user=request.user can_manage_event=can_manage_event application=application ApplicationStatus=ApplicationStatus include_view=True only %}
             </td>
             {% include 'stave/partials/application_table_row.html' with form=form application=application only %}
         </tr>
@@ -85,5 +85,5 @@ This form has not received any applications yet.
 {% endif %}
 {% endwith %}
 </form>
-
+{% endwith %}
 {% endblock %}

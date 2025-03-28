@@ -38,7 +38,7 @@
 <form method="POST">
     {% csrf_token %}
     <input type="hidden" name="redirect_url" id="redirect_url" value="{{ request.path }}">
-    {% include "stave/application_actions.html" with user=request.user application=application ApplicationStatus=ApplicationStatus include_view=False only %}
+    {% include "stave/application_actions.html" with user=request.user can_manage_event=user|can_manage_event:application.form.event application=application ApplicationStatus=ApplicationStatus include_view=False only %}
     </div>
 </form>
 {% else %}

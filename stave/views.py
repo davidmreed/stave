@@ -554,9 +554,11 @@ class FormApplicationsView(
                 event__slug=self.kwargs["event_slug"],
                 event__league__slug=self.kwargs["league_slug"],
             )
-            .prefetch_related(
+            .select_related(
                 "event",
                 "event__league",
+            )
+            .prefetch_related(
                 "applications",
                 "applications__user",
                 "applications__roles",
@@ -566,7 +568,8 @@ class FormApplicationsView(
                 "role_groups__roles",
                 "form_questions",
             )
-        ).first()
+            .first()
+        )
 
         if not form:
             raise Http404()

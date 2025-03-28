@@ -11,6 +11,7 @@ from stave import forms, models
 @dataclass
 class ApplicationActionsInputs:
     user: models.User
+    can_manage_event: bool
     application: models.Application
     ApplicationStatus: type
     include_view: bool

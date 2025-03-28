@@ -9,16 +9,16 @@
 {% for role_group in application.form.role_groups.all %}
     <td>
         {% for role in application.roles.all %}
-            {% if role.role_group == role_group %}
+            {% if role.role_group_id == role_group.id %}
                 {{ role }}
             {% endif %}
-        {% endfor %}
+            {% endfor %}
     </td>
 {% endfor %}
 {# Availability TODO #}
 {# Application questions #}
 {% for question in form.form_questions.all %}
-    {% with application.responses_by_question|get:question as response %}
+    {% with application.responses_by_question|get:question.id as response %}
         <td>
             {{ response.content|commalist }}
         </td>

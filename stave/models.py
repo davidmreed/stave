@@ -1300,8 +1300,8 @@ class Application(models.Model):
             key: getattr(self.user, key) for key in self.form.requires_profile_fields
         }
 
-    def responses_by_question(self) -> dict[Question, "ApplicationResponse"]:
-        return {response.question: response for response in self.responses.all()}
+    def responses_by_question(self) -> dict[uuid.UUID, "ApplicationResponse"]:
+        return {response.question_id: response for response in self.responses.all()}
 
     def role_names(self) -> set[str]:
         return set(r.name for r in self.roles.all())
