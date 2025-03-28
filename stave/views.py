@@ -517,10 +517,23 @@ class SingleApplicationView(
     model = models.Application
 
     def get_queryset(self) -> QuerySet[models.Application]:
-        return models.Application.objects.visible(self.request.user)
+        return (
+            models.Application.objects.visible(self.request.user)
+            .select_related("form", "form__event", "form__event__league")
+            .prefetch_related(
+                "form__form_questions",
+                "form__role_groups__roles",
+                "form__event__games",
+                "responses",
+                "availability_by_game",
+                "roles",
+                "roles__role_group",
+            )
+        )
 
     def get_context(self) -> contexts.ViewApplicationContext:
         application: models.Application = self.get_object()
+
         return contexts.ViewApplicationContext(
             ApplicationStatus=models.ApplicationStatus,
             application=application,
@@ -531,7 +544,7 @@ class SingleApplicationView(
                 for key in application.form.requires_profile_fields
             },
             responses_by_id={
-                response.question.id: response
+                response.question_id: response
                 for response in application.responses.all()
             },
             editable=False,
