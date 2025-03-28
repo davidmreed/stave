@@ -54,7 +54,7 @@
 {% for crew in static_crews|get:role_group.id %}
 <div class="crew-container">
     <h6>{{ crew }}</h6>
-{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew=crew crew_assignments=crew.get_assignments_by_role_id role_group=crew.role_group only %}
+{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew=crew crew_assignments=crew.get_assignments_by_role_id role_group=crew.role_group focus_user_id=None only %}
 </div>
 {% empty %}
 No static crews yet.
@@ -76,7 +76,7 @@ No static crews yet.
 {% with crew.get_assignments_by_role_id as crew_assignments %}
 <div class="crew-container">
 <h4>{{ crew }}</h4>
-{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=crew_assignments role_group=role_group crew=crew only %}
+{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=crew_assignments role_group=role_group crew=crew focus_user_id=None only %}
 </div>
 {% endwith %}
 {% endfor %}
