@@ -134,7 +134,7 @@
        name="game-{{game.id}}"
        id="game-{{game.id}}"
        {% if not editable %} disabled {% endif %}
-       {% if application and game in application.games.all %} checked {% endif %}
+       {% if application and game in application.availability_by_game.all %} checked {% endif %}
 >
 <label for="game-{{game.id}}">Game {{game.order_key}} ({{ game.start_time }} to {{ game.end_time }})</label>
 </div>
