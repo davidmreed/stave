@@ -776,21 +776,8 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         event_slug: str,
         application_form_slug: str,
     ) -> HttpResponse:
-        queryset = (
-            models.ApplicationForm.objects.manageable(request.user)
-            .select_related("event", "event__league")
-            .prefetch_related(
-                "event__crews",
-                "event__crew_assignments",
-                "role_groups",
-                "games",
-                "games__role_groups__crew__assignments__user",
-                "games__role_groups__override_crew__assignments__user",
-            )
-        )
-
         application_form: models.ApplicationForm = get_object_or_404(
-            queryset,
+            models.ApplicationForm.objects.manageable(request.user),
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league,
