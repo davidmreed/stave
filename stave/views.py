@@ -776,8 +776,21 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         event_slug: str,
         application_form_slug: str,
     ) -> HttpResponse:
+        queryset = (
+            models.ApplicationForm.objects.manageable(request.user)
+            .select_related("event", "event__league")
+            .prefetch_related(
+                "event__crews",
+                "event__crew_assignments",
+                "role_groups",
+                "games",
+                "games__role_groups__crew__assignments__user",
+                "games__role_groups__override_crew__assignments__user",
+            )
+        )
+
         application_form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user),
+            queryset,
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league,
@@ -896,11 +909,14 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         if len(applications) != 1:
             return HttpResponseBadRequest("multiple matching applications")
 
-        _ = models.CrewAssignment.objects.get_or_create(
+        # If there's already a user assigned, we want to replace them in the
+        # target role.
+        (assignment, _) = models.CrewAssignment.objects.get_or_create(
             role=role,
             crew=crew,
-            user=applications[0].user,
         )
+        assignment.user = applications[0].user
+        assignment.save()
 
         # Redirect the user to the base Crew Builder for this crew
         return HttpResponseRedirect(
