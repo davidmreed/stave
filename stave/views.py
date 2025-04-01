@@ -74,10 +74,7 @@ class HomeView(generic.TemplateView):
             applications = models.Application.objects.filter(
                 user=self.request.user, form__event__start_date__gt=datetime.now()
             )
-            events = models.Event.objects.filter(
-                league__user_permissions__permission=models.UserPermission.EVENT_MANAGER,
-                league__user_permissions__user=self.request.user,
-            ).distinct()
+            events = models.Event.objects.manageable(self.request.user)
         else:
             applications = []
             events = []
@@ -113,8 +110,10 @@ class EventDetailView(
         )
 
     def get_queryset(self) -> QuerySet[models.Event]:
-        return models.Event.objects.visible(user=self.request.user).filter(
-            league__slug=self.kwargs["league"]
+        return (
+            models.Event.objects.filter(league__slug=self.kwargs["league"])
+            .visible(user=self.request.user)
+            .prefetch_for_display()
         )
 
 
@@ -124,8 +123,12 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     slug_url_kwarg = "event"
 
     def get_queryset(self) -> QuerySet[models.Event]:
-        return models.Event.objects.manageable(self.request.user).filter(
-            league__slug=self.kwargs["league"],
+        return (
+            models.Event.objects.manageable(self.request.user)
+            .prefetch_for_display()
+            .filter(
+                league__slug=self.kwargs["league"],
+            )
         )
 
 
@@ -533,19 +536,9 @@ class SingleApplicationView(
         return kwargs
 
     def get_queryset(self) -> QuerySet[models.Application]:
-        return (
-            models.Application.objects.visible(self.request.user)
-            .select_related("form", "form__event", "form__event__league")
-            .prefetch_related(
-                "form__form_questions",
-                "form__role_groups__roles",
-                "form__event__games",
-                "responses",
-                "availability_by_game",
-                "roles",
-                "roles__role_group",
-            )
-        )
+        return models.Application.objects.visible(
+            self.request.user
+        ).prefetch_for_display()
 
     def get_context(self) -> contexts.ViewApplicationContext:
         application: models.Application = self.get_object()
@@ -578,24 +571,11 @@ class FormApplicationsView(
     def get_context(self) -> contexts.FormApplicationsInputs:
         form: models.ApplicationForm | None = (
             models.ApplicationForm.objects.manageable(self.request.user)
+            .prefetch_applications()
             .filter(
                 slug=self.kwargs["application_form_slug"],
                 event__slug=self.kwargs["event_slug"],
                 event__league__slug=self.kwargs["league_slug"],
-            )
-            .select_related(
-                "event",
-                "event__league",
-            )
-            .prefetch_related(
-                "applications",
-                "applications__user",
-                "applications__roles",
-                "applications__roles__role_group",
-                "applications__responses",
-                "role_groups",
-                "role_groups__roles",
-                "form_questions",
             )
             .first()
         )
@@ -635,7 +615,7 @@ class ApplicationStatusView(LoginRequiredMixin, views.View):
 
         # There are different legal state transformations based on whether the actor
         # is the applicant or the event manager.
-        is_this_user = request.user == application.user
+        is_this_user = request.user.id == application.user_id
         legal_changes = [
             not is_this_user
             and application.status == models.ApplicationStatus.APPLIED
@@ -725,10 +705,10 @@ class ScheduleView(LoginRequiredMixin, views.View):
             models.Event.objects.all(),
             slug=event_slug,
             league__slug=league_slug,
-        )
+        )  # TODO: prefetch
 
         manageable = (
-            models.Event.objects.manageable(request.user).filter(id=event.id).exists()
+            models.Event.objects.filter(id=event.id).manageable(request.user).exists()
         )
         staffed = (
             models.User.objects.filter(
@@ -751,11 +731,11 @@ class ScheduleView(LoginRequiredMixin, views.View):
         games = event.games.filter(role_groups__role_group__in=role_groups).distinct()
 
         static_crews_by_role_group_id = defaultdict(list)
-        for crew in event.static_crews():
+        for crew in event.static_crews().prefetch_assignments():
             static_crews_by_role_group_id[crew.role_group_id].append(crew)
 
         event_crews_by_role_group_id = defaultdict(list)
-        for crew in event.event_crews():
+        for crew in event.event_crews().prefetch_assignments():
             event_crews_by_role_group_id[crew.role_group_id].append(crew)
 
         allow_static_crews_by_role_group_id = {
@@ -793,7 +773,9 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         application_form_slug: str,
     ) -> HttpResponse:
         application_form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user),
+            models.ApplicationForm.objects.manageable(request.user)
+            .prefetch_applications()
+            .prefetch_crews(),
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league,
@@ -848,7 +830,9 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         role_id: UUID,
     ) -> HttpResponse:
         application_form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user),
+            models.ApplicationForm.objects.manageable(
+                request.user
+            ).prefetch_applications(),
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league,

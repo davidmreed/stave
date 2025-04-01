@@ -146,7 +146,7 @@ class Role(models.Model):
         ordering = ["role_group", "order_key"]
 
 
-class LeagueManager(models.Manager["League"]):
+class LeagueQuerySet(models.QuerySet["League"]):
     def visible(self, user: User | AnonymousUser) -> models.QuerySet["League"]:
         if isinstance(user, User):
             return self.filter(
@@ -191,7 +191,7 @@ class League(models.Model):
     event_templates: models.Manager["EventTemplate"]
     user_permissions: models.Manager["LeagueUserPermission"]
 
-    objects = LeagueManager()
+    objects = LeagueQuerySet.as_manager()
 
     def __str__(self) -> str:
         return self.name
@@ -418,6 +418,13 @@ class CrewKind(models.IntegerChoices):
     OVERRIDE_CREW = 3, _("Override Crew")
 
 
+class CrewQuerySet(models.QuerySet["Crew"]):
+    def prefetch_assignments(self) -> models.QuerySet["Crew"]:
+        return self.prefetch_related(
+            "assignments__user", "assignments__role", "assignments__role__role_group"
+        )
+
+
 class Crew(models.Model):
     CrewKind = CrewKind
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -433,7 +440,7 @@ class Crew(models.Model):
         choices=CrewKind.choices, blank=False, null=False, default=CrewKind.GAME_CREW
     )
     # TODO: validate that this field is consistent with our other data.
-
+    objects = CrewQuerySet.as_manager()
     assignments: models.Manager["CrewAssignment"]
     event_role_group_assignments: models.Manager["EventRoleGroupCrewAssignment"]
     role_group_assignments: models.Manager["RoleGroupCrewAssignment"]
@@ -484,7 +491,7 @@ class EventStatus(models.IntegerChoices):
     CANCELED = 5, _("Canceled")
 
 
-class EventManager(models.Manager["Event"]):
+class EventQuerySet(models.QuerySet["Event"]):
     def visible(self, user: User | AnonymousUser) -> models.QuerySet["Event"]:
         if isinstance(user, User):
             return self.filter(
@@ -522,6 +529,9 @@ class EventManager(models.Manager["Event"]):
             league__user_permissions__user=user,
         ).distinct()
 
+    def prefetch_for_display(self) -> models.QuerySet["Event"]:
+        return self.select_related("league").prefetch_related("games")
+
 
 class Event(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -547,7 +557,7 @@ class Event(models.Model):
 
     games: models.Manager["Game"]
 
-    objects = EventManager()
+    objects = EventQuerySet.as_manager()
 
     def __str__(self) -> str:
         return self.name
@@ -651,7 +661,7 @@ class RoleGroupCrewAssignment(models.Model):
         return list(self.effective_crew_by_role_id().values())
 
 
-class GameManager(models.Manager["Game"]):
+class GameQuerySet(models.QuerySet["Game"]):
     def manageable(self, user: User) -> models.QuerySet["Game"]:
         return self.filter(
             event__league__user_permissions__permission=UserPermission.LEAGUE_MANAGER,
@@ -667,7 +677,7 @@ class Game(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
 
-    objects = GameManager()
+    objects = GameQuerySet.as_manager()
 
     def get_crew_assignments_by_role_group(
         self,
@@ -889,7 +899,7 @@ class ApplicationFormTemplate(models.Model):
         ]
 
 
-class ApplicationFormManager(models.Manager["ApplicationForm"]):
+class ApplicationFormQuerySet(models.QuerySet["ApplicationForm"]):
     def listed(self, user: User | AnonymousUser) -> models.QuerySet["ApplicationForm"]:
         """ApplicationForms that are listed on the homepage and other timelines"""
         return (
@@ -933,6 +943,28 @@ class ApplicationFormManager(models.Manager["ApplicationForm"]):
                 .distinct()
                 .exclude(event__status__in=[EventStatus.CANCELED, EventStatus.COMPLETE])
             )
+
+    def prefetch_applications(self) -> models.QuerySet["ApplicationForm"]:
+        return self.select_related(
+            "event",
+            "event__league",
+        ).prefetch_related(
+            "applications",
+            "applications__user",
+            "applications__roles",
+            "applications__roles__role_group",
+            "applications__responses",
+            "role_groups",
+            "role_groups__roles",
+            "form_questions",
+        )
+
+    def prefetch_crews(self) -> models.QuerySet["ApplicationForm"]:
+        return self.select_related("event").prefetch_related(
+            "event__crews",
+            "event__crews__assignments",
+            "event__crews__assignments__user",
+        )
 
 
 class SendEmailContextType(enum.Enum):
@@ -1001,7 +1033,7 @@ class ApplicationForm(models.Model):
             "You can accept standard fields from the user's profile without requiring them to re-type their information."
         ),
     )
-    objects = ApplicationFormManager()
+    objects = ApplicationFormQuerySet().as_manager()
     invitation_email_template = models.ForeignKey(
         MessageTemplate,
         related_name="application_form_invitation",
@@ -1247,7 +1279,7 @@ class Question(models.Model):
         ]
 
 
-class ApplicationManager(models.Manager["Application"]):
+class ApplicationQuerySet(models.QuerySet["Application"]):
     def visible(self, user: User) -> models.QuerySet["Application"]:
         return self.filter(
             Q(user=user)
@@ -1256,6 +1288,19 @@ class ApplicationManager(models.Manager["Application"]):
                 form__event__league__user_permissions__user=user,
             ),
         ).distinct()
+
+    def prefetch_for_display(self) -> models.QuerySet["Application"]:
+        return self.select_related(
+            "form", "form__event", "form__event__league"
+        ).prefetch_related(
+            "form__form_questions",
+            "form__role_groups__roles",
+            "form__event__games",
+            "responses",
+            "availability_by_game",
+            "roles",
+            "roles__role_group",
+        )
 
 
 class Application(models.Model):
@@ -1280,7 +1325,7 @@ class Application(models.Model):
 
     responses: models.Manager["ApplicationResponse"]
 
-    objects = ApplicationManager()
+    objects = ApplicationQuerySet.as_manager()
 
     class Meta:
         # TODO: require population of the relevant availability type for the form.
