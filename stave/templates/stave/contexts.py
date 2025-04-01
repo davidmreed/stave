@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
+import django.forms
 from django.contrib.auth.models import AnonymousUser
 from django.db.models import QuerySet
 from django.http import HttpRequest
@@ -68,13 +69,11 @@ class LeagueDetailViewInputs:
 
 @dataclass
 class ViewApplicationContext:
-    form: models.ApplicationForm
+    app_form: models.ApplicationForm
+    form: forms.ApplicationForm | None
     application: models.Application | None
     ApplicationStatus: type
-    user_data: dict[str, str]
-    responses_by_id: dict[UUID, models.ApplicationResponse]
     editable: bool
-    profile_form: forms.ProfileForm | None
 
 
 @dataclass

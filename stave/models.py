@@ -1,8 +1,8 @@
 import copy
-from collections import defaultdict
 import enum
 import json
 import uuid
+from collections import defaultdict
 from collections.abc import Iterable
 from datetime import datetime, timedelta
 
@@ -639,10 +639,10 @@ class RoleGroupCrewAssignment(models.Model):
 
         if self.crew:
             for assignment in self.crew.assignments.all():
-                crew_assignments_by_role[assignment.role.id] = assignment
+                crew_assignments_by_role[assignment.role_id] = assignment
         if self.crew_overrides:
             for assignment in self.crew_overrides.assignments.all():
-                crew_assignments_by_role[assignment.role.id] = assignment
+                crew_assignments_by_role[assignment.role_id] = assignment
         return crew_assignments_by_role
 
     # TODO: constrain crew_overrides to have is_override=True

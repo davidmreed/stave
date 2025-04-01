@@ -4,7 +4,6 @@ from pathlib import Path
 import dj_database_url
 import django_stubs_ext
 import dotenv
-
 import sentry_sdk
 
 django_stubs_ext.monkeypatch()

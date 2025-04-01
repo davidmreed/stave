@@ -12,7 +12,7 @@
         {{ form.event.name }}
     </h1>
     {% if not application and request.user|can_manage_event:form.event %}
-    <a href="{% url 'form-update' form.event.league.slug form.event.slug form.slug %}" role="button">Edit Form</a>
+    <a href="{% url 'form-update' app_form.event.league.slug app_form.event.slug app_form.slug %}" role="button">Edit Form</a>
     {% endif %}
 </header>
 
@@ -32,44 +32,46 @@
     </div>
     <div>
         <dt>Event</dt>
-        <dd><a href="{% url 'event-detail' form.event.league.slug form.event.slug %}">{{ form.event }}</a></dd>
+        <dd><a href="{% url 'event-detail' app_form.event.league.slug app_form.event.slug %}">{{ app_form.event }}</a></dd>
     </div>
 </dl>
+{% if not editable %}
 <form method="POST">
     {% csrf_token %}
     <input type="hidden" name="redirect_url" id="redirect_url" value="{{ request.path }}">
-    {% include "stave/application_actions.html" with user=request.user can_manage_event=user|can_manage_event:application.form.event application=application ApplicationStatus=ApplicationStatus include_view=False only %}
+    {% include "stave/application_actions.html" with user=request.user can_manage_event=user|can_manage_event:app_form.event application=application ApplicationStatus=ApplicationStatus include_view=False only %}
     </div>
 </form>
+{% endif %}
 {% else %}
 <p>
 <dl>
     <div>
       <dt>Host</dt>
-      <dd><a href="{% url 'league-detail' form.event.league.slug %}">{{ form.event.league.name }}</a></dd>
+      <dd><a href="{% url 'league-detail' app_form.event.league.slug %}">{{ app_form.event.league.name }}</a></dd>
     </div>
-    {% if form.event.end_date != form.event.start_date %}
+    {% if app_form.event.end_date != app_form.event.start_date %}
     <div>
         <dt>Start Date</dt>
-        <dd>{{ form.event.start_date }}</dd>
+        <dd>{{ app_form.event.start_date }}</dd>
     </div>
     <div>
         <dt>End Date</dt>
-        <dd>{{ form.event.end_date }}</dd>
+        <dd>{{ app_form.event.end_date }}</dd>
     </div>
     {% else %}
     <div>
         <dt>Date</dt>
-        <dd>{{ form.event.start_date }}</dd>
+        <dd>{{ app_form.event.start_date }}</dd>
     </div>
     {% endif %}
     <div>
         <dt>Location</dt>
-        <dd>{{ form.event.location }}</dd>
+        <dd>{{ app_form.event.location }}</dd>
     </div>
 </dl>
 
-{{ form.intro_text|markdownify }}
+{{ app_form.intro_text|markdownify }}
 {% endif %}
 
 <h2>Application</h2>
@@ -79,66 +81,43 @@
 <hr>
 {% endif %}
 
-<form action="{% url 'application-form' form.event.league.slug form.event.slug form.slug %}" method="post">
+<form action="{% if application %}{% url 'update-application' application.id %}{% else %}{% url 'application-form' app_form.event.league.slug app_form.event.slug app_form.slug %}{% endif %}" method="post">
 {% csrf_token %}
 
-{% if form.requires_profile_fields %}
+{# top-level form - for error display only #}
+{{ form.errors }}
+
+{% if app_form.requires_profile_fields %}
 
 <p>This application includes information from your profile.</p>
 
-{% if editable and profile_form %}
+{% if editable and form.profile_form %}
 <p>Any changes made here will update your profile.</p>
-{{ profile_form }}
+{{ form.profile_form }}
 
 {% else %}
-<ul>
-{% for profile_field in form.requires_profile_fields %}
-<li>{{ profile_field|get_profile_field_name }} {% if request.user.is_authenticated %}({{ user_data|get:profile_field }}){% endif %}</li>
-{% endfor %}
-</ul>
+{{ form.profile_form }}
 {% endif %}
 <hr>
 {% endif %}
 
 {# Availability #}
-{% if form.application_availability_kind == form.ApplicationAvailabilityKind.WHOLE_EVENT %}
+{% if app_form.application_availability_kind == app_form.ApplicationAvailabilityKind.WHOLE_EVENT %}
 
-<p>This application covers the entire event{% if form.event.start_date != form.event.end_date %}, from {{ form.event.start_date }} to {{ form.event.end_date }}{% endif %}.</p>
+<p>This application covers the entire event{% if app_form.event.start_date != app_form.event.end_date %}, from {{ app_form.event.start_date }} to {{ app_form.event.end_date }}{% endif %}.</p>
 
-{% elif form.application_availability_kind == form.ApplicationAvailabilityKind.BY_DAY %}
+{% elif app_form.application_availability_kind == app_form.ApplicationAvailabilityKind.BY_DAY %}
 
 <p>This application covers multiple days. {% if editable %}Select your availability below.{% endif %}<p>
 
-<fieldset>
-{% for day in form.event.days %}
-<div>
-<input type="checkbox"
-       name="day-{{day}}"
-       id="day-{{day}}"
-       {% if not editable %} disabled {% endif %}
-       {% if application and day in application.availability_by_day %} checked {% endif %}
->
-<label for="day-{{day}}">{{day}}</label>
-</div>
-{% endfor %}
-</fieldset>
+{{ form.availability_form }}
 
-{% elif form.application_availability_kind == form.ApplicationAvailabilityKind.BY_GAME %}
+{% elif app_form.application_availability_kind == app_form.ApplicationAvailabilityKind.BY_GAME %}
 
 <p>This application covers multiple games. {% if editable %}Select your availability below.{% endif %}</p>
 
-<fieldset>
-{% for game in form.games.all %}
-<div>
-<input type="checkbox"
-       name="game-{{game.id}}"
-       id="game-{{game.id}}"
-       {% if not editable %} disabled {% endif %}
-       {% if application and game in application.availability_by_game.all %} checked {% endif %}
->
-<label for="game-{{game.id}}">Game {{game.order_key}} ({{ game.start_time }} to {{ game.end_time }})</label>
-</div>
-{% endfor %}
+{{ form.availability_form }}
+
 {% endif %}
 </fieldset>
 
@@ -146,97 +125,18 @@
 
 <p>Choose the roles you're interested in filling.</p>
 
-{% for role_group in form.role_groups.all %}
+{% for role_group_form in form.role_group_forms %}
 <fieldset>
     <legend>{{role_group.name}}</legend>
-{% regroup role_group.roles.all by name as role_sets %}
-{% for role in role_sets %}
-<div class="role">
-<input type="checkbox"
-       name="role-{{role.list.0.id}}"
-       id="role-{{role.list.0.id}}"
-       {% if not editable %} disabled {% endif %}
-       {% if application and role.grouper in application.role_names_by_role_group_id|get:role_group.id %} checked {% endif %}
-       >
-<label for="role-{{role.list.0.id}}">{{role.grouper}}</label>
-<div>
-{% endfor %}
+    {{ role_group_form }}
 </fieldset>
 {% endfor %}
 
 <hr>
 
-{% for question in form.form_questions.all %}
-<div class="question">
-{% with response=responses_by_id|get:question.id %}
-<label for="{{question.id}}">{{ question.content }}</label>
-{% if question.kind == question.QuestionKind.SHORT_TEXT %}
-<input type="text"
-       id="{{question.id}}"
-       name="{{question.id}}"
-       value="{% if application %}{{ response.content.0 }}{% endif %}"
-       {% if not editable %} disabled {% endif %}
->
-{% elif question.kind == question.QuestionKind.LONG_TEXT %}
-<div>
-<textarea
-    id="{{question.id}}"
-    name="{{question.id}}"
-    {% if not editable %} disabled {% endif %}
->
-    {% if application %}{{ response.content.0 }}{% endif %}
-</textarea>
-</div>
-{% elif question.kind == question.QuestionKind.SELECT_ONE %}
-{% for option in question.options %}
-<div>
-<input type="radio"
-       name="{{question.id}}"
-       value="{{forloop.counter0}}"
-       id="{{question.id}}-{{forloop.counter0}}"
-       {% if not editable %} disabled {% endif %}
-       {% if option == response.content.0 %} checked {% endif %}
-       >
-<label for="{{question.id}}-{{forloop.counter0}}">{{option}}</label>
-</div>
-{% endfor %}
-{% elif question.kind == question.QuestionKind.SELECT_MANY %}
-{% for option in question.options %}
-<div>
-<input type="checkbox"
-       name="{{question.id}}"
-       value="{{forloop.counter0}}"
-       id="{{question.id}}-{{forloop.counter0}}"
-       {% if not editable %} disabled {% endif %}
-       {% if option in response.content %} checked {% endif %}
->
-<label for="{{question.id}}-{{forloop.counter0}}">{{option}}</label>
-</div>
-{% endfor %}
+{% if form.custom_form %}
 
-{% if question.allow_other %}
-<div>
-<input type="checkbox"
-       name="{{question.id}}-other"
-       value="{{question.id}}-other"
-       id="{{question.id}}-other"
-       {% if not editable %} disabled {% endif %}
-       {% if application and response.get_other_response %} checked {% endif %}
->
-<label for="{{question.id}}-other">Other</label>
-<input type="text"
-       name="{{question.id}}-other-value"
-       value="{% if application %}{{ response.get_other_response }}{% endif %}"
-       {% if not editable %} disabled {% endif %}
-       style="width: auto;"
->
-</div>
-{% endif %}
-{% endif %}
-{% endwith %}
-</div>
-{% endfor %}
-{% if form.form_questions.all %}
+{{ form.custom_form }}
 <hr>
 {% endif %}
 <input type="submit" {% if not editable %} disabled {% endif %} value="Submit">

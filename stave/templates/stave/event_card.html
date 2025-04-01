@@ -85,8 +85,10 @@
     </div>
 </header>
     {% for game in event.games.all %}
+    <header>
     <h6>Game {{ game.order_key }} ({{game.start_time|time}}&ndash;{{game.end_time|time}})</h6>
     <a role="button" href="{% url 'game-edit' event.league.slug event.slug game.id %}">Edit</a>
+    </header>
     {% empty %}
     No games scheduled yet.
     {% endfor %}

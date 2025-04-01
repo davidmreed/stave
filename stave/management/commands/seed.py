@@ -319,6 +319,45 @@ class Command(BaseCommand):
             order_key=1,
         )
 
+        # Create a doubleheader event
+        doubleheader = models.Event.objects.create(
+            name="2218-02-28 Doubleheader",
+            slug="2218-02-28-doubleheader",
+            league=league,
+            status=models.EventStatus.OPEN,
+            start_date=date(2218, 2, 28),
+            end_date=date(2218, 2, 28),
+        )
+        doubleheader.role_groups.set([role_group_so, role_group_nso])
+
+        doubleheader_game_1 = models.Game.objects.create(
+            event=doubleheader,
+            name="Game 1",
+            start_time=datetime.combine(
+                doubleheader.start_date, time(10, 00), timezone.utc
+            ),
+            end_time=datetime.combine(
+                doubleheader.start_date, time(12, 00), timezone.utc
+            ),
+            order_key=1,
+        )
+
+        doubleheader_game_2 = models.Game.objects.create(
+            event=doubleheader,
+            name="Game 2",
+            start_time=datetime.combine(
+                doubleheader.start_date, time(14, 00), timezone.utc
+            ),
+            end_time=datetime.combine(
+                doubleheader.start_date, time(16, 00), timezone.utc
+            ),
+            order_key=2,
+        )
+        for role_group in [role_group_so, role_group_nso]:
+            for game in [doubleheader_game_1, doubleheader_game_2]:
+                _ = models.RoleGroupCrewAssignment.objects.create(
+                    game=game, role_group=role_group
+                )
         # Create a single-game event.
         singleheader = models.Event.objects.create(
             name="2218-01-19 Game",
@@ -354,6 +393,17 @@ class Command(BaseCommand):
             requires_profile_fields=["preferred_name"],
         )
         singleheader_app_form.role_groups.set([role_group_so, role_group_nso])
+
+        doubleheader_app_form = models.ApplicationForm.objects.create(
+            event=doubleheader,
+            slug="apply",
+            application_kind=models.ApplicationKind.CONFIRM_ONLY,
+            application_availability_kind=models.ApplicationAvailabilityKind.BY_GAME,
+            hidden=False,
+            intro_text="Join the best teams in the Belt! **For beltalowda!**",
+            requires_profile_fields=["preferred_name"],
+        )
+        doubleheader_app_form.role_groups.set([role_group_so, role_group_nso])
 
         # Create some users
         def create_user(

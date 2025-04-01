@@ -1,6 +1,10 @@
+import copy
 import json
 
 from django import forms
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 
 from . import models
@@ -26,6 +30,326 @@ class SeparatedJSONListField(forms.JSONField):
             python_value = []
 
         return super().to_python(json.dumps(python_value))
+
+
+class MultipleChoiceOrOtherWidget(forms.MultiWidget):
+    def get_context(self, name, value, attrs):
+        # This is a goofy hack to get around the fact that MultiWidget
+        # doesn't handle the situation where our compound value is itself a sequence.
+        value = {"values": value}
+
+        return super().get_context(name, value, attrs)
+
+    def decompress(
+        self, value: dict[str, list[str]]
+    ) -> tuple[list[str], str] | tuple[list[str]]:
+        values: tuple[list[str], str] = ([], "")
+        if value and value.get("values"):
+            value = value["values"]
+            # When we're redisplaying a form with errors, we get back our already-decompresssed data structure
+            if isinstance(value[0], list):
+                return value
+
+            # Otherwise, decompress an actual flat list of values
+            legal_values = [c[0] for c in self.widgets[0].choices]
+            multi_choice_values = [v for v in value if v in legal_values]
+            other = [v for v in value if v not in legal_values]
+            if other:
+                multi_choice_values += ["other"]
+            values = (multi_choice_values, ",".join(other))
+
+        return values[: len(self.widgets)]
+
+
+class MultipleChoiceOrOtherField(forms.MultiValueField):
+    allow_other: bool
+
+    def __init__(self, choices, allow_other: bool, *args, **kwargs):
+        self.allow_other = allow_other
+
+        if allow_other:
+            choices = choices + [("other", _("Other"))]
+            fields = (
+                forms.MultipleChoiceField(
+                    choices=choices, required=False, widget=forms.CheckboxSelectMultiple
+                ),
+                forms.CharField(required=False),
+            )
+        else:
+            fields = (
+                forms.MultipleChoiceField(
+                    choices=choices, required=False, widget=forms.CheckboxSelectMultiple
+                ),
+            )
+
+        super().__init__(
+            fields=fields,
+            widget=MultipleChoiceOrOtherWidget(widgets=[f.widget for f in fields]),
+            require_all_fields=False,
+            *args,
+            **kwargs,
+        )
+
+    def validate(self, value: list[str]):
+        if self.required and not value:
+            raise ValidationError(_("Select at least one option"), code="required")
+
+    def compress(self, values: tuple[list[str], str] | tuple[list[str]]) -> list[str]:
+        if self.allow_other:
+            regular_values = [v for v in values[0] if v != "other"]
+            if "other" in values[0]:
+                regular_values.append(values[1])
+
+            return regular_values
+        else:
+            return values[0]
+
+
+class ApplicationForm(forms.Form):
+    """This is a compound form class that represents the content of a
+    user-designed models.ApplicationForm"""
+
+    profile_form: forms.ModelForm
+    availability_form: forms.Form | None
+    role_group_forms: list[forms.Form]
+    custom_form: forms.Form | None
+    app_form: models.ApplicationForm
+    user: models.User | None
+    instance: models.Application | None
+
+    def __init__(
+        self,
+        app_form: models.ApplicationForm,
+        user: models.User | None,
+        instance: models.Application | None,
+        editable: bool,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.app_form = app_form
+        self.instance = instance
+
+        # If we have an instance, build a dict of initial values.
+        if instance:
+            initial = {}
+            initial["days"] = instance.availability_by_day
+            initial["games"] = instance.availability_by_game.all()
+            # This gets filtered below.
+            initial["roles"] = instance.roles.all()
+            responses_by_question = instance.responses_by_question()
+            for question in app_form.form_questions.all():
+                if question.id in responses_by_question:
+                    initial[f"{question.id}"] = responses_by_question[
+                        question.id
+                    ].content
+
+        else:
+            initial = None
+
+        if "prefix" in kwargs:
+            kwargs.pop("prefix")
+        if "initial" in kwargs:
+            kwargs.pop("initial")
+
+        # Generate fields for profile
+        profile_form_class = forms.modelform_factory(
+            models.User, fields=app_form.requires_profile_fields
+        )
+        self.profile_form = profile_form_class(
+            instance=user, prefix="profile", *args, **kwargs
+        )
+        for f in self.profile_form.fields.values():
+            f.disabled = not editable
+
+        self.user = user
+
+        # Generate fields for availability
+        if (
+            app_form.application_availability_kind
+            == models.ApplicationAvailabilityKind.BY_DAY
+        ):
+            self.availability_form = forms.Form(
+                prefix="days", initial=initial, *args, **kwargs
+            )
+            self.availability_form.fields["days"] = forms.MultipleChoiceField(
+                choices=[(a, a) for a in app_form.event.days()],
+                widget=forms.CheckboxSelectMultiple,
+                required=True,
+                disabled=not editable,
+            )
+        elif (
+            app_form.application_availability_kind
+            == models.ApplicationAvailabilityKind.BY_GAME
+        ):
+            self.availability_form = forms.Form(
+                prefix="games", initial=initial, *args, **kwargs
+            )
+            self.availability_form.fields["games"] = forms.ModelMultipleChoiceField(
+                app_form.games(),
+                widget=forms.CheckboxSelectMultiple,
+                required=True,
+                disabled=not editable,
+            )
+        else:
+            self.availability_form = None
+
+        # Generate fields for role groups
+        self.role_group_forms = []
+        for role_group in app_form.role_groups.all():
+            # We need to pass a distinct initial to each role group form
+            this_initial = None
+            if initial:
+                this_initial = copy.copy(initial)
+                this_initial["roles"] = this_initial["roles"].filter(
+                    role_group_id=role_group.id
+                )
+            self.role_group_forms.append(
+                forms.Form(
+                    prefix=f"role-group-{role_group.id}",
+                    initial=this_initial,
+                    *args,
+                    **kwargs,
+                )
+            )
+            # We need to get only the first role with any given name.
+            role_ids = set()
+            role_names = set()
+            for role in role_group.roles.all():
+                if role.name not in role_names:
+                    role_names.add(role.name)
+                    role_ids.add(role.id)
+            self.role_group_forms[-1].fields["roles"] = forms.ModelMultipleChoiceField(
+                role_group.roles.filter(id__in=role_ids),
+                widget=forms.CheckboxSelectMultiple,
+                label=role_group.name,
+                disabled=not editable,
+                required=False,
+            )
+
+        # Generate fields for the custom form built by the user
+        if app_form.form_questions.all():
+            self.custom_form = forms.Form(
+                prefix="custom", initial=initial, *args, **kwargs
+            )
+            for question in app_form.form_questions.all():
+                field = None
+                match question.kind:
+                    case models.QuestionKind.SHORT_TEXT:
+                        field = forms.CharField()
+                    case models.QuestionKind.LONG_TEXT:
+                        field = forms.CharField(widget=forms.Textarea)
+                    case models.QuestionKind.SELECT_ONE:
+                        field = forms.ChoiceField(
+                            choices=[(a, a) for a in question.options],
+                            widget=forms.RadioSelect,
+                        )
+                    case models.QuestionKind.SELECT_MANY:
+                        field = MultipleChoiceOrOtherField(
+                            choices=[(a, a) for a in question.options],
+                            allow_other=question.allow_other,
+                        )
+
+                if field:
+                    field.label = question.content
+                    field.required = question.required
+                    field.disabled = not editable
+                    self.custom_form.fields[f"{question.id}"] = field
+        else:
+            self.custom_form = None
+
+    def is_valid(self):
+        forms_valid = all(f.is_valid() for f in self.forms)
+        if forms_valid:
+            roles = models.Role.objects.none()
+            for role_group_form in self.role_group_forms:
+                if this_group_roles := role_group_form.cleaned_data.get("roles"):
+                    roles |= this_group_roles
+
+            have_roles = roles.exists()
+            if not have_roles:
+                for role_group_form in self.role_group_forms:
+                    role_group_form.add_error(
+                        None,
+                        error={
+                            "roles": _("Select at least one role from any role group.")
+                        },
+                    )
+
+            return have_roles
+
+        return False
+
+    @property
+    def forms(self) -> list[forms.Form | forms.ModelForm]:
+        return [
+            f
+            for f in (
+                [self.profile_form, self.availability_form]
+                + self.role_group_forms
+                + [self.custom_form]
+            )
+            if f
+        ]
+
+    def cleaned_data(self) -> list[dict]:
+        return [f.cleaned_data for f in self.forms]
+
+    def save(self):
+        with transaction.atomic():
+            # Create instance if not present.
+            if not self.instance:
+                self.instance = models.Application(
+                    form=self.app_form,
+                    user=self.user,
+                    status=models.ApplicationStatus.APPLIED,
+                )
+                self.instance.save()
+
+            # Save profile.
+            self.profile_form.save()
+
+            # Save availability
+            if (
+                self.app_form.application_availability_kind
+                == models.ApplicationAvailabilityKind.BY_DAY
+            ):
+                self.instance.availability_by_day = self.availability_form.cleaned_data[
+                    "days"
+                ]
+            elif (
+                self.app_form.application_availability_kind
+                == models.ApplicationAvailabilityKind.BY_GAME
+            ):
+                self.instance.availability_by_game.set(
+                    self.availability_form.cleaned_data["games"]
+                )
+
+            # Save roles
+            roles = models.Role.objects.none()
+            for role_group_form in self.role_group_forms:
+                if this_group_roles := role_group_form.cleaned_data.get("roles"):
+                    roles |= this_group_roles
+            self.instance.roles.set(roles)
+
+            # Save custom question answers
+            for question in self.app_form.form_questions.all():
+                if str(question.id) in self.custom_form.fields:
+                    values = self.custom_form.cleaned_data[str(question.id)]
+                    response = models.ApplicationResponse.objects.filter(
+                        application=self.instance, question=question
+                    ).first()
+                    if not response:
+                        response = models.ApplicationResponse(
+                            application=self.instance, question=question
+                        )
+
+                    response.content = values
+                    response.save()
+
+            self.instance.save()
+
+            return self.instance
 
 
 class QuestionForm(forms.ModelForm):

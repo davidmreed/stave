@@ -65,7 +65,7 @@ urlpatterns = [
         name="form-create",
     ),
     path(
-        "_/<slug:league>/events/<slug:event>/forms/<slug:application_form>/",
+        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:application_form_slug>/",
         views.ApplicationFormView.as_view(),
         name="application-form",
     ),
@@ -84,6 +84,11 @@ urlpatterns = [
         "application/<uuid:pk>/",
         view=views.SingleApplicationView.as_view(),
         name="view-application",
+    ),
+    path(
+        "application/<uuid:pk>/edit/",
+        view=views.SingleApplicationView.as_view(),
+        name="update-application",
     ),
     path(
         "application/<uuid:pk>/<int:status>/",

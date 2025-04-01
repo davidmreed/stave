@@ -18,8 +18,8 @@ from django.http import (
     HttpRequest,
     HttpResponse,
     HttpResponseBadRequest,
-    HttpResponseRedirect,
     HttpResponseForbidden,
+    HttpResponseRedirect,
 )
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
@@ -511,10 +511,26 @@ class ProfileView(
 class SingleApplicationView(
     LoginRequiredMixin,
     TypedContextMixin[contexts.ViewApplicationContext],
-    generic.DetailView,
+    generic.edit.UpdateView,
 ):
     template_name = "stave/view_application.html"
     model = models.Application
+    form_class = forms.ApplicationForm
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+
+        kwargs.update(
+            {
+                "instance": self.get_object(),
+                "editable": self.request.path.endswith("/edit/"),
+                "label_suffix": "",
+                "user": self.request.user,
+                "app_form": self.get_object().form,
+            }
+        )
+
+        return kwargs
 
     def get_queryset(self) -> QuerySet[models.Application]:
         return (
@@ -533,22 +549,22 @@ class SingleApplicationView(
 
     def get_context(self) -> contexts.ViewApplicationContext:
         application: models.Application = self.get_object()
+        application_form = self.get_form()
+        # Force a clean since we're going to override
+        # the `form` kwarg from our mixin
+        _ = application_form.is_valid()
 
         return contexts.ViewApplicationContext(
             ApplicationStatus=models.ApplicationStatus,
             application=application,
-            form=application.form,
-            profile_form=None,
-            user_data={
-                key: str(getattr(application.user, key))
-                for key in application.form.requires_profile_fields
-            },
-            responses_by_id={
-                response.question_id: response
-                for response in application.responses.all()
-            },
-            editable=False,
+            app_form=application.form,
+            form=application_form,
+            editable=self.request.path.endswith("/edit/"),
         )
+
+    def form_valid(self, form: forms.ApplicationForm):
+        self.object = form.save()
+        return super().form_valid(form)
 
 
 class FormApplicationsView(
@@ -919,173 +935,90 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
 
 class ApplicationFormView(views.View):
     def get(
-        self, request: HttpRequest, application_form: str, event: str, league: str
+        self,
+        request: HttpRequest,
+        application_form_slug: str,
+        event_slug: str,
+        league_slug: str,
     ) -> HttpResponse:
-        form = get_object_or_404(
+        app_form = get_object_or_404(
             models.ApplicationForm.objects.accessible(request.user),
-            slug=application_form,
-            event__slug=event,
-            event__league__slug=league,
+            slug=application_form_slug,
+            event__slug=event_slug,
+            event__league__slug=league_slug,
         )
         if request.user.is_authenticated:
-            existing_application = form.applications.filter(user=request.user).first()
+            existing_application = app_form.applications.filter(
+                user=request.user
+            ).first()
             if existing_application:
                 return HttpResponseRedirect(existing_application.get_absolute_url())
-
-        if request.user.is_authenticated:
-            profile_form_class = modelform_factory(
-                models.User, fields=form.requires_profile_fields
-            )
-            profile_form = profile_form_class(
-                instance=request.user,
-                prefix="profile",
-            )
-        else:
-            profile_form = None
+        editable = (
+            request.user.is_authenticated
+            and models.ApplicationForm.objects.submittable(request.user)
+            .filter(id=app_form.id)
+            .exists()
+        )
+        form = forms.ApplicationForm(
+            app_form,
+            request.user if request.user.is_authenticated else None,
+            instance=None,
+            editable=editable,
+            label_suffix="",
+        )
 
         context = contexts.ViewApplicationContext(
             ApplicationStatus=models.ApplicationStatus,
             application=None,
             form=form,
-            profile_form=profile_form,
-            user_data={
-                key: str(getattr(request.user, key))
-                for key in form.requires_profile_fields
-            }
-            if request.user.is_authenticated
-            else {},
-            responses_by_id={},
-            editable=request.user.is_authenticated
-            and models.ApplicationForm.objects.submittable(request.user)
-            .filter(id=form.id)
-            .exists(),
+            app_form=app_form,
+            editable=editable,
         )
 
         return render(request, "stave/view_application.html", asdict(context))
 
     def post(
-        self, request: HttpRequest, application_form: str, event: str, league: str
+        self,
+        request: HttpRequest,
+        application_form_slug: str,
+        event_slug: str,
+        league_slug: str,
     ) -> HttpResponse:
         app = None
 
         if not request.user.is_authenticated:
             return HttpResponseBadRequest("login first")  # TODO
 
-        with transaction.atomic():
-            form: models.ApplicationForm = get_object_or_404(
-                models.ApplicationForm.objects.submittable(request.user),
-                slug=application_form,
-                event__slug=event,
-                event__league__slug=league,
-            )
-
-            # Update the user Profile if needed
-            profile_form_class = modelform_factory(
-                models.User, fields=form.requires_profile_fields
-            )
-            profile_form = profile_form_class(
-                instance=request.user, prefix="profile", data=request.POST
-            )
-            if not profile_form.is_valid():
-                messages.error(request, "Your profile data was invalid")
-
-                return HttpResponseRedirect(request.path)  # TODO
-
-            profile_form.save()
-
-            # Construct and persist an Application, ApplicationResponse, and RoleAssignments
-
-            app = models.Application(
-                form=form,
-                user=request.user,
-                status=models.ApplicationStatus.APPLIED,
-            )
-
-            # Pull out Availability information
-            if (
-                form.application_availability_kind
-                == models.ApplicationAvailabilityKind.BY_DAY
-            ):
-                app.availability_by_day = [
-                    day for day in form.event.days() if f"day-{day}" in request.POST
-                ]
-                if not app.availability_by_day:
-                    messages.error(request, "Select at least one day of availability")
-                    return HttpResponseRedirect(request.path)
-            elif (
-                form.application_availability_kind
-                == models.ApplicationAvailabilityKind.BY_GAME
-            ):
-                games = [
-                    game
-                    for game in form.event.games.all()
-                    if f"game-{game.id}" in request.POST
-                ]
-                if not games:
-                    messages.error(request, "Select at least one game of availability")
-                    return HttpResponseRedirect(request.path)
-
-                app.availability_by_game.set(games)
-
-            roles = [
-                role
-                for role in models.Role.objects.filter(
-                    role_group__in=form.role_groups.all()
-                )
-                if f"role-{role.id}" in request.POST
-            ]
-            if not roles:
-                messages.error(request, "Select at least one role")
-                return HttpResponseRedirect(request.path)
-
-            app.roles.set(roles)
-
-            app.save()
-            # Question answers
-            for question in form.form_questions.all():
-                if str(question.id) in request.POST:
-                    values = request.POST.getlist(str(question.id))
-                    if not values or (
-                        len(values) != 1
-                        and question.kind != question.QuestionKind.SELECT_MANY
-                    ):
-                        raise BadRequest()
-                    if question.kind in (
-                        models.QuestionKind.SHORT_TEXT,
-                        models.QuestionKind.LONG_TEXT,
-                    ):
-                        content = values
-                    else:
-                        # The content of `values` should be indices into the `options` array
-                        # for this question
-                        try:
-                            answers = [question.options[int(v)] for v in values]
-                        except (ValueError, IndexError):
-                            raise BadRequest()
-
-                        if f"{question.id}-other" in request.POST:
-                            if not question.allow_other or not request.POST.get(
-                                f"{question.id}-other-value"
-                            ):
-                                raise BadRequest("bad other")
-                            else:
-                                answers.append(
-                                    request.POST[f"{question.id}-other-value"]
-                                )
-
-                        content = answers
-
-                    if question.required and not content:
-                        raise BadRequest("Missing content")
-
-                    response = models.ApplicationResponse(
-                        application=app, question=question, content=content
-                    )
-                    response.save()
-                else:
-                    raise BadRequest(f"missing question {question.content}")
-
+        app_form: models.ApplicationForm = get_object_or_404(
+            models.ApplicationForm.objects.submittable(request.user),
+            slug=application_form_slug,
+            event__slug=event_slug,
+            event__league__slug=league_slug,
+        )
+        form = forms.ApplicationForm(
+            app_form,
+            request.user,
+            data=request.POST,
+            instance=None,
+            editable=True,
+            label_suffix="",
+        )
+        if form.is_valid():
+            app = form.save()
             return HttpResponseRedirect(reverse("view-application", args=[app.id]))
+
+        context = contexts.ViewApplicationContext(
+            ApplicationStatus=models.ApplicationStatus,
+            application=None,
+            app_form=app_form,
+            form=form,
+            editable=request.user.is_authenticated
+            and models.ApplicationForm.objects.submittable(request.user)
+            .filter(id=app_form.id)
+            .exists(),
+        )
+
+        return render(request, "stave/view_application.html", asdict(context))
 
 
 class SendEmailView(LoginRequiredMixin, views.View):

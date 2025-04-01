@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta, timezone
 import logging
+from datetime import datetime, timedelta, timezone
 
 from django.core.mail import EmailMultiAlternatives
 from django_apscheduler.util import close_old_connections

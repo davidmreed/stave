@@ -25,7 +25,13 @@ article header:not(:first-child) {
     margin-top: 18px !important;
 }
 
+a[role=button] {
+    margin-bottom: 20px;
+    width: 100%;
+}
+
 header a[role=button] {
+    width: auto;
     padding: 0.25rem;
     margin-left:0.25rem;
     align-content: center;
@@ -44,10 +50,6 @@ header a[role=button] {
 
 main a:not([role])::after {
     content: ' ⇨';
-}
-
-fieldset legend {
-    font-weight: bold;
 }
 
 body header nav {
