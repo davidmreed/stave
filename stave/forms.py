@@ -140,10 +140,16 @@ class ApplicationForm(forms.Form):
             responses_by_question = instance.responses_by_question()
             for question in app_form.form_questions.all():
                 if question.id in responses_by_question:
-                    initial[f"{question.id}"] = responses_by_question[
-                        question.id
-                    ].content
+                    content = responses_by_question[question.id].content
 
+                    # Clean up accidentally-stored lists.
+                    if isinstance(content, list) and question.kind in [
+                        models.QuestionKind.SHORT_TEXT,
+                        models.QuestionKind.LONG_TEXT,
+                    ]:
+                        content = content[0]
+
+                    initial[f"{question.id}"] = content
         else:
             initial = None
 

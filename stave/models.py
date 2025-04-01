@@ -1323,7 +1323,21 @@ class ApplicationResponse(models.Model):
     content: models.JSONField[str | list[str]] = models.JSONField()
 
     def __str__(self) -> str:
-        return json.dumps(self.content)
+        if isinstance(self.content, list):
+            if len(self.content) == 0:
+                return ""
+            elif len(self.content) == 1:
+                return str(self.content[0])
+            elif len(self.content) == 2:
+                return " and ".join(str(a) for a in self.content)
+            else:
+                return (
+                    ", ".join(str(a) for a in self.content[:-1])
+                    + " and "
+                    + str(self.content[-1])
+                )
+        else:
+            return self.content
 
     def get_other_response(self) -> str:
         if self.question.kind == QuestionKind.SELECT_MANY:

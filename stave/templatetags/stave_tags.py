@@ -1,5 +1,5 @@
 from collections.abc import Mapping, Sequence
-from typing import Any, Type
+from typing import Any
 
 from django import template
 from django.db.models import QuerySet
