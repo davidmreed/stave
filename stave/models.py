@@ -1,6 +1,5 @@
 import copy
 import enum
-import json
 import uuid
 from collections import defaultdict
 from collections.abc import Iterable
@@ -25,6 +24,7 @@ class User(AbstractBaseUser):
         "preferred_name",
         "legal_name",
         "pronouns",
+        "email",
         "league_affiliation",
         "game_history_url",
         "wftda_insurance_number",
