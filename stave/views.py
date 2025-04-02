@@ -523,13 +523,14 @@ class SingleApplicationView(
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
 
+        application = self.get_object()
         kwargs.update(
             {
-                "instance": self.get_object(),
+                "instance": application,
                 "editable": self.request.path.endswith("/edit/"),
                 "label_suffix": "",
-                "user": self.request.user,
-                "app_form": self.get_object().form,
+                "user": application.user,
+                "app_form": application.form,
             }
         )
 
