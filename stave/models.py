@@ -67,6 +67,13 @@ class User(AbstractBaseUser):
     # TODO: references.
     league_permissions: models.Manager["LeagueUserPermission"]
 
+    # Required to use the Django Admin
+    def has_perm(self, perm, obj=None):
+        return True
+
+    def has_module_perms(self, app_label):
+        return True
+
     def __str__(self) -> str:
         return self.preferred_name
 
