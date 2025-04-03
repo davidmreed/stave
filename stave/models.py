@@ -706,10 +706,9 @@ class Game(models.Model):
         """
         Returns the User for the given role group and role for the game.
         """
-        for rga in self.get_crew_assignments_by_role_group().values():
-            if rga.role_group.name != role_group:
-                continue
-            for ca in rga.effective_crew():
+        rga = self.role_groups.filter(role_group__name=role_group).first()
+        if rga:
+           for ca in rga.effective_crew():
                 if ca.role.name == role:
                     return ca.user
         return None
