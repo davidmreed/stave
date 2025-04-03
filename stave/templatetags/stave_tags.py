@@ -90,3 +90,8 @@ def commalist(d: Sequence[Any]) -> str:
         return " and ".join(str(a) for a in d)
     else:
         return ", ".join(str(a) for a in d[:-1]) + " and " + str(d[-1])
+
+
+@register.filter
+def game_history(ca: models.CrewAssignment):
+    return models.GameHistory(ca)

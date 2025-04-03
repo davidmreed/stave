@@ -702,6 +702,29 @@ class Game(models.Model):
         ]
         ordering = ["order_key"]
 
+    def user_by_group_and_role(self, role_group: str, role: str) -> User | None:
+        """
+        Returns the User for the given role group and role for the game.
+        """
+        rga = self.role_groups.filter(role_group__name=role_group).first()
+        if rga:
+           for ca in rga.effective_crew():
+                if ca.role.name == role:
+                    return ca.user
+        return None
+
+    def hr(self) -> User | None:
+        """
+        Returns the Head Referee for the game.
+        """
+        return self.user_by_group_and_role("SO", "HR")
+
+    def hnso(self) -> User | None:
+        """
+        Returns the Head NSO for the game.
+        """
+        return self.user_by_group_and_role("NSO", "HNSO")
+
 
 class ApplicationStatus(models.IntegerChoices):
     APPLIED = 1, _("Applied")
@@ -1414,3 +1437,16 @@ class ApplicationResponse(models.Model):
             ),
             # models.CheckConstraint(check=Q(application=F("question__application")), name="response_app_and_question_app_match")
         ]
+
+
+class GameHistory:
+    game: Game
+    user: User
+    role: Role
+    secondary_role: Role | None
+
+    def __init__(self, game: Game, user: User, role: Role, secondary_role: Role | None):
+        self.game = game
+        self.user = user
+        self.role = role
+        self.secondary_role = secondary_role

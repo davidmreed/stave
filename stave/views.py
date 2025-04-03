@@ -11,7 +11,7 @@ from django import views
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Q
 from django.http import (
     Http404,
     HttpRequest,
@@ -56,6 +56,62 @@ class MyApplicationsView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self) -> QuerySet[models.Application]:
         return super().get_queryset().filter(user=self.request.user)
+
+
+class OfficiatingHistoryView(LoginRequiredMixin, generic.ListView):
+    """
+    A view that displays a user's officiating history.
+
+    The QuerySet fetches all RoleGroupCrewAssignments with a crew that has the user in a crew
+    assignment. `get_context_data` then computes the effective crew for each of those and bulids a
+    list of GameHistory's. This requires only a single query, and a bit of filtering in memory.
+
+    The QuerySet can be paginated, although the number of game histories shown on the results could
+    be less than the size of the page because the effective crew may not include the user, and could
+    even theoretically be empty. This could be fixed by having get_queryset return GameHistory's,
+    but it's not clear if that can be composed as a QuerySet.
+    """
+
+    template_name = "stave/officiating_history.html"
+    model = models.RoleGroupCrewAssignment
+
+    def get_queryset(self):
+        cas = models.CrewAssignment.objects.filter(user=self.request.user)
+        crews = models.Crew.objects.filter(assignments__in=cas)
+        rgcas = models.RoleGroupCrewAssignment.objects.filter(
+            Q(crew__in=crews) | Q(crew_overrides__in=crews)
+        ).order_by("-game__start_time")
+        return rgcas
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        histories = []
+        for rgca in context["object_list"]:
+            cas = [ca for ca in rgca.effective_crew() if ca.user == self.request.user]
+            # A user can have up to two roles in a game. Primary role is the one with
+            # `nonexclusive=True`.
+            if len(cas) == 0:
+                continue
+            elif len(cas) == 1:
+                role = cas[0].role
+                secondary_role = None
+            else:
+                role = next((ca.role for ca in cas if ca.role.nonexclusive), None)
+                assert role is not None
+                secondary_role = next(
+                    (ca.role for ca in cas if not ca.role.nonexclusive), None
+                )
+            history = models.GameHistory(
+                game=rgca.game,
+                user=self.request.user,
+                role=role,
+                secondary_role=secondary_role,
+            )
+            histories.append(history)
+        context["histories"] = histories
+
+        return context
 
 
 class HomeView(generic.TemplateView):
