@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load stave_tags %}
+
+{% block content %}
+
+<h2>Officiating History</h2>
+
+<table>
+    <thead>
+        <tr>
+            <td>
+                Date
+            </td>
+            <td>
+                Event Name
+            </td>
+            <td>
+                Event Location
+            </td>
+            <td>
+                Event Host
+            </td>
+            <td>
+                Home / High Seed
+            </td>
+            <td>
+                Visitor / Low Seed
+            </td>
+            <td>
+                Association
+            </td>
+            <td>
+                Game Type
+            </td>
+            <td>
+                Position
+            </td>
+            <td>
+                2nd Position
+            </td>
+            <td>
+                Software
+            </td>
+            <td>
+                Head Referee
+            </td>
+            <td>
+                Head NSO
+            </td>
+        </tr>
+    </thead>
+    <tbody>
+        {% for history in histories %}
+        <tr>
+            <td>
+                {# TODO: This should use the local timezone. #}
+                {{ history.game.start_time|date:"Y-m-d" }}
+            </td>
+            <td>
+                {{ history.game.event.name }}
+            </td>
+            <td>
+                {{ history.game.event.location }}
+            </td>
+            <td>
+                {{ history.game.event.league.name }}
+            </td>
+            <td>
+                {# Home / High Seed #}
+                {# TODO: Temporary way to identify games until we have teams. #}
+                [{{ history.game.name }}]
+            </td>
+            <td>
+                {# Visitor / Low Seed #}
+            </td>
+            <td>
+                {# Association #}
+            </td>
+            <td>
+                {# Game Type #}
+            </td>
+            <td>
+                {# Position #}
+                {{ history.role }}
+            </td>
+            <td>
+                {# 2nd Position #}
+                {{ history.secondary_role.name }}
+            </td>
+            <td>
+                {# Software #}
+            </td>
+            <td>
+                {{ history.game.hr.preferred_name|default:"" }}
+            </td>
+            <td>
+                {{ history.game.hnso.preferred_name|default:"" }}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
