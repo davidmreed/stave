@@ -59,6 +59,14 @@ class MyApplicationsView(LoginRequiredMixin, generic.ListView):
         return super().get_queryset().filter(user=self.request.user)
 
 
+class OfficiatingHistoryView(LoginRequiredMixin, generic.ListView):
+    template_name = "stave/officiating_history.html"
+    model = models.CrewAssignment
+
+    def get_queryset(self) -> QuerySet[models.CrewAssignment]:
+        return super().get_queryset().filter(user=self.request.user)
+
+
 class HomeView(generic.TemplateView):
     template_name = "stave/home.html"
 

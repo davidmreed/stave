@@ -702,6 +702,30 @@ class Game(models.Model):
         ]
         ordering = ["order_key"]
 
+    def user_by_group_and_role(self, role_group: str, role: str) -> User | None:
+        """
+        Returns the User for the given role group and role for the game.
+        """
+        for rga in self.get_crew_assignments_by_role_group().values():
+            if rga.role_group.name != role_group:
+                continue
+            for ca in rga.effective_crew():
+                if ca.role.name == role:
+                    return ca.user
+        return None
+
+    def hr(self) -> User | None:
+        """
+        Returns the Head Referee for the game.
+        """
+        return self.user_by_group_and_role("SO", "HR")
+
+    def hnso(self) -> User | None:
+        """
+        Returns the Head NSO for the game.
+        """
+        return self.user_by_group_and_role("NSO", "HNSO")
+
 
 class ApplicationStatus(models.IntegerChoices):
     APPLIED = 1, _("Applied")
@@ -1414,3 +1438,22 @@ class ApplicationResponse(models.Model):
             ),
             # models.CheckConstraint(check=Q(application=F("question__application")), name="response_app_and_question_app_match")
         ]
+
+
+class GameHistory:
+    event: Event
+    game: Game | None
+    user: User | None
+    role: Role | None
+
+    def __init__(self, ca: CrewAssignment, user: User | None = None, role: Role | None = None):
+        context = ca.crew.get_context()
+        self.user = user
+        self.role = role
+        if isinstance(context, Game):
+            self.game = context
+            self.event = self.game.event
+        elif isinstance(context, Event):
+            self.event = context
+        else:
+            raise ValueError("Invalid GameHistorycontext")
