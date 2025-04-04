@@ -1440,19 +1440,7 @@ class ApplicationResponse(models.Model):
 
 
 class GameHistory:
-    event: Event
-    game: Game | None
-    user: User | None
-    role: Role | None
-
-    def __init__(self, ca: CrewAssignment, user: User | None = None, role: Role | None = None):
-        context = ca.crew.get_context()
-        self.user = user
-        self.role = role
-        if isinstance(context, Game):
-            self.game = context
-            self.event = self.game.event
-        elif isinstance(context, Event):
-            self.event = context
-        else:
-            raise ValueError("Invalid GameHistorycontext")
+    game: Game
+    user: User
+    role: Role
+    secondary_role: Role | None

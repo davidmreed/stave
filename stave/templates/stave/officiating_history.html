@@ -50,21 +50,20 @@
         </tr>
     </thead>
     <tbody>
-        {% for crew_assignment in object_list %}
-        {% with gh=crew_assignment|game_history %}
+        {% for history in object_list %}
         <tr>
             <td>
                 {# TODO: This should use the local timezone. #}
-                {{ gh.game.start_time|date:"Y-m-d" }}
+                {{ history.game.start_time|date:"Y-m-d" }}
             </td>
             <td>
-                {{ gh.event.name }}
+                {{ history.game.event.name }}
             </td>
             <td>
-                {{ gh.event.location }}
+                {{ history.game.event.location }}
             </td>
             <td>
-                {{ gh.event.league.name }}
+                {{ history.game.event.league.name }}
             </td>
             <td>
                 {# Home / High Seed #}
@@ -80,22 +79,22 @@
             </td>
             <td>
                 {# Position #}
-                {{ crew_assignment.role.name }}
+                {{ history.role.name }}
             </td>
             <td>
                 {# 2nd Position #}
+                {{ history.secondary_role.name }}
             </td>
             <td>
                 {# Software #}
             </td>
             <td>
-                {{ gh.game.hr.preferred_name|default:"" }}
+                {{ history.game.hr.preferred_name|default:"" }}
             </td>
             <td>
-                {{ gh.game.hnso.preferred_name|default:"" }}
+                {{ history.game.hnso.preferred_name|default:"" }}
             </td>
         </tr>
-        {% endwith %}
         {% endfor %}
     </tbody>
 </table>

@@ -60,11 +60,52 @@ class MyApplicationsView(LoginRequiredMixin, generic.ListView):
 
 
 class OfficiatingHistoryView(LoginRequiredMixin, generic.ListView):
-    template_name = "stave/officiating_history.html"
-    model = models.CrewAssignment
+    """
+    A view that displays a user's officiating history.
 
-    def get_queryset(self) -> QuerySet[models.CrewAssignment]:
-        return super().get_queryset().filter(user=self.request.user)
+    The QuerySet fetches all RoleGroupCrewAssignments with a crew that has the user in a crew
+    assignment. `get_context_data` then computes the effective crew for each of those and bulids a
+    list of GameHistory's. This requires only a single query, and a bit of filtering in memory.
+
+    The QuerySet can be paginated, although the number of game histories shown on the results could
+    be less than the size of the page because the effective crew may not include the user, and could
+    even theoretically be empty. This could be fixed by having get_queryset return GameHistory's,
+    but it's not clear if that can be composed as a QuerySet.
+    """
+
+    template_name = "stave/officiating_history.html"
+    model = models.RoleGroupCrewAssignment
+
+    def get_queryset(self):
+        ca = models.CrewAssignment.objects.filter(user=self.request.user)
+        crews = models.Crew.objects.filter(assignments__in=ca)
+        rgcas = models.RoleGroupCrewAssignment.objects.filter(crew__in=crews)
+        return rgcas
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        histories = []
+        for rgca in context["object_list"]:
+            cas = [ca for ca in rgca.effective_crew()
+                   if ca.user == self.request.user]
+            # A user can have up to two roles in a game. Primary role is the one with
+            # `nonexclusive=True`.
+            role = next(
+                (ca.role for ca in cas if ca.role.nonexclusive), None)
+            assert role is not None
+            secondary_role = next(
+                (ca.role for ca in cas if not ca.role.nonexclusive), None)
+            history = models.GameHistory(
+                game=rgca.game,
+                user=self.request.user,
+                role=role,
+                secondary_role=secondary_role,
+            )
+            histories.append(history)
+        context["histories"] = histories
+
+        return context
 
 
 class HomeView(generic.TemplateView):
