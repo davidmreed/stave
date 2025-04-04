@@ -25,6 +25,7 @@
             <div>
                 <ul>
                 {% if request.user.is_authenticated %}
+                <li><a href="{% url 'officiating-history' %}">Officiating History</a></li>
                 <li><a href="{% url 'my-applications' %}">My Applications</a></li>
                 <li><a href="{% url 'profile' %}">My Account</a></li>
                 <li><a href="{% url 'account_logout' %}">Logout</a></li>
