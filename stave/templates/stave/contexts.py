@@ -1,10 +1,8 @@
 from dataclasses import dataclass
 from uuid import UUID
-
-import django.forms
+from typing import Any
 from django.contrib.auth.models import AnonymousUser
 from django.db.models import QuerySet
-from django.http import HttpRequest
 
 from stave import forms, models
 
@@ -114,3 +112,13 @@ class EventCardInputs(EventDetailInputs):
     show_details: bool
     show_forms: bool
     show_games: bool
+
+
+@dataclass
+class ParentChildCreateUpdateInputs:
+    object: Any
+    form: forms.ParentChildForm
+    view_url: str
+    parent_name: str
+    child_name: str
+    child_name_plural: str

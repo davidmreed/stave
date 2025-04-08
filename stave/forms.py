@@ -2,7 +2,6 @@ import copy
 import json
 
 from django import forms
-from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
@@ -105,75 +104,87 @@ class MultipleChoiceOrOtherField(forms.MultiValueField):
             return values[0]
 
 
-class MasterDetailForm(forms.Form):
-    master_form_class: type[forms.ModelForm]
-    detail_form_class: type[forms.ModelForm]
+class ParentChildForm(forms.Form):
+    parent_form_class: type[forms.ModelForm]
+    child_form_class: type[forms.ModelForm]
     relation_name: str
     reverse_name: str
 
-    master_form: forms.ModelForm
-    detail_formset: forms.BaseModelFormSet
+    parent_form: forms.ModelForm
+    child_formset: forms.BaseModelFormSet
 
     def __init__(self, *args, **kwargs):
-        self.master_form = self.master_form_class(*args, **kwargs)
-        self.detail_formset = self._get_detail_formset(*args, **kwargs)
+        self.parent_form = self.get_parent_formset(*args, **kwargs)
+        self.child_formset = self.get_child_formset(*args, **kwargs)
 
-    def _get_detail_formset(self, *args, **kwargs):
+    def get_parent_formset(self, *args, **kwargs) -> forms.ModelForm:
+        return self.parent_form_class(*args, **kwargs)
+
+    def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
         # If we have an instance, grab its children for the detail formset
         # Otherwise, use a blank queryset.
-        if self.master_form.instance:
-            detail_queryset = getattr(
-                self.master_form.instance, self.reverse_name
-            ).all()
+        if self.parent_form.instance:
+            child_queryset = getattr(self.parent_form.instance, self.reverse_name).all()
         else:
-            detail_queryset = self.detail_form_class.Meta.model.objects.none()
+            child_queryset = self.child_form_class.Meta.model.objects.none()
 
         if "instance" in kwargs:
             # formsets do not want this kwarg
             del kwargs["instance"]
 
         formset_factory = forms.modelformset_factory(
-            self.detail_form_class.Meta.model,
-            form=self.detail_form_class,
+            self.child_form_class.Meta.model,
+            form=self.child_form_class,
             can_delete=True,
             extra=0,
         )
 
         formset_factory.deletion_widget = forms.HiddenInput
-        return formset_factory(queryset=detail_queryset, *args, **kwargs)
+        return formset_factory(queryset=child_queryset, *args, **kwargs)
 
     def is_valid(self) -> bool:
-        return self.master_form.is_valid() and self.detail_formset.is_valid()
+        return self.parent_form.is_valid() and self.child_formset.is_valid()
 
-    def add_detail_form(self, values: dict[str, str] | None = None):
-        new_data = self.detail_formset.data.copy()
-        count = int(new_data["form-TOTAL_FORMS"])
-        new_data[f"form-{count}-id"] = ""
-        if values:
-            for key, value in values.items():
-                new_data[f"form-{count}-{key}"] = value
+    def add_child_form(self, values: dict[str, str] | None = None):
+        if "form-TOTAL_FORMS" in self.child_formset.data:
+            try:
+                new_data = self.child_formset.data.copy()
+                count = int(new_data["form-TOTAL_FORMS"])
+                new_data[f"form-{count}-id"] = ""
+                if values:
+                    for key, value in values.items():
+                        new_data[f"form-{count}-{key}"] = value
 
-        count += 1
-        new_data["form-TOTAL_FORMS"] = str(count)
-        self.detail_formset = self._get_detail_formset(data=new_data)
+                count += 1
+                new_data["form-TOTAL_FORMS"] = str(count)
+                self.child_formset = self.get_child_formset(data=new_data)
+            except (KeyError, ValueError):
+                pass
+        else:
+            # Form has not been rendered yet.
+            self.child_formset.extra += 1
 
-    def delete_detail_form(self, index: int):
-        new_data = self.detail_formset.data.copy()
+    def delete_child_form(self, index: int):
+        new_data = self.child_formset.data.copy()
         if 0 <= index < len(new_data):
             new_data[f"form-{index}-DELETE"] = "on"
-            self.detail_formset = self._get_detail_formset(data=new_data)
+            self.child_formset = self.get_child_formset(data=new_data)
+
+    def pre_save(self):
+        pass
 
     def save(self):
+        self.pre_save()
         with transaction.atomic():
-            master = self.master_form.save()
+            parent = self.parent_form.save()
 
-            for detail_form in self.detail_formset.forms:
-                setattr(detail_form.instance, self.relation_name, master)
+            for child_form in self.child_formset.forms:
+                setattr(child_form.instance, self.relation_name, parent)
 
-            self.detail_formset.save_existing_objects()
-            self.detail_formset.save_new_objects()
+            self.child_formset.save_existing_objects()
+            self.child_formset.save_new_objects()
 
-            return master
+            return parent
 
 
 class ApplicationForm(forms.Form):
@@ -629,11 +640,28 @@ class GameForm(forms.ModelForm):
         }
 
 
-class EventCreateUpdateForm(MasterDetailForm):
-    master_form_class = EventForm
-    detail_form_class = GameForm
+class EventCreateUpdateForm(ParentChildForm):
+    parent_form_class = EventForm
+    child_form_class = GameForm
     relation_name = "event"
     reverse_name = "games"
+
+    def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
+        if "league" in kwargs:
+            del kwargs["league"]
+
+        return super().get_child_formset(*args, **kwargs)
+
+    def pre_save(self):
+        # Renumber games.
+        for index, game_form in enumerate(
+            [
+                game_form
+                for game_form in self.child_formset.forms
+                if game_form.cleaned_data.get("DELETE") != "on"
+            ]
+        ):
+            game_form.instance.order_key = index + 1
 
 
 class ProfileForm(forms.ModelForm):

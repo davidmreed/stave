@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import dataclasses
 import itertools
 from collections import defaultdict
@@ -9,10 +10,8 @@ from uuid import UUID
 from django import views
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import BadRequest
 from django.db import transaction
 from django.db.models import QuerySet
-from django.forms import modelform_factory
 from django.http import (
     Http404,
     HttpRequest,
@@ -117,75 +116,114 @@ class EventDetailView(
         )
 
 
-class EventUpdateView(LoginRequiredMixin, views.View):
-    template_name = "stave/event_create_update.html"
-    form_class = forms.EventCreateUpdateForm
-    slug_url_kwarg = "event"
+class ParentChildCreateUpdateFormView(views.View, ABC):
+    template_name: str = "stave/parent_child_create_update.html"
+    form_class: type[forms.ParentChildForm]
 
-    def get_event(
-        self, user: models.User, league_slug: str, event_slug: str
-    ) -> models.Event:
-        return get_object_or_404(
-            models.Event.objects.manageable(user)
-            .prefetch_for_display()
-            .filter(
-                league__slug=league_slug,
-            ),
-            slug=event_slug,
-        )
+    @abstractmethod
+    def get_object(self, request: HttpRequest, **kwargs) -> Any | None: ...
 
-    def get(
-        self, request: HttpRequest, league_slug: str, event_slug: str
-    ) -> HttpResponse:
-        event = self.get_event(request.user, league_slug, event_slug)
-        form = forms.EventCreateUpdateForm(instance=event)
+    @abstractmethod
+    def get_view_url(self) -> str: ...
+
+    def get_form(self, **kwargs) -> forms.ParentChildForm:
+        return self.form_class(**kwargs)
+
+    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        object_ = self.get_object(request, **kwargs)
+        form = self.get_form(instance=object_)
+
+        # On a GET, we can process adds but not deletes.
+        if request.GET.get("action") == "add":
+            form.add_child_form()
+
         return render(
             request,
-            template_name="stave/event_create_update.html",
-            context={"event": event, "form": form},
+            template_name=self.template_name,
+            context={
+                "object": object_,
+                "form": form,
+                "view_url": self.get_view_url(),
+                "parent_name": self.form_class.parent_form_class._meta.model._meta.verbose_name,
+                "child_name": self.form_class.child_form_class._meta.model._meta.verbose_name,
+                "child_name_plural": self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
+            },
         )
 
-    def post(
-        self, request: HttpRequest, league_slug: str, event_slug: str
-    ) -> HttpResponse:
-        event = self.get_event(request.user, league_slug, event_slug)
-        form = forms.EventCreateUpdateForm(instance=event, data=request.POST)
+    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        object_ = self.get_object(request, **kwargs)
+        form = self.get_form(instance=object_, data=request.POST)
 
         action = request.GET.get("action")
         match action:
             case "add":
-                # We requested to add a game.
-                form.add_detail_form()
+                # We requested to add a child object.
+                form.add_child_form()
             case "delete":
+                # We requested to delete a child object.
                 index = request.GET.get("index")
                 if index:
                     try:
                         index = int(index)
-                        form.delete_detail_form(index)
+                        # Index validation is done by the form.
+                        form.delete_child_form(index)
                     except ValueError:
                         pass
             case _:
                 if form.is_valid():
-                    # Renumber games.
-                    # TODO: This should probably be in a method on the form.
-                    for index, game_form in enumerate(
-                        [
-                            game_form
-                            for game_form in form.detail_formset.forms
-                            if game_form.cleaned_data.get("DELETE") is not None
-                        ]
-                    ):
-                        game_form.instance.order_key = index
-
-                    event = form.save()
-
-                    return HttpResponseRedirect(event.get_absolute_url())
-
+                    object_ = form.save()
+                    return HttpResponseRedirect(object_.get_absolute_url())
         return render(
             request,
-            template_name="stave/event_create_update.html",
-            context={"event": event, "form": form},
+            template_name=self.template_name,
+            context={
+                "object": object_,
+                "form": form,
+                "view_url": self.get_view_url(),
+                "parent_name": self.form_class.parent_form_class._meta.model._meta.verbose_name,
+                "child_name": self.form_class.child_form_class._meta.model._meta.verbose_name,
+                "child_name_plural": self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
+            },
         )
+
+
+class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView):
+    form_class = forms.EventCreateUpdateForm
+
+    def get_form(self, **kwargs) -> forms.EventCreateUpdateForm:
+        league = get_object_or_404(
+            models.League.objects.manageable(self.request.user),
+            slug=self.kwargs.get("league_slug"),
+        )
+        return forms.EventCreateUpdateForm(league=league, **kwargs)
+
+    def get_object(
+        self,
+        request: HttpRequest,
+        league_slug: str | None = None,
+        event_slug: str | None = None,
+        **kwargs,
+    ) -> models.Event | None:
+        if league_slug and event_slug:
+            return get_object_or_404(
+                models.Event.objects.manageable(request.user)
+                .prefetch_for_display()
+                .filter(
+                    league__slug=league_slug,
+                ),
+                slug=event_slug,
+            )
+
+    def get_view_url(self) -> str:
+        league_slug = self.kwargs.get("league_slug")
+        event_slug = self.kwargs.get("event_slug")
+
+        if league_slug and event_slug:
+            return reverse("event-edit", args=[league_slug, event_slug])
+        elif league_slug:
+            return reverse("event-create", args=[league_slug])
+
+        return ""  # FIXME: raise appropriate exception
 
 
 class EventCreateView(
@@ -205,18 +243,17 @@ class EventCreateView(
             slug=self.kwargs.get("league"),
         )
         self.selected_template = None
+
         if template_id := request.POST.get("template_id"):
+            # template_id being present means the first form, the selector, was submitted.
             if template_id != "none":
-                # this is the sigil for "select no template"
+                # "none" is the sigil for "select no template"
                 self.selected_template = get_object_or_404(
                     self.league.event_templates.all(), pk=template_id
                 )
 
     def get_form_class(self) -> type:
-        if self.selected_template:
-            return forms.EventFromTemplateForm
-
-        return forms.EventForm
+        return forms.EventFromTemplateForm
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -243,28 +280,25 @@ class EventCreateView(
         )
 
     def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
-        if not self.selected_template and "template_id" not in request.POST:
-            # This is the first stage of the form, where the user has to select a template.
-            # We don't want to call form_valid() because the user hasn't
-            # actually filled out the model form yet.
-
-            # if template_id is in the request, the user picked "none"
-            self.object = None
-            return self.render_to_response(self.get_context_data())
-
-        return super().post(request, *args, **kwargs)
-
-    def form_valid(
-        self, form: forms.EventForm | forms.EventFromTemplateForm
-    ) -> HttpResponse:
-        with transaction.atomic():
+        if "slug" in self.request.POST:
+            # This submission was of the clone-from-selected-template form.
+            # Let Django process the form for us.
+            return super().post(request, *args, **kwargs)
+        else:
             if self.selected_template:
-                # We're cloning an event template.
-                event = self.selected_template.clone(**form.cleaned_data)
+                self.object = None
+                return self.render_to_response(self.get_context_data())
             else:
-                # We've got event data to save.
-                event = form.save()
+                # The user doesn't want to clone a template
+                # Redirect them to the Create Event form.
+                return HttpResponseRedirect(
+                    reverse("event-edit", args=[self.league.slug])
+                )
 
+    def form_valid(self, form: forms.EventFromTemplateForm) -> HttpResponse:
+        with transaction.atomic():
+            # We're cloning an event template.
+            event = self.selected_template.clone(**form.cleaned_data)
             self.object = event
 
             return HttpResponseRedirect(self.get_success_url())
@@ -305,45 +339,6 @@ class CrewCreateView(LoginRequiredMixin, views.View):
             return HttpResponseRedirect(redirect_url)
 
         return HttpResponseRedirect(form.get_absolute_url())
-
-
-class GameUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
-    template_name = "stave/league_edit.html"
-    form_class = forms.GameForm
-
-    def get_queryset(self) -> QuerySet[models.Game]:
-        return models.Game.objects.manageable(self.request.user)
-
-    def get_success_url(self) -> str:
-        return self.object.event.get_absolute_url()
-
-
-class GameCreateView(LoginRequiredMixin, generic.edit.CreateView):
-    template_name = "stave/league_edit.html"
-    form_class = forms.GameForm
-
-    def get(
-        self, request: HttpRequest, league_slug: str, event_slug: str, *args, **kwargs
-    ) -> HttpResponse:
-        _ = get_object_or_404(
-            models.League.objects.event_manageable(request.user),
-            slug=league_slug,
-        )
-
-        return super().get(request, *args, **kwargs)
-
-    def form_valid(self, form: forms.GameForm) -> HttpResponse:
-        event = get_object_or_404(
-            models.Event.objects.manageable(self.request.user),
-            league__slug=self.kwargs["league_slug"],
-            slug=self.kwargs["event_slug"],
-        )
-
-        form.instance.event_id = event.id
-        return super().form_valid(form)
-
-    def get_success_url(self) -> str:
-        return self.object.event.get_absolute_url()
 
 
 class LeagueUpdateView(LoginRequiredMixin, generic.edit.UpdateView):

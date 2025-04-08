@@ -81,13 +81,13 @@
 <header>
     <h5>Games</h5>
     <div class="header-buttons">
-        <a href="{% url 'game-create' event.league.slug event.slug %}" role="button">Create Game</a>
+        <a href="{% url 'event-edit' event.league.slug event.slug %}{% querystring action='add'%}" role="button">Create Game</a>
     </div>
 </header>
     {% for game in event.games.all %}
     <header>
     <h6>Game {{ game.order_key }} ({{game.start_time|time}}&ndash;{{game.end_time|time}})</h6>
-    <a role="button" href="{% url 'game-edit' event.league.slug event.slug game.id %}">Edit</a>
+    <a role="button" href="{% url 'event-edit' event.league.slug event.slug %}">Edit</a>
     </header>
     {% empty %}
     No games scheduled yet.

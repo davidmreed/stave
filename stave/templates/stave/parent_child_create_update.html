@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load stave_tags %}
+
+{% inputs 'ParentChildCreateUpdateInputs' %}
+
+{% block content %}
+
+<header>
+    <h1>{{ object|default:"New" }}</h1> {# TODO: new #}
+</header>
+
+<form action="{{ view_url }}" method="POST">
+    {% csrf_token %}
+
+    {{ form.parent_form }}
+
+    <h2>{{ child_name_plural|title }} </h2>
+    {{ form.child_formset.management_form }}
+
+    {% for child_form in form.child_formset %}
+    {% if not child_form|is_form_deleted %}
+    {{ child_form }}
+    <input type="submit" formaction="{{ view_url }}{% querystring action='delete' index=forloop.counter0 %}" value="Delete {{ child_name|title }}" formnovalidate>
+    <hr>
+    {% else %}
+    {{ child_form.DELETE }}
+    {{ child_form.id }}
+    {% endif %}
+    {% empty %}
+    This {{ parent_name|lower }} doesn't have any {{ child_name_plural|lower }} yet.
+    {% endfor %}
+    <input type="submit" formaction="{{ view_url }}{% querystring action='add' %}" value="Add {{ child_name|title }} to {{ parent_name|title }}" formnovalidate>
+    <hr>
+    <input type="submit" value="Save">
+</form>
+
+{% endblock %}

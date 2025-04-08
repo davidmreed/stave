@@ -20,7 +20,7 @@ urlpatterns = [
         "_/<slug:slug>/edit/", view=views.LeagueUpdateView.as_view(), name="league-edit"
     ),
     path(
-        "_/<slug:league>/create-event/",
+        "_/<slug:league>/create-event-with-template/",
         view=views.EventCreateView.as_view(),
         name="event-create",
     ),
@@ -30,19 +30,14 @@ urlpatterns = [
         name="event-detail",
     ),
     path(
-        "_/<slug:league_slug>/events/<slug:event_slug>/edit/",
-        view=views.EventUpdateView.as_view(),
+        "_/<slug:league_slug>/create-event/",
+        view=views.EventCreateUpdateView.as_view(),
         name="event-edit",
     ),
     path(
-        "_/<slug:league_slug>/events/<slug:event_slug>/games/<uuid:pk>/",
-        view=views.GameUpdateView.as_view(),
-        name="game-edit",
-    ),
-    path(
-        "_/<slug:league_slug>/events/<slug:event_slug>/create-game/",
-        view=views.GameCreateView.as_view(),
-        name="game-create",
+        "_/<slug:league_slug>/events/<slug:event_slug>/edit/",
+        view=views.EventCreateUpdateView.as_view(),
+        name="event-edit",
     ),
     path(
         "_/<slug:league_slug>/events/<slug:event_slug>/create-form/<int:kind>/",
