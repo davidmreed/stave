@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from uuid import UUID
 from typing import Any
+from uuid import UUID
+
 from django.contrib.auth.models import AnonymousUser
 from django.db.models import QuerySet
 

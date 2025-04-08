@@ -1,9 +1,8 @@
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from django import template
+from django import forms, template
 from django.db.models import QuerySet
-from django import forms
 
 from stave.templates.stave import contexts
 

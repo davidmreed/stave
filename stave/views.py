@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod
 import dataclasses
 import itertools
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import asdict, is_dataclass
 from datetime import datetime
