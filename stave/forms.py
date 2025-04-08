@@ -105,6 +105,77 @@ class MultipleChoiceOrOtherField(forms.MultiValueField):
             return values[0]
 
 
+class MasterDetailForm(forms.Form):
+    master_form_class: type[forms.ModelForm]
+    detail_form_class: type[forms.ModelForm]
+    relation_name: str
+    reverse_name: str
+
+    master_form: forms.ModelForm
+    detail_formset: forms.BaseModelFormSet
+
+    def __init__(self, *args, **kwargs):
+        self.master_form = self.master_form_class(*args, **kwargs)
+        self.detail_formset = self._get_detail_formset(*args, **kwargs)
+
+    def _get_detail_formset(self, *args, **kwargs):
+        # If we have an instance, grab its children for the detail formset
+        # Otherwise, use a blank queryset.
+        if self.master_form.instance:
+            detail_queryset = getattr(
+                self.master_form.instance, self.reverse_name
+            ).all()
+        else:
+            detail_queryset = self.detail_form_class.Meta.model.objects.none()
+
+        if "instance" in kwargs:
+            # formsets do not want this kwarg
+            del kwargs["instance"]
+
+        formset_factory = forms.modelformset_factory(
+            self.detail_form_class.Meta.model,
+            form=self.detail_form_class,
+            can_delete=True,
+            extra=0,
+        )
+
+        formset_factory.deletion_widget = forms.HiddenInput
+        return formset_factory(queryset=detail_queryset, *args, **kwargs)
+
+    def is_valid(self) -> bool:
+        return self.master_form.is_valid() and self.detail_formset.is_valid()
+
+    def add_detail_form(self, values: dict[str, str] | None = None):
+        new_data = self.detail_formset.data.copy()
+        count = int(new_data["form-TOTAL_FORMS"])
+        new_data[f"form-{count}-id"] = ""
+        if values:
+            for key, value in values.items():
+                new_data[f"form-{count}-{key}"] = value
+
+        count += 1
+        new_data["form-TOTAL_FORMS"] = str(count)
+        self.detail_formset = self._get_detail_formset(data=new_data)
+
+    def delete_detail_form(self, index: int):
+        new_data = self.detail_formset.data.copy()
+        if 0 <= index < len(new_data):
+            new_data[f"form-{index}-DELETE"] = "on"
+            self.detail_formset = self._get_detail_formset(data=new_data)
+
+    def save(self):
+        with transaction.atomic():
+            master = self.master_form.save()
+
+            for detail_form in self.detail_formset.forms:
+                setattr(detail_form.instance, self.relation_name, master)
+
+            self.detail_formset.save_existing_objects()
+            self.detail_formset.save_new_objects()
+
+            return master
+
+
 class ApplicationForm(forms.Form):
     """This is a compound form class that represents the content of a
     user-designed models.ApplicationForm"""
@@ -511,6 +582,11 @@ class EventForm(forms.ModelForm):
             "end_date",
             "location",
         ]
+        widgets = {
+            "start_date": forms.DateInput(attrs={"type": "date"}),
+            "end_date": forms.DateInput(attrs={"type": "date"}),
+            "role_groups": forms.CheckboxSelectMultiple,
+        }
 
     def __init__(self, *args, league: models.League | None = None, **kwargs):
         kwargs["label_suffix"] = ""
@@ -532,6 +608,7 @@ class EventFromTemplateForm(forms.ModelForm):
             "start_date",
             "location",
         ]
+        widgets = {"start_date": forms.DateInput(attrs={"type": "date"})}
 
     def __init__(self, *args, league: models.League, **kwargs):
         kwargs["label_suffix"] = ""
@@ -541,7 +618,22 @@ class EventFromTemplateForm(forms.ModelForm):
 class GameForm(forms.ModelForm):
     class Meta:
         model = models.Game
-        fields = ["name", "order_key", "start_time", "end_time"]
+        fields = ["name", "start_time", "end_time"]
+        widgets = {
+            "start_time": forms.DateTimeInput(
+                attrs={"type": "datetime-local", "required": True}
+            ),
+            "end_time": forms.DateTimeInput(
+                attrs={"type": "datetime-local", "required": True}
+            ),
+        }
+
+
+class EventCreateUpdateForm(MasterDetailForm):
+    master_form_class = EventForm
+    detail_form_class = GameForm
+    relation_name = "event"
+    reverse_name = "games"
 
 
 class ProfileForm(forms.ModelForm):

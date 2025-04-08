@@ -117,18 +117,74 @@ class EventDetailView(
         )
 
 
-class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
-    template_name = "stave/league_edit.html"
-    form_class = forms.EventForm
+class EventUpdateView(LoginRequiredMixin, views.View):
+    template_name = "stave/event_create_update.html"
+    form_class = forms.EventCreateUpdateForm
     slug_url_kwarg = "event"
 
-    def get_queryset(self) -> QuerySet[models.Event]:
-        return (
-            models.Event.objects.manageable(self.request.user)
+    def get_event(
+        self, user: models.User, league_slug: str, event_slug: str
+    ) -> models.Event:
+        return get_object_or_404(
+            models.Event.objects.manageable(user)
             .prefetch_for_display()
             .filter(
-                league__slug=self.kwargs["league"],
-            )
+                league__slug=league_slug,
+            ),
+            slug=event_slug,
+        )
+
+    def get(
+        self, request: HttpRequest, league_slug: str, event_slug: str
+    ) -> HttpResponse:
+        event = self.get_event(request.user, league_slug, event_slug)
+        form = forms.EventCreateUpdateForm(instance=event)
+        return render(
+            request,
+            template_name="stave/event_create_update.html",
+            context={"event": event, "form": form},
+        )
+
+    def post(
+        self, request: HttpRequest, league_slug: str, event_slug: str
+    ) -> HttpResponse:
+        event = self.get_event(request.user, league_slug, event_slug)
+        form = forms.EventCreateUpdateForm(instance=event, data=request.POST)
+
+        action = request.GET.get("action")
+        match action:
+            case "add":
+                # We requested to add a game.
+                form.add_detail_form()
+            case "delete":
+                index = request.GET.get("index")
+                if index:
+                    try:
+                        index = int(index)
+                        form.delete_detail_form(index)
+                    except ValueError:
+                        pass
+            case _:
+                if form.is_valid():
+                    # Renumber games.
+                    # TODO: This should probably be in a method on the form.
+                    for index, game_form in enumerate(
+                        [
+                            game_form
+                            for game_form in form.detail_formset.forms
+                            if game_form.cleaned_data.get("DELETE") is not None
+                        ]
+                    ):
+                        game_form.instance.order_key = index
+
+                    event = form.save()
+
+                    return HttpResponseRedirect(event.get_absolute_url())
+
+        return render(
+            request,
+            template_name="stave/event_create_update.html",
+            context={"event": event, "form": form},
         )
 
 
@@ -150,9 +206,11 @@ class EventCreateView(
         )
         self.selected_template = None
         if template_id := request.POST.get("template_id"):
-            self.selected_template = get_object_or_404(
-                self.league.event_templates.all(), pk=template_id
-            )
+            if template_id != "none":
+                # this is the sigil for "select no template"
+                self.selected_template = get_object_or_404(
+                    self.league.event_templates.all(), pk=template_id
+                )
 
     def get_form_class(self) -> type:
         if self.selected_template:
@@ -170,6 +228,7 @@ class EventCreateView(
 
         if "slug" not in self.request.POST and "data" in kwargs:
             # This form submission wasn't from a page that had the form rendered.
+            # (i.e., the template selector screen)
             del kwargs["data"]
             del kwargs["files"]
 
@@ -184,10 +243,12 @@ class EventCreateView(
         )
 
     def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
-        if not self.selected_template:
+        if not self.selected_template and "template_id" not in request.POST:
             # This is the first stage of the form, where the user has to select a template.
             # We don't want to call form_valid() because the user hasn't
             # actually filled out the model form yet.
+
+            # if template_id is in the request, the user picked "none"
             self.object = None
             return self.render_to_response(self.get_context_data())
 
@@ -201,9 +262,8 @@ class EventCreateView(
                 # We're cloning an event template.
                 event = self.selected_template.clone(**form.cleaned_data)
             else:
-                event = form.save(commit=False)
-                event.league = self.league
-                event.save()
+                # We've got event data to save.
+                event = form.save()
 
             self.object = event
 
@@ -386,10 +446,8 @@ class FormCreateUpdateView(LoginRequiredMixin, views.View):
         question_queryset = models.Question.objects.none()
         if form_slug:
             form = get_object_or_404(
-                models.ApplicationForm.objects.manageable(request.user),
+                event.forms.manageable(request.user),
                 slug=form_slug,
-                event__slug=event_slug,
-                event__league__slug=league_slug,
             )
             question_queryset = form.form_questions.all()
 

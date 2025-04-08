@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load stave_tags %}
+{% block content %}
+
+<header>
+    <h1>{{ event.name|default:"New Event" }}</h1>
+</header>
+
+<form action="{% url 'event-edit' event.league.slug event.slug %}" method="POST">
+    {% csrf_token %}
+
+    {{ form.master_form }}
+
+    <h2>Games</h2>
+    {{ form.detail_formset.management_form }}
+
+    {% for detail_form in form.detail_formset %}
+    {% if not detail_form|is_form_deleted %}
+    <header>
+        <h3>Game X</h3>
+        <input type="submit" formaction="{% url 'event-edit' event.league.slug event.slug %}{% querystring action='delete' index=forloop.counter0 %}" value="Delete" formnovalidate>
+    </header>
+    {{ detail_form }}
+    {% else %}
+    {{ detail_form.DELETE }}
+    {{ detail_form.id }}
+    {% endif %}
+    {% empty %}
+    This event doesn't have any games scheduled yet.
+    {% endfor %}
+    <input type="submit" formaction="{% url 'event-edit' event.league.slug event.slug %}{% querystring action='add' %}" value="Add Game to Event" formnovalidate>
+    <hr>
+    <input type="submit" value="Save">
+</form>
+
+{% endblock %}
