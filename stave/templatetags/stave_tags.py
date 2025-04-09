@@ -1,7 +1,7 @@
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from django import template
+from django import forms, template
 from django.db.models import QuerySet
 
 from stave.templates.stave import contexts
@@ -13,6 +13,11 @@ register = template.Library()
 
 class TemplateValidationException(Exception):
     pass
+
+
+@register.filter
+def is_form_deleted(form: forms.BaseForm) -> bool:
+    return form.data.get(f"{form.prefix}-DELETE") == "on"
 
 
 @register.simple_tag(takes_context=True)

@@ -2,7 +2,6 @@ import copy
 import json
 
 from django import forms
-from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
@@ -103,6 +102,89 @@ class MultipleChoiceOrOtherField(forms.MultiValueField):
             return regular_values
         else:
             return values[0]
+
+
+class ParentChildForm(forms.Form):
+    parent_form_class: type[forms.ModelForm]
+    child_form_class: type[forms.ModelForm]
+    relation_name: str
+    reverse_name: str
+
+    parent_form: forms.ModelForm
+    child_formset: forms.BaseModelFormSet
+
+    def __init__(self, *args, **kwargs):
+        self.parent_form = self.get_parent_formset(*args, **kwargs)
+        self.child_formset = self.get_child_formset(*args, **kwargs)
+
+    def get_parent_formset(self, *args, **kwargs) -> forms.ModelForm:
+        return self.parent_form_class(*args, **kwargs)
+
+    def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
+        # If we have an instance, grab its children for the detail formset
+        # Otherwise, use a blank queryset.
+        if self.parent_form.instance:
+            child_queryset = getattr(self.parent_form.instance, self.reverse_name).all()
+        else:
+            child_queryset = self.child_form_class.Meta.model.objects.none()
+
+        if "instance" in kwargs:
+            # formsets do not want this kwarg
+            del kwargs["instance"]
+
+        formset_factory = forms.modelformset_factory(
+            self.child_form_class.Meta.model,
+            form=self.child_form_class,
+            can_delete=True,
+            extra=0,
+        )
+
+        formset_factory.deletion_widget = forms.HiddenInput
+        return formset_factory(queryset=child_queryset, *args, **kwargs)
+
+    def is_valid(self) -> bool:
+        return self.parent_form.is_valid() and self.child_formset.is_valid()
+
+    def add_child_form(self, values: dict[str, str] | None = None):
+        if "form-TOTAL_FORMS" in self.child_formset.data:
+            try:
+                new_data = self.child_formset.data.copy()
+                count = int(new_data["form-TOTAL_FORMS"])
+                new_data[f"form-{count}-id"] = ""
+                if values:
+                    for key, value in values.items():
+                        new_data[f"form-{count}-{key}"] = value
+
+                count += 1
+                new_data["form-TOTAL_FORMS"] = str(count)
+                self.child_formset = self.get_child_formset(data=new_data)
+            except (KeyError, ValueError):
+                pass
+        else:
+            # Form has not been rendered yet.
+            self.child_formset.extra += 1
+
+    def delete_child_form(self, index: int):
+        new_data = self.child_formset.data.copy()
+        if 0 <= index < len(new_data):
+            new_data[f"form-{index}-DELETE"] = "on"
+            self.child_formset = self.get_child_formset(data=new_data)
+
+    def pre_save(self):
+        pass
+
+    def save(self):
+        self.pre_save()
+        with transaction.atomic():
+            parent = self.parent_form.save()
+
+            for child_form in self.child_formset.forms:
+                setattr(child_form.instance, self.relation_name, parent)
+
+            self.child_formset.save_existing_objects()
+            self.child_formset.save_new_objects()
+
+            return parent
 
 
 class ApplicationForm(forms.Form):
@@ -511,6 +593,11 @@ class EventForm(forms.ModelForm):
             "end_date",
             "location",
         ]
+        widgets = {
+            "start_date": forms.DateInput(attrs={"type": "date"}),
+            "end_date": forms.DateInput(attrs={"type": "date"}),
+            "role_groups": forms.CheckboxSelectMultiple,
+        }
 
     def __init__(self, *args, league: models.League | None = None, **kwargs):
         kwargs["label_suffix"] = ""
@@ -532,6 +619,7 @@ class EventFromTemplateForm(forms.ModelForm):
             "start_date",
             "location",
         ]
+        widgets = {"start_date": forms.DateInput(attrs={"type": "date"})}
 
     def __init__(self, *args, league: models.League, **kwargs):
         kwargs["label_suffix"] = ""
@@ -541,7 +629,47 @@ class EventFromTemplateForm(forms.ModelForm):
 class GameForm(forms.ModelForm):
     class Meta:
         model = models.Game
-        fields = ["name", "order_key", "start_time", "end_time"]
+        fields = ["name", "start_time", "end_time"]
+        widgets = {
+            "start_time": forms.DateTimeInput(
+                attrs={"type": "datetime-local", "required": True}
+            ),
+            "end_time": forms.DateTimeInput(
+                attrs={"type": "datetime-local", "required": True}
+            ),
+        }
+
+
+class EventCreateUpdateForm(ParentChildForm):
+    parent_form_class = EventForm
+    child_form_class = GameForm
+    relation_name = "event"
+    reverse_name = "games"
+    league: models.League
+
+    def __init__(self, league: models.League, *args, **kwargs):
+        self.league = league
+        super().__init__(*args, league=league, **kwargs)
+
+    def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
+        if "league" in kwargs:
+            del kwargs["league"]
+
+        return super().get_child_formset(*args, **kwargs)
+
+    def pre_save(self):
+        # Assign league.
+        self.parent_form.instance.league = self.league
+
+        # Renumber games.
+        for index, game_form in enumerate(
+            [
+                game_form
+                for game_form in self.child_formset.forms
+                if game_form.cleaned_data.get("DELETE") != "on"
+            ]
+        ):
+            game_form.instance.order_key = index + 1
 
 
 class ProfileForm(forms.ModelForm):
