@@ -844,11 +844,11 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         )
 
         static_crews_by_role_group_id = defaultdict(list)
-        for crew in application_form.static_crews():
+        for crew in application_form.static_crews().prefetch_assignments():
             static_crews_by_role_group_id[crew.role_group_id].append(crew)
 
         event_crews_by_role_group_id = defaultdict(list)
-        for crew in application_form.event_crews():
+        for crew in application_form.event_crews().prefetch_assignments():
             event_crews_by_role_group_id[crew.role_group_id].append(crew)
 
         allow_static_crews_by_role_group_id = {
