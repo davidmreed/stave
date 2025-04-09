@@ -6,6 +6,7 @@
     {% if include_view %}
         <a role="button" href="{% url 'view-application' application.id %}">View</a>
     {% endif %}
+    {% if application.status != ApplicationStatus.WITHDRAWN %}
     {% if user == application.user %}
         <a role="button" href="{% url 'update-application' application.id %}">Edit</a>
         {% if application.status == ApplicationStatus.APPLIED %}
@@ -35,5 +36,6 @@
                 <input type="submit" formaction="{% url 'application-status' application.id ApplicationStatus.WITHDRAWN %}" value="Mark Withdrawn">
             {% endif %}
         {% endif %}
+    {% endif %}
     {% endif %}
 </div>

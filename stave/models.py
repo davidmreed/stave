@@ -1363,6 +1363,18 @@ class Application(models.Model):
 
         return names
 
+    def save(self, *args, **kwargs):
+        if self.status == ApplicationStatus.WITHDRAWN:
+            # Remove all CrewAssignments for this user that correspond
+            # to this application's form's Role Groups.
+            _ = CrewAssignment.objects.filter(
+                user=self.user,
+                crew__event=self.form.event,
+                role__role_group__in=self.form.role_groups.all(),
+            ).delete()
+
+        return super().save(*args, **kwargs)
+
 
 class ApplicationResponse(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
