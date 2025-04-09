@@ -6,7 +6,7 @@
 {% block content %}
 
 <header>
-    <h1>{{ object|default:"New" }}</h1> {# TODO: new #}
+    <h1>{% if object %}{{ object }}{% else %}New {{ parent_name|title }}{% endif %}</h1>
 </header>
 
 <form action="{{ view_url }}" method="POST">

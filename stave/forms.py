@@ -645,6 +645,11 @@ class EventCreateUpdateForm(ParentChildForm):
     child_form_class = GameForm
     relation_name = "event"
     reverse_name = "games"
+    league: models.League
+
+    def __init__(self, league: models.League, *args, **kwargs):
+        self.league = league
+        super().__init__(*args, league=league, **kwargs)
 
     def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
         if "league" in kwargs:
@@ -653,6 +658,9 @@ class EventCreateUpdateForm(ParentChildForm):
         return super().get_child_formset(*args, **kwargs)
 
     def pre_save(self):
+        # Assign league.
+        self.parent_form.instance.league = self.league
+
         # Renumber games.
         for index, game_form in enumerate(
             [

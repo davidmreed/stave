@@ -221,7 +221,7 @@ class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView)
         if league_slug and event_slug:
             return reverse("event-edit", args=[league_slug, event_slug])
         elif league_slug:
-            return reverse("event-create", args=[league_slug])
+            return reverse("event-edit", args=[league_slug])
 
         return ""  # FIXME: raise appropriate exception
 
@@ -240,7 +240,7 @@ class EventCreateView(
 
         self.league = get_object_or_404(
             models.League.objects.event_manageable(self.request.user),
-            slug=self.kwargs.get("league"),
+            slug=self.kwargs.get("league_slug"),
         )
         self.selected_template = None
 
@@ -278,6 +278,13 @@ class EventCreateView(
             selected_template=self.selected_template,
             require_template_selection_first=True,
         )
+
+    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        if not self.league.event_templates.exists():
+            # No templates. Redirect to the template-free create page.
+            return HttpResponseRedirect(reverse("event-edit", args=[self.league.slug]))
+
+        return super().get(request, *args, **kwargs)
 
     def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         if "slug" in self.request.POST:
@@ -367,7 +374,8 @@ class LeagueCreateView(
 
     def form_valid(self, form: forms.LeagueForm) -> HttpResponse:
         with transaction.atomic():
-            if template_id := self.request.POST.get("template_id"):
+            template_id = self.request.POST.get("template_id")
+            if template_id and template_id != "none":
                 # We're cloning a league template.
                 template = get_object_or_404(models.LeagueTemplate, pk=template_id)
                 league = template.clone(**form.cleaned_data)

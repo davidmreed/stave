@@ -20,7 +20,7 @@ urlpatterns = [
         "_/<slug:slug>/edit/", view=views.LeagueUpdateView.as_view(), name="league-edit"
     ),
     path(
-        "_/<slug:league>/create-event-with-template/",
+        "_/<slug:league_slug>/create-event-with-template/",
         view=views.EventCreateView.as_view(),
         name="event-create",
     ),
