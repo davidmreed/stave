@@ -843,6 +843,19 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
             event__league__slug=league,
         )
 
+        # Crew Builder requires that all Override Crews be present on our RoleGroupCrewAssignments.
+        with transaction.atomic():
+            games = application_form.event.games.all()
+            for game in games:
+                for rgca in game.role_groups.all().select_for_update():
+                    if not rgca.crew_overrides:
+                        rgca.crew_overrides = models.Crew.objects.create(
+                            kind=models.CrewKind.OVERRIDE_CREW,
+                            role_group=rgca.role_group,
+                            event=game.event,
+                        )
+                        rgca.save()
+
         static_crews_by_role_group_id = defaultdict(list)
         for crew in application_form.static_crews().prefetch_assignments():
             static_crews_by_role_group_id[crew.role_group_id].append(crew)

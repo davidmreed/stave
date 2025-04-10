@@ -639,17 +639,8 @@ class RoleGroupCrewAssignment(models.Model):
         editable=False,
         related_name="role_group_override_assignments",
         on_delete=models.CASCADE,
+        null=True,
     )
-
-    def save(self, *args, **kwargs):
-        if not self.crew_overrides_id:
-            self.crew_overrides_id = Crew.objects.create(
-                kind=CrewKind.OVERRIDE_CREW,
-                role_group=self.role_group,
-                event=self.game.event,
-            ).id
-
-        return super().save(*args, **kwargs)
 
     def effective_crew_by_role_id(self) -> dict[uuid.UUID, CrewAssignment]:
         crew_assignments_by_role: dict[uuid.UUID, CrewAssignment] = {}
