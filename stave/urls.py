@@ -90,6 +90,8 @@ urlpatterns = [
         view=views.ApplicationStatusView.as_view(),
         name="application-status",
     ),
+    path("officiating-history", views.OfficiatingHistoryView.as_view(),
+         name="officiating-history"),
     # Crew Builder urls
     path(
         "_/<slug:league>/events/<slug:event_slug>/forms/<slug:application_form_slug>/builder/",
