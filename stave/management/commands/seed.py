@@ -110,12 +110,12 @@ def create_templates() -> models.LeagueTemplate:
     )
     event_template_doubleheader.role_groups.set([role_group_so, role_group_nso])
     game_template_doubleheader_1 = models.GameTemplate.objects.create(
-        event_template=event_template_single_game,
+        event_template=event_template_doubleheader,
         day=1,
     )
     game_template_doubleheader_1.role_groups.set([role_group_so, role_group_nso])
     game_template_doubleheader_2 = models.GameTemplate.objects.create(
-        event_template=event_template_single_game,
+        event_template=event_template_doubleheader,
         day=1,
     )
     game_template_doubleheader_2.role_groups.set([role_group_so, role_group_nso])

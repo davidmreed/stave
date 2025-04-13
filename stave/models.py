@@ -3,9 +3,10 @@ import enum
 import uuid
 from collections import defaultdict
 from collections.abc import Iterable
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.urls import reverse
@@ -95,6 +96,7 @@ class RoleGroup(models.Model):
         null=True,
         blank=True,
     )
+    event_only: models.BooleanField(default=False)
 
     roles: models.Manager["Role"]
 
@@ -362,6 +364,8 @@ class EventTemplate(models.Model):
             **values,
         )
         new_object.role_groups.set(self.role_groups.all())
+        for i, game_template in enumerate(self.game_templates.all()):
+            _ = game_template.clone(event=new_object, order_key=i + 1)
 
         return new_object
 
@@ -372,14 +376,15 @@ class GameTemplate(models.Model):
         EventTemplate, related_name="game_templates", on_delete=models.CASCADE
     )
     day = models.IntegerField()
-    start_time = models.TimeField(blank=True, null=True)
-    end_time = models.TimeField(blank=True, null=True)
+    start_time = models.TimeField(default=time(12, 00))
+    end_time = models.TimeField(default=time(14, 00))
     role_groups: models.ManyToManyField["GameTemplate", RoleGroup] = (
         models.ManyToManyField(RoleGroup, blank=True)
     )
     # TODO: validate that Role Groups have the same League as we do.
     # TODO: validate that Role Groups assigned to us are a strict subset
     # of those assigned to our Event
+    # TODO: validate that Role Groups assigned are not event-only
 
     def clone_as_template(
         self, event_template: EventTemplate, role_group_map: dict[uuid.UUID, uuid.UUID]
@@ -411,10 +416,10 @@ class GameTemplate(models.Model):
         )
 
         # Copy Role Group assignments
-        new_role_group_ids = {
-            role_group_map[role_group.id] for role_group in self.role_groups.all()
-        }
-        new_object.role_groups.set(new_role_group_ids)
+        for role_group in self.role_groups.filter(event_only=False):
+            _ = RoleGroupCrewAssignment.objects.create(
+                role_group=role_group, game=new_object
+            )
 
         return new_object
 
