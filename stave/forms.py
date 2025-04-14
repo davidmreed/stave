@@ -113,14 +113,14 @@ class ParentChildForm(forms.Form):
     parent_form: forms.ModelForm
     child_formset: forms.BaseModelFormSet
 
-    def __init__(self, *args, **kwargs):
-        self.parent_form = self.get_parent_formset(*args, **kwargs)
-        self.child_formset = self.get_child_formset(*args, **kwargs)
+    def __init__(self, *args, parent_initial=None, child_initial=None, **kwargs):
+        self.parent_form = self.get_parent_formset(parent_initial, *args, **kwargs)
+        self.child_formset = self.get_child_formset(child_initial, *args, **kwargs)
 
-    def get_parent_formset(self, *args, **kwargs) -> forms.ModelForm:
-        return self.parent_form_class(*args, **kwargs)
+    def get_parent_formset(self, initial, *args, **kwargs) -> forms.ModelForm:
+        return self.parent_form_class(*args, initial=initial, **kwargs)
 
-    def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
+    def get_child_formset(self, initial, *args, **kwargs) -> forms.BaseModelFormSet:
         # If we have an instance, grab its children for the detail formset
         # Otherwise, use a blank queryset.
         if self.parent_form.instance:
@@ -136,11 +136,16 @@ class ParentChildForm(forms.Form):
             self.child_form_class.Meta.model,
             form=self.child_form_class,
             can_delete=True,
-            extra=0,
+            extra=len(initial) if initial else 0,
         )
 
         formset_factory.deletion_widget = forms.HiddenInput
-        return formset_factory(queryset=child_queryset, *args, **kwargs)
+        return formset_factory(
+            *args,
+            queryset=child_queryset,
+            initial=initial,
+            **kwargs,
+        )
 
     def is_valid(self) -> bool:
         return self.parent_form.is_valid() and self.child_formset.is_valid()
@@ -157,7 +162,7 @@ class ParentChildForm(forms.Form):
 
                 count += 1
                 new_data["form-TOTAL_FORMS"] = str(count)
-                self.child_formset = self.get_child_formset(data=new_data)
+                self.child_formset = self.get_child_formset(initial=None, data=new_data)
             except (KeyError, ValueError):
                 pass
         else:
@@ -168,7 +173,7 @@ class ParentChildForm(forms.Form):
         new_data = self.child_formset.data.copy()
         if 0 <= index < len(new_data):
             new_data[f"form-{index}-DELETE"] = "on"
-            self.child_formset = self.get_child_formset(data=new_data)
+            self.child_formset = self.get_child_formset(initial=None, data=new_data)
 
     def pre_save(self):
         pass
@@ -579,6 +584,10 @@ class CrewForm(forms.ModelForm):
         model = models.Crew
         fields = ["name"]
 
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
 
 class EventForm(forms.ModelForm):
     class Meta:
@@ -613,11 +622,7 @@ class EventFromTemplateForm(forms.ModelForm):
         model = models.Event
         fields = [
             "name",
-            "slug",
-            "status",
-            "banner",
             "start_date",
-            "location",
         ]
         widgets = {"start_date": forms.DateInput(attrs={"type": "date"})}
 
@@ -629,7 +634,17 @@ class EventFromTemplateForm(forms.ModelForm):
 class GameForm(forms.ModelForm):
     class Meta:
         model = models.Game
-        fields = ["name", "start_time", "end_time"]
+        fields = [
+            "name",
+            "home_league",
+            "home_team",
+            "visiting_league",
+            "visiting_team",
+            "association",
+            "kind",
+            "start_time",
+            "end_time",
+        ]
         widgets = {
             "start_time": forms.DateTimeInput(
                 attrs={"type": "datetime-local", "required": True}
@@ -638,6 +653,10 @@ class GameForm(forms.ModelForm):
                 attrs={"type": "datetime-local", "required": True}
             ),
         }
+
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
 
 
 class EventCreateUpdateForm(ParentChildForm):
@@ -677,7 +696,15 @@ class ProfileForm(forms.ModelForm):
         model = models.User
         fields = models.User.ALLOWED_PROFILE_FIELDS
 
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
 
 class SendEmailForm(forms.Form):
     subject = forms.CharField(max_length=256)
     content = forms.CharField(max_length=2048, widget=forms.Textarea)  # TODO
+
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)

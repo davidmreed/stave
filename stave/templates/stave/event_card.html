@@ -96,6 +96,24 @@
     <a role="button" href="{% url 'event-edit' event.league.slug event.slug %}">Edit</a>
     {% endif %}
     </header>
+    <dl>
+        <div>
+            <dt>Association</dt>
+            <dd>{{ game.get_association_display }}</dd>
+        </div>
+        <div>
+            <dt>Type</dt>
+            <dd>{{ game.get_kind_display }}</dd>
+        </div>
+        <div>
+            <dt>Home</dt>
+            <dd>{{ game.home_league}} {{ game.home_team }}</dd>
+        </div>
+        <div>
+            <dt>Visitor</dt>
+            <dd>{{ game.visiting_league}} {{ game.visiting_team }}</dd>
+        </div>
+    </dl>
     {% empty %}
     No games scheduled yet.
     {% endfor %}

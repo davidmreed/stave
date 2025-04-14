@@ -96,8 +96,8 @@ class SendEmailInputs:
 class TemplateSelectorInputs:
     templates: QuerySet[models.LeagueTemplate] | QuerySet[models.EventTemplate]
     object_type: str
-    selected_template: models.LeagueTemplate | models.EventTemplate | None
     require_template_selection_first: bool
+    selected_template: models.LeagueTemplate | models.EventTemplate | None = None
 
 
 @dataclass

@@ -370,14 +370,39 @@ class EventTemplate(models.Model):
         return new_object
 
 
+class GameAssociation(models.TextChoices):
+    WFTDA = "WFTDA", _("WFTDA")
+    JRDA = "JRDA", _("JRDA")
+    MRDA = "MRDA", _("MRDA")
+    OTHER = "Other", _("Other")
+
+
+class GameKind(models.TextChoices):
+    CHAMPS = "Champs", _("Champs")
+    PLAYOFF = "Playoff", _("Playoff")
+    CUPS = "Cups", _("Cups")
+    NATIONAL = "National", _("National")
+    SANC = "Sanc", _("Sanc")
+    REG = "Reg", _("Reg")
+    OTHER = "Other", _("Other")
+
+
 class GameTemplate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event_template = models.ForeignKey(
         EventTemplate, related_name="game_templates", on_delete=models.CASCADE
     )
     day = models.IntegerField()
-    start_time = models.TimeField(default=time(12, 00))
-    end_time = models.TimeField(default=time(14, 00))
+    home_league = models.CharField(max_length=256, null=True, blank=True)
+    home_team = models.CharField(max_length=256, null=True, blank=True)
+    visiting_league = models.CharField(max_length=256, null=True, blank=True)
+    visiting_team = models.CharField(max_length=256, null=True, blank=True)
+    association = models.CharField(
+        max_length=32, choices=GameAssociation, null=True, blank=True
+    )
+    kind = models.CharField(max_length=32, choices=GameKind, null=True, blank=True)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
     role_groups: models.ManyToManyField["GameTemplate", RoleGroup] = (
         models.ManyToManyField(RoleGroup, blank=True)
     )
@@ -676,6 +701,12 @@ class Game(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event = models.ForeignKey(Event, related_name="games", on_delete=models.CASCADE)
     name = models.CharField(max_length=256)
+    home_league = models.CharField(max_length=256)
+    home_team = models.CharField(max_length=256)
+    visiting_league = models.CharField(max_length=256)
+    visiting_team = models.CharField(max_length=256)
+    association = models.CharField(max_length=32, choices=GameAssociation)
+    kind = models.CharField(max_length=32, choices=GameKind)
     order_key = models.IntegerField()
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
