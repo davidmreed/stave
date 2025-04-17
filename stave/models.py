@@ -96,7 +96,7 @@ class RoleGroup(models.Model):
         null=True,
         blank=True,
     )
-    event_only: models.BooleanField(default=False)
+    event_only = models.BooleanField(default=False)
 
     roles: models.Manager["Role"]
 
@@ -367,7 +367,26 @@ class EventTemplate(models.Model):
         for i, game_template in enumerate(self.game_templates.all()):
             _ = game_template.clone(event=new_object, order_key=i + 1)
 
+        # TODO: clone ApplicationFormTemplates to ApplicationForms
+
         return new_object
+
+
+class GameAssociation(models.TextChoices):
+    WFTDA = "WFTDA", _("WFTDA")
+    JRDA = "JRDA", _("JRDA")
+    MRDA = "MRDA", _("MRDA")
+    OTHER = "Other", _("Other")
+
+
+class GameKind(models.TextChoices):
+    CHAMPS = "Champs", _("Champs")
+    PLAYOFF = "Playoff", _("Playoff")
+    CUPS = "Cups", _("Cups")
+    NATIONAL = "National", _("National")
+    SANC = "Sanc", _("Sanc")
+    REG = "Reg", _("Reg")
+    OTHER = "Other", _("Other")
 
 
 class GameTemplate(models.Model):
@@ -376,8 +395,16 @@ class GameTemplate(models.Model):
         EventTemplate, related_name="game_templates", on_delete=models.CASCADE
     )
     day = models.IntegerField()
-    start_time = models.TimeField(default=time(12, 00))
-    end_time = models.TimeField(default=time(14, 00))
+    home_league = models.CharField(max_length=256, null=True, blank=True)
+    home_team = models.CharField(max_length=256, null=True, blank=True)
+    visiting_league = models.CharField(max_length=256, null=True, blank=True)
+    visiting_team = models.CharField(max_length=256, null=True, blank=True)
+    association = models.CharField(
+        max_length=32, choices=GameAssociation, null=True, blank=True
+    )
+    kind = models.CharField(max_length=32, choices=GameKind, null=True, blank=True)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
     role_groups: models.ManyToManyField["GameTemplate", RoleGroup] = (
         models.ManyToManyField(RoleGroup, blank=True)
     )
@@ -631,7 +658,7 @@ class RoleGroupCrewAssignment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     role_group = models.ForeignKey(RoleGroup, on_delete=models.CASCADE)
     game: models.ForeignKey["Game"] = models.ForeignKey(
-        "Game", related_name="role_groups", on_delete=models.CASCADE
+        "Game", related_name="role_group_crew_assignments", on_delete=models.CASCADE
     )
     crew = models.ForeignKey(
         Crew,
@@ -676,16 +703,26 @@ class Game(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event = models.ForeignKey(Event, related_name="games", on_delete=models.CASCADE)
     name = models.CharField(max_length=256)
+    home_league = models.CharField(max_length=256)
+    home_team = models.CharField(max_length=256)
+    visiting_league = models.CharField(max_length=256)
+    visiting_team = models.CharField(max_length=256)
+    association = models.CharField(max_length=32, choices=GameAssociation)
+    kind = models.CharField(max_length=32, choices=GameKind)
     order_key = models.IntegerField()
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
+
+    role_groups = models.ManyToManyField(RoleGroup, through=RoleGroupCrewAssignment)
 
     objects = GameQuerySet.as_manager()
 
     def get_crew_assignments_by_role_group(
         self,
     ) -> dict[uuid.UUID, RoleGroupCrewAssignment]:
-        return {rgca.role_group_id: rgca for rgca in self.role_groups.all()}
+        return {
+            rgca.role_group_id: rgca for rgca in self.role_group_crew_assignments.all()
+        }
 
     def __str__(self) -> str:
         return self.name
@@ -1072,7 +1109,7 @@ class ApplicationForm(models.Model):
         """Return those games from this form's event which have
         at least one of the Role Groups from this form."""
         return self.event.games.filter(
-            role_groups__role_group__in=self.role_groups.all()
+            role_groups__in=self.role_groups.all()
         ).distinct()
 
     def __str__(self) -> str:

@@ -4,6 +4,7 @@ import json
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.forms.utils import ErrorDict
 from django.utils.translation import gettext_lazy as _
 
 from . import models
@@ -113,14 +114,26 @@ class ParentChildForm(forms.Form):
     parent_form: forms.ModelForm
     child_formset: forms.BaseModelFormSet
 
-    def __init__(self, *args, **kwargs):
-        self.parent_form = self.get_parent_formset(*args, **kwargs)
-        self.child_formset = self.get_child_formset(*args, **kwargs)
+    def __init__(self, *args, parent_initial=None, child_initial=None, **kwargs):
+        self.parent_form = self.get_parent_formset(parent_initial, *args, **kwargs)
+        self.child_formset = self.get_child_formset(child_initial, *args, **kwargs)
+        # we deliberately do not propagate our arguments to super
+        super().__init__()
 
-    def get_parent_formset(self, *args, **kwargs) -> forms.ModelForm:
-        return self.parent_form_class(*args, **kwargs)
+    def full_clean(self):
+        self._errors = ErrorDict(renderer=self.renderer)
+        self.cleaned_data = {}
 
-    def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
+        # Removing short-circuiting from super.
+
+        self._clean_fields()
+        self._clean_form()
+        self._post_clean()
+
+    def get_parent_formset(self, initial, *args, **kwargs) -> forms.ModelForm:
+        return self.parent_form_class(*args, initial=initial, **kwargs)
+
+    def get_child_formset(self, initial, *args, **kwargs) -> forms.BaseModelFormSet:
         # If we have an instance, grab its children for the detail formset
         # Otherwise, use a blank queryset.
         if self.parent_form.instance:
@@ -136,14 +149,32 @@ class ParentChildForm(forms.Form):
             self.child_form_class.Meta.model,
             form=self.child_form_class,
             can_delete=True,
-            extra=0,
+            extra=len(initial) if initial else 0,
         )
 
         formset_factory.deletion_widget = forms.HiddenInput
-        return formset_factory(queryset=child_queryset, *args, **kwargs)
+        return formset_factory(
+            *args,
+            queryset=child_queryset,
+            initial=initial,
+            **kwargs,
+        )
 
     def is_valid(self) -> bool:
-        return self.parent_form.is_valid() and self.child_formset.is_valid()
+        # We do this repetitive dance so that our subclasses'
+        # clean() methods can add errors on their constituent forms,
+        # and have those get picked up, while consuming the cleaned_data
+        # _from_ those constituent forms in our clean()
+        if not self.parent_form.is_valid() or not self.child_formset.is_valid():
+            return False
+
+        if self.errors:
+            return False
+
+        if not self.parent_form.is_valid() or not self.child_formset.is_valid():
+            return False
+
+        return True
 
     def add_child_form(self, values: dict[str, str] | None = None):
         if "form-TOTAL_FORMS" in self.child_formset.data:
@@ -157,7 +188,7 @@ class ParentChildForm(forms.Form):
 
                 count += 1
                 new_data["form-TOTAL_FORMS"] = str(count)
-                self.child_formset = self.get_child_formset(data=new_data)
+                self.child_formset = self.get_child_formset(initial=None, data=new_data)
             except (KeyError, ValueError):
                 pass
         else:
@@ -168,13 +199,9 @@ class ParentChildForm(forms.Form):
         new_data = self.child_formset.data.copy()
         if 0 <= index < len(new_data):
             new_data[f"form-{index}-DELETE"] = "on"
-            self.child_formset = self.get_child_formset(data=new_data)
-
-    def pre_save(self):
-        pass
+            self.child_formset = self.get_child_formset(initial=None, data=new_data)
 
     def save(self):
-        self.pre_save()
         with transaction.atomic():
             parent = self.parent_form.save()
 
@@ -579,8 +606,18 @@ class CrewForm(forms.ModelForm):
         model = models.Crew
         fields = ["name"]
 
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
 
 class EventForm(forms.ModelForm):
+    template = forms.ModelChoiceField(
+        required=False,
+        queryset=models.EventTemplate.objects.none(),
+        widget=forms.HiddenInput,
+    )
+
     class Meta:
         model = models.Event
         fields = [
@@ -604,8 +641,12 @@ class EventForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if league:
             self.fields["role_groups"].queryset = league.role_groups.all()
+            self.fields["template"].queryset = league.event_templates.all()
         elif self.instance:
             self.fields["role_groups"].queryset = self.instance.league.role_groups.all()
+            self.fields[
+                "template"
+            ].queryset = self.instance.league.event_templates.all()
 
 
 class EventFromTemplateForm(forms.ModelForm):
@@ -613,11 +654,7 @@ class EventFromTemplateForm(forms.ModelForm):
         model = models.Event
         fields = [
             "name",
-            "slug",
-            "status",
-            "banner",
             "start_date",
-            "location",
         ]
         widgets = {"start_date": forms.DateInput(attrs={"type": "date"})}
 
@@ -629,7 +666,18 @@ class EventFromTemplateForm(forms.ModelForm):
 class GameForm(forms.ModelForm):
     class Meta:
         model = models.Game
-        fields = ["name", "start_time", "end_time"]
+        fields = [
+            "name",
+            "home_league",
+            "home_team",
+            "visiting_league",
+            "visiting_team",
+            "association",
+            "kind",
+            "start_time",
+            "end_time",
+            "role_groups",
+        ]
         widgets = {
             "start_time": forms.DateTimeInput(
                 attrs={"type": "datetime-local", "required": True}
@@ -637,7 +685,12 @@ class GameForm(forms.ModelForm):
             "end_time": forms.DateTimeInput(
                 attrs={"type": "datetime-local", "required": True}
             ),
+            "role_groups": forms.CheckboxSelectMultiple,
         }
+
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
 
 
 class EventCreateUpdateForm(ParentChildForm):
@@ -646,18 +699,61 @@ class EventCreateUpdateForm(ParentChildForm):
     relation_name = "event"
     reverse_name = "games"
     league: models.League
+    template: models.EventTemplate | None
 
-    def __init__(self, league: models.League, *args, **kwargs):
+    def __init__(
+        self,
+        league: models.League,
+        template: models.EventTemplate | None,
+        *args,
+        **kwargs,
+    ):
         self.league = league
+        self.template = template
         super().__init__(*args, league=league, **kwargs)
+
+    def get_parent_formset(self, initial, *args, **kwargs) -> forms.ModelForm:
+        if self.template:
+            if not initial:
+                initial = {}
+            initial["template"] = self.template
+
+        return super().get_parent_formset(initial, *args, **kwargs)
 
     def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
         if "league" in kwargs:
             del kwargs["league"]
 
-        return super().get_child_formset(*args, **kwargs)
+        formset = super().get_child_formset(*args, **kwargs)
 
-    def pre_save(self):
+        for form in formset:
+            form.fields["role_groups"].queryset = self.league.role_groups.filter(
+                event_only=False
+            )
+
+        return formset
+
+    def clean(self):
+        super().clean()
+
+        # Validate that all Game role groups are a subset of Event role groups
+        # m2m fields aren't saved, so use cleaned_data rather than instance.
+        event_role_groups = [
+            role_group
+            for role_group in self.parent_form.cleaned_data["role_groups"]
+            if not role_group.event_only
+        ]
+
+        for game_form in self.child_formset.forms:
+            if not all(
+                role_group in event_role_groups
+                for role_group in game_form.cleaned_data["role_groups"]
+            ):
+                game_form.add_error(
+                    "role_groups",
+                    _("Role groups for Games must be included on the Event"),
+                )
+
         # Assign league.
         self.parent_form.instance.league = self.league
 
@@ -671,13 +767,26 @@ class EventCreateUpdateForm(ParentChildForm):
         ):
             game_form.instance.order_key = index + 1
 
+        # If we're cloning a template, finish by cloning ApplicationFormTemplates
+        # FIXME/TODO
+        if template := self.parent_form.cleaned_data["template"]:
+            pass
+
 
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = models.User
         fields = models.User.ALLOWED_PROFILE_FIELDS
 
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
 
 class SendEmailForm(forms.Form):
     subject = forms.CharField(max_length=256)
     content = forms.CharField(max_length=2048, widget=forms.Textarea)  # TODO
+
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)

@@ -3,7 +3,7 @@ import itertools
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import asdict, is_dataclass
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -21,9 +21,11 @@ from django.http import (
     HttpResponseRedirect,
 )
 from django.shortcuts import get_object_or_404, render
+from django.template.defaultfilters import slugify
 from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
-from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.dateparse import parse_date
+from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.utils.translation import gettext_lazy
 from django.views import generic
 
@@ -173,6 +175,7 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
                 if form.is_valid():
                     object_ = form.save()
                     return HttpResponseRedirect(object_.get_absolute_url())
+
         return render(
             request,
             template_name=self.template_name,
@@ -195,7 +198,66 @@ class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView)
             models.League.objects.manageable(self.request.user),
             slug=self.kwargs.get("league_slug"),
         )
-        return forms.EventCreateUpdateForm(league=league, **kwargs)
+
+        if template_id := self.kwargs.get("template_id"):
+            template = get_object_or_404(league.event_templates.all(), id=template_id)
+            start_date = self.request.GET.get("start_date")
+            try:
+                if start_date:
+                    start_date = parse_date(start_date)
+            except ValueError:
+                return HttpResponseBadRequest(f"invalid date {start_date}")
+
+            name = self.request.GET.get("name") or template.name
+            initial = {
+                "name": name,
+                "slug": slugify(name),
+                "location": template.location,
+                "role_groups": template.role_groups.all(),
+                "start_date": start_date,
+                "end_date": start_date + timedelta(days=template.days)
+                if start_date
+                else None,
+            }
+
+            game_template_initial = []
+            for game_template in template.game_templates.all():
+                game_template_initial.append(
+                    {
+                        "start_time": datetime.combine(
+                            start_date + timedelta(days=game_template.day - 1),
+                            game_template.start_time or time(12, 00),
+                        )
+                        if start_date
+                        else None,
+                        "end_time": datetime.combine(
+                            start_date + timedelta(days=game_template.day - 1),
+                            game_template.end_time or time(14, 00),
+                        )
+                        if start_date
+                        else None,
+                        "role_groups": game_template.role_groups.all(),
+                        "home_league": game_template.home_league,
+                        "visiting_league": game_template.visiting_league,
+                        "home_team": game_template.home_team,
+                        "visiting_team": game_template.visiting_team,
+                        "association": game_template.association,
+                        "kind": game_template.kind,
+                    }
+                )
+
+        else:
+            template = None
+            initial = None
+            game_template_initial = None
+
+        return forms.EventCreateUpdateForm(
+            league=league,
+            parent_initial=initial,
+            child_initial=game_template_initial,
+            template=template,
+            **kwargs,
+        )
 
     def get_object(
         self,
@@ -233,7 +295,6 @@ class EventCreateView(
 ):
     template_name = "stave/template_selector.html"
     league: models.League
-    selected_template: models.EventTemplate | None
 
     def setup(self, request: HttpRequest, *args, **kwargs) -> None:
         super().setup(request, *args, **kwargs)
@@ -242,15 +303,6 @@ class EventCreateView(
             models.League.objects.event_manageable(self.request.user),
             slug=self.kwargs.get("league_slug"),
         )
-        self.selected_template = None
-
-        if template_id := request.POST.get("template_id"):
-            # template_id being present means the first form, the selector, was submitted.
-            if template_id != "none":
-                # "none" is the sigil for "select no template"
-                self.selected_template = get_object_or_404(
-                    self.league.event_templates.all(), pk=template_id
-                )
 
     def get_form_class(self) -> type:
         return forms.EventFromTemplateForm
@@ -259,24 +311,13 @@ class EventCreateView(
         kwargs = super().get_form_kwargs()
         kwargs["league"] = self.league
 
-        # If we're just moving to the second screen, we don't want
-        # to validate the form yet (since the user hasn't had a chance
-        # to do any entry).
-
-        if "slug" not in self.request.POST and "data" in kwargs:
-            # This form submission wasn't from a page that had the form rendered.
-            # (i.e., the template selector screen)
-            del kwargs["data"]
-            del kwargs["files"]
-
         return kwargs
 
     def get_context(self) -> contexts.TemplateSelectorInputs:
         return contexts.TemplateSelectorInputs(
             templates=self.league.event_templates.all(),
             object_type="Event",
-            selected_template=self.selected_template,
-            require_template_selection_first=True,
+            require_template_selection_first=False,
         )
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
@@ -286,29 +327,21 @@ class EventCreateView(
 
         return super().get(request, *args, **kwargs)
 
-    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
-        if "slug" in self.request.POST:
-            # This submission was of the clone-from-selected-template form.
-            # Let Django process the form for us.
-            return super().post(request, *args, **kwargs)
-        else:
-            if self.selected_template:
-                self.object = None
-                return self.render_to_response(self.get_context_data())
-            else:
-                # The user doesn't want to clone a template
-                # Redirect them to the Create Event form.
-                return HttpResponseRedirect(
-                    reverse("event-edit", args=[self.league.slug])
-                )
-
     def form_valid(self, form: forms.EventFromTemplateForm) -> HttpResponse:
-        with transaction.atomic():
-            # We're cloning an event template.
-            event = self.selected_template.clone(**form.cleaned_data)
-            self.object = event
+        template_id = self.request.POST.get("template_id")
+        if template_id and template_id != "none":
+            selected_template = get_object_or_404(
+                self.league.event_templates.all(), pk=template_id
+            )
+            url = reverse("event-create-template", args=[self.league.slug, template_id])
+            querystring = urlencode(
+                {"name": form.instance.name, "start_date": form.instance.start_date}
+            )
+            url = f"{url}?{querystring}"
+        else:
+            url = reverse("event-edit", args=[self.league.slug])
 
-            return HttpResponseRedirect(self.get_success_url())
+        return HttpResponseRedirect(url)
 
 
 class CrewCreateView(LoginRequiredMixin, views.View):
@@ -369,7 +402,6 @@ class LeagueCreateView(
             templates=models.LeagueTemplate.objects.all(),
             object_type="League",
             require_template_selection_first=False,
-            selected_template=None,
         )
 
     def form_valid(self, form: forms.LeagueForm) -> HttpResponse:
@@ -726,7 +758,7 @@ class SetGameCrewView(LoginRequiredMixin, views.View):
             pk=game_id,
         )
         rgca: models.RoleGroupCrewAssignment = get_object_or_404(
-            game.role_groups, role_group_id=role_group_id
+            game.role_group_crew_assignments.all(), role_group_id=role_group_id
         )
         if crew_id:
             crew = get_object_or_404(
@@ -790,7 +822,7 @@ class ScheduleView(LoginRequiredMixin, views.View):
         if role_group_ids:
             role_groups = role_groups.filter(id__in=role_group_ids.split(","))
 
-        games = event.games.filter(role_groups__role_group__in=role_groups).distinct()
+        games = event.games.filter(role_groups__in=role_groups).distinct()
 
         static_crews_by_role_group_id = defaultdict(list)
         for crew in event.static_crews().prefetch_assignments():
@@ -847,7 +879,7 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         with transaction.atomic():
             games = application_form.event.games.all()
             for game in games:
-                for rgca in game.role_groups.all().select_for_update():
+                for rgca in game.role_group_crew_assignments.all().select_for_update():
                     if not rgca.crew_overrides:
                         rgca.crew_overrides = models.Crew.objects.create(
                             kind=models.CrewKind.OVERRIDE_CREW,

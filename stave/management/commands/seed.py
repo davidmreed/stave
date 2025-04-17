@@ -77,7 +77,7 @@ def create_templates() -> models.LeagueTemplate:
     )
 
     role_group_tho = models.RoleGroup.objects.create(
-        name="THO", league_template=league_template
+        name="THO", league_template=league_template, event_only=True
     )
     role_thr = models.Role.objects.create(
         role_group=role_group_tho, name="THR", order_key=1

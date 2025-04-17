@@ -25,6 +25,11 @@ urlpatterns = [
         name="event-create",
     ),
     path(
+        "_/<slug:league_slug>/create-event-with-template/<uuid:template_id>",
+        view=views.EventCreateUpdateView.as_view(),
+        name="event-create-template",
+    ),
+    path(
         "_/<slug:league>/events/<slug:event>/",
         view=views.EventDetailView.as_view(),
         name="event-detail",

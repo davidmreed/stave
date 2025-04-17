@@ -6,7 +6,7 @@ from stave import models
 def create_templates() -> models.LeagueTemplate:
     league_template = models.LeagueTemplate.objects.get_or_create(
         name="Roller Derby League",
-        description="Basic setup for a roller derby league, including templates for single and doubleheaders and a multi-day tournament",
+        description="Basic setup for a roller derby league, including templates for single and doubleheaders and a multi-day tournament.",
     )[0]
     role_group_nso = models.RoleGroup.objects.get_or_create(
         name="NSO", league_template=league_template
@@ -74,7 +74,7 @@ def create_templates() -> models.LeagueTemplate:
     )[0]
 
     role_group_tho = models.RoleGroup.objects.get_or_create(
-        name="THO", league_template=league_template
+        name="THO", league_template=league_template, event_only=True
     )[0]
     role_thr = models.Role.objects.get_or_create(
         role_group=role_group_tho, name="THR", order_key=1
