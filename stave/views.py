@@ -862,16 +862,7 @@ class ScheduleView(LoginRequiredMixin, views.View):
         manageable = (
             models.Event.objects.filter(id=event.id).manageable(request.user).exists()
         )
-        staffed = (
-            models.User.objects.filter(
-                id__in=models.CrewAssignment.objects.filter(
-                    crew__event=event,
-                ).values("user_id")
-            )
-            .distinct()
-            .filter(id=request.user.id)
-            .exists()
-        )
+        staffed = models.User.objects.staffed(event).filter(id=request.user.id).exists()
 
         if not manageable and not staffed:
             return HttpResponseForbidden()

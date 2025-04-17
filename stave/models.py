@@ -20,6 +20,15 @@ class CertificationLevel(models.TextChoices):
     LEVEL_3 = "Level 3", _("Level 3")
 
 
+class UserQuerySet(models.QuerySet["User"]):
+    def staffed(self, event: "Event") -> "UserQuerySet":
+        return self.filter(
+            id__in=CrewAssignment.objects.filter(
+                crew__event=event,
+            ).values("user_id")
+        ).distinct()
+
+
 class User(AbstractBaseUser):
     ALLOWED_PROFILE_FIELDS = [
         "preferred_name",
@@ -67,6 +76,8 @@ class User(AbstractBaseUser):
 
     # TODO: references.
     league_permissions: models.Manager["LeagueUserPermission"]
+
+    objects = UserQuerySet.as_manager()
 
     # Required to use the Django Admin
     def has_perm(self, perm, obj=None):

@@ -1,6 +1,6 @@
 {% load stave_tags %}
 {% inputs 'EventCardInputs' %}
-{% with user|can_manage_event:event as can_manage_this_event %}
+{% with can_manage_this_event=user|can_manage_event:event is_staffed_on_event=user|is_staffed_on_event:event %}
 
 <article>
 <header>
@@ -56,7 +56,9 @@
     {% if show_details %}
     <a href="{% url 'event-detail' event.league.slug event.slug %}">Details</a>
     {% endif %}
+    {% if can_manage_this_event or is_staffed_on_event %}
     <a href="{% url 'event-schedule' event.league.slug event.slug %}">Staffing Schedule</a>
+    {% endif %}
 
     {% if show_forms %}
     <header>
@@ -73,7 +75,9 @@
     {% if can_manage_this_event %}
     <a href="{% url 'form-applications' event.league.slug event.slug form.slug %}">Applications</a>
     <a href="{% url 'crew-builder' event.league.slug event.slug form.slug %}">Crew Builder</a>
+    {% if can_manage_this_event or is_staffed_on_event %}
     <a href="{{ form.get_schedule_url }}">Staffing Schedule</a>
+    {% endif %}
     {% endif %}
     {% empty %}
     No application forms are currently open.
