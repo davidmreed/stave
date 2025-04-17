@@ -24,8 +24,8 @@ from django.shortcuts import get_object_or_404, render
 from django.template.defaultfilters import slugify
 from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
-from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.utils.dateparse import parse_date
+from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.utils.translation import gettext_lazy
 from django.views import generic
 
