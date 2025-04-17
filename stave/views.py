@@ -79,7 +79,9 @@ class OfficiatingHistoryView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         cas = models.CrewAssignment.objects.filter(user=self.request.user)
-        crews = models.Crew.objects.filter(assignments__in=cas)
+        crews = models.Crew.objects.filter(
+            assignments__in=cas, event__status=models.EventStatus.COMPLETE
+        )
         rgcas = models.RoleGroupCrewAssignment.objects.filter(
             Q(crew__in=crews) | Q(crew_overrides__in=crews)
         ).order_by("-game__start_time")

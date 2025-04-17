@@ -57,7 +57,10 @@
                 {{ history.game.start_time|date:"Y-m-d" }}
             </td>
             <td>
+                {# Only show event name for multi-game events #}
+                {% if history.game.event.games.all|length > 1 %}
                 {{ history.game.event.name }}
+                {% endif %}
             </td>
             <td>
                 {{ history.game.event.location }}
@@ -67,17 +70,19 @@
             </td>
             <td>
                 {# Home / High Seed #}
-                {# TODO: Temporary way to identify games until we have teams. #}
-                [{{ history.game.name }}]
+                {{ history.game.home_league }} {{ history.game.home_team }}
             </td>
             <td>
                 {# Visitor / Low Seed #}
+                {{ history.game.visiting_league }} {{ history.game.visiting_team }}
             </td>
             <td>
                 {# Association #}
+                {{ history.game.get_association_display }}
             </td>
             <td>
                 {# Game Type #}
+                {{ history.game.get_kind_display }}
             </td>
             <td>
                 {# Position #}
