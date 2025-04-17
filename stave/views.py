@@ -756,7 +756,7 @@ class SetGameCrewView(LoginRequiredMixin, views.View):
             pk=game_id,
         )
         rgca: models.RoleGroupCrewAssignment = get_object_or_404(
-            game.role_groups, role_group_id=role_group_id
+            game.role_group_crew_assignments.all(), role_group_id=role_group_id
         )
         if crew_id:
             crew = get_object_or_404(
@@ -820,7 +820,7 @@ class ScheduleView(LoginRequiredMixin, views.View):
         if role_group_ids:
             role_groups = role_groups.filter(id__in=role_group_ids.split(","))
 
-        games = event.games.filter(role_groups__role_group__in=role_groups).distinct()
+        games = event.games.filter(role_groups__in=role_groups).distinct()
 
         static_crews_by_role_group_id = defaultdict(list)
         for crew in event.static_crews().prefetch_assignments():
@@ -877,7 +877,7 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         with transaction.atomic():
             games = application_form.event.games.all()
             for game in games:
-                for rgca in game.role_groups.all().select_for_update():
+                for rgca in game.role_group_crew_assignments.all().select_for_update():
                     if not rgca.crew_overrides:
                         rgca.crew_overrides = models.Crew.objects.create(
                             kind=models.CrewKind.OVERRIDE_CREW,

@@ -656,7 +656,7 @@ class RoleGroupCrewAssignment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     role_group = models.ForeignKey(RoleGroup, on_delete=models.CASCADE)
     game: models.ForeignKey["Game"] = models.ForeignKey(
-        "Game", related_name="role_groups", on_delete=models.CASCADE
+        "Game", related_name="role_group_crew_assignments", on_delete=models.CASCADE
     )
     crew = models.ForeignKey(
         Crew,
@@ -711,12 +711,16 @@ class Game(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
 
+    role_groups = models.ManyToManyField(RoleGroup, through=RoleGroupCrewAssignment)
+
     objects = GameQuerySet.as_manager()
 
     def get_crew_assignments_by_role_group(
         self,
     ) -> dict[uuid.UUID, RoleGroupCrewAssignment]:
-        return {rgca.role_group_id: rgca for rgca in self.role_groups.all()}
+        return {
+            rgca.role_group_id: rgca for rgca in self.role_group_crew_assignments.all()
+        }
 
     def __str__(self) -> str:
         return self.name
@@ -1103,7 +1107,7 @@ class ApplicationForm(models.Model):
         """Return those games from this form's event which have
         at least one of the Role Groups from this form."""
         return self.event.games.filter(
-            role_groups__role_group__in=self.role_groups.all()
+            role_groups__in=self.role_groups.all()
         ).distinct()
 
     def __str__(self) -> str:
