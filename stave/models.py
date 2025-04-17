@@ -96,7 +96,7 @@ class RoleGroup(models.Model):
         null=True,
         blank=True,
     )
-    event_only: models.BooleanField(default=False)
+    event_only = models.BooleanField(default=False)
 
     roles: models.Manager["Role"]
 
@@ -366,6 +366,8 @@ class EventTemplate(models.Model):
         new_object.role_groups.set(self.role_groups.all())
         for i, game_template in enumerate(self.game_templates.all()):
             _ = game_template.clone(event=new_object, order_key=i + 1)
+
+        # TODO: clone ApplicationFormTemplates to ApplicationForms
 
         return new_object
 

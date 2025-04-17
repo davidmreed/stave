@@ -3,7 +3,7 @@ import itertools
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import asdict, is_dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -175,6 +175,7 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
                 if form.is_valid():
                     object_ = form.save()
                     return HttpResponseRedirect(object_.get_absolute_url())
+
         return render(
             request,
             template_name=self.template_name,
@@ -225,13 +226,13 @@ class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView)
                     {
                         "start_time": datetime.combine(
                             start_date + timedelta(days=game_template.day - 1),
-                            game_template.start_time,
+                            game_template.start_time or time(12, 00),
                         )
                         if start_date
                         else None,
                         "end_time": datetime.combine(
                             start_date + timedelta(days=game_template.day - 1),
-                            game_template.end_time,
+                            game_template.end_time or time(14, 00),
                         )
                         if start_date
                         else None,
@@ -246,14 +247,15 @@ class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView)
                 )
 
         else:
+            template = None
             initial = None
             game_template_initial = None
 
-        # TODO: need to ensure that MessageTemplate relations are copied from the EventTemplate.
         return forms.EventCreateUpdateForm(
             league=league,
             parent_initial=initial,
             child_initial=game_template_initial,
+            template=template,
             **kwargs,
         )
 
