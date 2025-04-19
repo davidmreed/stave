@@ -551,9 +551,15 @@ class EventQuerySet(models.QuerySet["Event"]):
                         "league"
                     )
                 )
-            )
+            ).exclude(status__in=[EventStatus.CANCELED, EventStatus.COMPLETE])
         else:
-            return self.exclude(status=EventStatus.DRAFTING)
+            return self.exclude(
+                status__in=[
+                    EventStatus.DRAFTING,
+                    EventStatus.CANCELED,
+                    EventStatus.COMPLETE,
+                ]
+            )
 
     def listed(self, user: User | AnonymousUser) -> models.QuerySet["Event"]:
         if isinstance(user, User):

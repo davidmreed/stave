@@ -149,7 +149,9 @@ class HomeView(generic.TemplateView):
             applications = models.Application.objects.filter(
                 user=self.request.user, form__event__start_date__gt=datetime.now()
             )
-            events = models.Event.objects.manageable(self.request.user)
+            events = models.Event.objects.manageable(self.request.user).exclude(
+                status__in=[models.EventStatus.CANCELED, models.EventStatus.COMPLETE]
+            )
         else:
             applications = []
             events = []
@@ -535,7 +537,6 @@ class EventListView(generic.ListView):
 
     def get_queryset(self) -> QuerySet[models.Event]:
         return models.Event.objects.visible(self.request.user)
-
 
 class FormCreateUpdateView(LoginRequiredMixin, views.View):
     def get(
