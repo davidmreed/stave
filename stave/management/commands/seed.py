@@ -512,7 +512,7 @@ class Command(BaseCommand):
         drummer_app_tho = models.Application.objects.create(
             form=app_form_tho, user=drummer, status=models.ApplicationStatus.APPLIED
         )
-        drummer_app_tho.roles.set([role_thnso])
+        drummer_app_tho.roles.set([role_thnso, role_thr, role_gto])
 
         _ = models.ApplicationResponse.objects.create(
             application=drummer_app_tho,
@@ -579,7 +579,17 @@ class Command(BaseCommand):
 
         create_tournament_app(
             drummer,
-            [role_hnso, role_jt, role_plt, role_sbo, role_pbm, role_sk, role_pbt],
+
+                role_hnso,
+                role_jt,
+                role_plt,
+                role_sbo,
+                role_pbm,
+                role_sk,
+                role_pbt,
+                role_hr,
+                role_ipr,
+            ],
             [d for d in app_form.event.days()],
             "OPA",
             ["red", "blue"],

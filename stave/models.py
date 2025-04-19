@@ -1197,33 +1197,50 @@ class ApplicationForm(models.Model):
             applications = applications.filter(status=ApplicationStatus.INVITED)
 
         # Exclude already-assigned users based on our given context.
-        # If the context is a Game, exclude users already assigned to that Game
-        # If the context is an Event, exclude users already assigned an Event-level role.
-        # If the context is None, we're building a static crew, so we exclude users
-        # who are already assigned to any crew type on this event.
-
         if isinstance(context, Game):
             # TODO: profile this heinous query
-            applications = applications.exclude(
-                user__in=User.objects.filter(
-                    crews__role__nonexclusive=False,
-                    crews__crew__role_group_assignments__game=context,
+
+            # A user can hold any number of nonexclusive roles on this game as well
+            # as one exclusive role on this game. Those roles need to be in the
+            # same Role Group.
+
+            # They can also hold any number of event-level roles.
+            if role.nonexclusive:
+                # Exclude those already holding roles in other role groups
+                applications = applications.exclude(
+                    user__in=User.objects.filter(
+                        ~Q(crews__role__role_group_id=role.role_group_id),
+                        Q(crews__crew__role_group_assignments__game=context)
+                        | Q(crews__crew__role_group_override_assignments__game=context),
+                    )
                 )
-            )
-            applications = applications.exclude(
-                user__in=User.objects.filter(
-                    crews__role__nonexclusive=False,
-                    crews__crew__role_group_override_assignments__game=context,
+            else:
+                # Exclude anyone holding another exclusive role (in any Role Group).
+                # Or a nonexclusive role in another Role Group.
+                applications = applications.exclude(
+                    user__in=User.objects.filter(
+                        # Find assignments through either static crews or override crews.
+                        Q(crews__crew__role_group_assignments__game=context)
+                        | Q(crews__crew__role_group_override_assignments__game=context),
+                        # where the role is exclusive, or is in a different Role Group
+                        Q(crews__role__nonexclusive=False)
+                        | ~Q(crews__role__role_group_id=role.role_group_id),
+                    )
                 )
-            )
         elif isinstance(context, Event):
-            # FIXME: this does not work.
+            # A user can hold exactly one exclusive Event-level role
+            # and any number of nonexclusive Event-level roles.
+            # NOTE: we do not prohibit users who are in game-level
+            # roles from being assigned event-level roles and vice versa.
+
             applications = applications.exclude(
                 user__in=User.objects.filter(
-                    crews__crew__event_role_groups__event=context
+                    crews__crew__event_role_group_assignments__event=context,
+                    crews__role__nonexclusive=False,
                 )
             )
         elif context is None:
+            # None means assigning to a static crew.
             applications = applications.exclude(
                 user__in=User.objects.filter(crews__crew__event=self.event)
             )
