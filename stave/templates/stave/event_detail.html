@@ -5,7 +5,7 @@
 {% inputs 'EventDetailInputs' %}
 
 {% block content %}
-
-{% include "stave/event_card.html" with user=request.user event=event application_forms=user|listed_application_forms:event show_host=True show_details=False show_forms=True show_games=True %}
+{% include "stave/partials/event_banner.html" with event=event only %}
+{% include "stave/event_card.html" with user=request.user event=event application_forms=user|listed_application_forms:event show_host=True show_details=False show_forms=True show_games=True only %}
 
 {% endblock %}

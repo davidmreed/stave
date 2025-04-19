@@ -9,7 +9,7 @@
     <h1>{% if object %}{{ object }}{% else %}New {{ parent_name|title }}{% endif %}</h1>
 </header>
 
-<form action="{{ view_url }}" method="POST">
+<form action="{{ view_url }}" enctype="multipart/form-data" method="POST">
     {% csrf_token %}
 
     {{ form.parent_form }}

@@ -1,9 +1,10 @@
 from django.contrib import admin
 from django.urls import include, path
 
-from . import views
+from . import settings, views
 
 urlpatterns = [
+    path(f"{settings.MEDIA_URL}<str:path>", view=views.MediaView.as_view()),
     path("", views.HomeView.as_view(), name="home"),
     path("about", views.AboutView.as_view(), name="about"),
     path("privacy", views.PrivacyPolicyView.as_view(), name="privacy-policy"),
@@ -95,8 +96,11 @@ urlpatterns = [
         view=views.ApplicationStatusView.as_view(),
         name="application-status",
     ),
-    path("officiating-history", views.OfficiatingHistoryView.as_view(),
-         name="officiating-history"),
+    path(
+        "officiating-history",
+        views.OfficiatingHistoryView.as_view(),
+        name="officiating-history",
+    ),
     # Crew Builder urls
     path(
         "_/<slug:league>/events/<slug:event_slug>/forms/<slug:application_form_slug>/builder/",

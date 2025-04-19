@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import asdict, is_dataclass
 from datetime import datetime, time, timedelta
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -11,13 +12,15 @@ from django import views
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import QuerySet, Q
+from django.db.models import Q, QuerySet
 from django.http import (
+    FileResponse,
     Http404,
     HttpRequest,
     HttpResponse,
     HttpResponseBadRequest,
     HttpResponseForbidden,
+    HttpResponseNotFound,
     HttpResponseRedirect,
 )
 from django.shortcuts import get_object_or_404, render
@@ -50,6 +53,19 @@ class TypedContextMixin[T: dict[str, Any] | DataclassInstance]:
             _ = context.update(typed_context)
 
         return context
+
+
+class MediaView(views.View):
+    # TODO: do not serve files unless associated with a viewable
+    # league or application form.
+
+    def get(self, request: HttpRequest, path: str) -> HttpResponse:
+        file_path = Path(settings.MEDIA_ROOT) / path
+
+        if file_path.exists():
+            return FileResponse(file_path.open("rb"))
+
+        return HttpResponseNotFound()
 
 
 class MyApplicationsView(LoginRequiredMixin, generic.ListView):
@@ -212,7 +228,7 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
 
     def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         object_ = self.get_object(request, **kwargs)
-        form = self.get_form(instance=object_, data=request.POST)
+        form = self.get_form(instance=object_, data=request.POST, files=request.FILES)
 
         action = request.GET.get("action")
         match action:

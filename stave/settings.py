@@ -110,8 +110,8 @@ STORAGES = {
     },
 }
 
-MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/images")
-MEDIA_URL = "/media/"
+MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "images")
+MEDIA_URL = "media/"
 
 AUTH_PASSWORD_VALIDATORS = [
     {

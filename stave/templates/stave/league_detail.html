@@ -20,6 +20,11 @@
 {% if not league.enabled %}
 <div class="disabled-warning">Not yet enabled by administrator. Visible only to you.</div>
 {% endif %}
+{% if league.logo %}
+<div style="float: right; max-width: 20%; max-height: 20%;">
+<img src="{{ league.logo.url }}" alt="{{ league.name }} logo">
+</div>
+{% endif %}
 <dl>
     {% if league.website %}
     <div>
@@ -34,9 +39,6 @@
     </div>
     {% endif %}
 </dl>
-{% if league.logo %}
-<img src="{{ league.logo.url }}" alt="{{ league.name }} logo" style="float: right;">
-{% endif %}
 <p>
 {{ league.description|markdownify }}
 </p>
