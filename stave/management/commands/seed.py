@@ -189,6 +189,12 @@ class Command(BaseCommand):
         tournament_game_1 = models.Game.objects.create(
             event=tournament,
             name="Game 1",
+            home_league="Ceres Roller Derby",
+            home_team="Miners",
+            visiting_league="Ganymede",
+            visiting_team="Green Sprouts",
+            association=models.GameAssociation.WFTDA,
+            kind=models.GameKind.REG,
             start_time=datetime.combine(
                 tournament.start_date, time(10, 00), timezone.utc
             ),
@@ -201,6 +207,12 @@ class Command(BaseCommand):
         tournament_game_2 = models.Game.objects.create(
             event=tournament,
             name="Game 2",
+            home_league="Tycho Station",
+            home_team="Gearheads",
+            visiting_league="Loca Griega",
+            visiting_team="All Stars",
+            association=models.GameAssociation.WFTDA,
+            kind=models.GameKind.REG,
             start_time=datetime.combine(
                 tournament.start_date, time(12, 00), timezone.utc
             ),
@@ -211,7 +223,13 @@ class Command(BaseCommand):
         )
         tournament_game_3 = models.Game.objects.create(
             event=tournament,
-            name="Game 1",
+            name="Game 3",
+            home_league="Ceres Roller Derby",
+            home_team="Nuggets",
+            visiting_league="Pallas Station",
+            visiting_team="Thin Airs",
+            association=models.GameAssociation.JRDA,
+            kind=models.GameKind.REG,
             start_time=datetime.combine(
                 tournament.start_date, time(16, 00), timezone.utc
             ),
@@ -224,6 +242,12 @@ class Command(BaseCommand):
         tournament_game_4 = models.Game.objects.create(
             event=tournament,
             name="Game 4",
+            home_league="Ceres Roller Derby",
+            home_team="Miners",
+            visiting_league="Tycho Station",
+            visiting_team="Gearheads",
+            association=models.GameAssociation.WFTDA,
+            kind=models.GameKind.REG,
             start_time=datetime.combine(
                 tournament.end_date, time(12, 00), timezone.utc
             ),
@@ -233,6 +257,12 @@ class Command(BaseCommand):
         tournament_game_5 = models.Game.objects.create(
             event=tournament,
             name="Game 5",
+            home_league="Ganymede",
+            home_team="Green Sprouts",
+            visiting_league="Loca Griega",
+            visiting_team="All Stars",
+            association=models.GameAssociation.WFTDA,
+            kind=models.GameKind.REG,
             start_time=datetime.combine(
                 tournament.end_date, time(14, 00), timezone.utc
             ),
@@ -333,6 +363,12 @@ class Command(BaseCommand):
         doubleheader_game_1 = models.Game.objects.create(
             event=doubleheader,
             name="Game 1",
+            home_league="Ceres Roller Derby",
+            home_team="Miners",
+            visiting_league="Loca Griega",
+            visiting_team="All Stars",
+            association=models.GameAssociation.WFTDA,
+            kind=models.GameKind.SANC,
             start_time=datetime.combine(
                 doubleheader.start_date, time(10, 00), timezone.utc
             ),
@@ -345,6 +381,12 @@ class Command(BaseCommand):
         doubleheader_game_2 = models.Game.objects.create(
             event=doubleheader,
             name="Game 2",
+            home_league="Ceres Roller Derby",
+            home_team="Nuggets",
+            visiting_league="Ganymede",
+            visiting_team="Seedlings",
+            association=models.GameAssociation.JRDA,
+            kind=models.GameKind.SANC,
             start_time=datetime.combine(
                 doubleheader.start_date, time(14, 00), timezone.utc
             ),
@@ -371,6 +413,12 @@ class Command(BaseCommand):
         singleheader_game = models.Game.objects.create(
             event=singleheader,
             name="Game",
+            home_league="Ceres Roller Derby",
+            home_team="Miners",
+            visiting_league="Tycho Station",
+            visiting_team="Gearheads",
+            association=models.GameAssociation.WFTDA,
+            kind=models.GameKind.REG,
             start_time=datetime.combine(
                 singleheader.start_date, time(10, 00), timezone.utc
             ),
