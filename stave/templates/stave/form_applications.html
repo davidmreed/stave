@@ -37,13 +37,14 @@
 
 <header>
 <h2>Applications</h2>
-<a href="{% url 'crew-builder' form.event.league.slug form.event.slug form.slug %}">Crew Builder</a>
+<a role="button" href="{% url 'crew-builder' form.event.league.slug form.event.slug form.slug %}">Crew Builder</a>
 </header>
+
 {% if not applications %}
 This form has not received any applications yet.
 {% endif %}
 
-{% if invited_unsent_count %}
+{% if invited_unsent_count and form.event.application_kind == form.event.ApplicationKind.CONFIRM_THEN_ASSIGN %}
 <div style="text-align: center; width: 100%">
 {{ invited_unsent_count }} need email invitations sent.
 <a role="button" href="{% url 'send-email' form.event.league.slug form.event.slug form.slug 'invitation' %}{% querystring redirect_url=request.path %}">Send Emails</a>
@@ -81,6 +82,13 @@ This form has not received any applications yet.
 {% with applications|get:ApplicationStatus.REJECTED as applications %}
 {% if applications %}
 <h3>Rejected ({{ applications|length }})</h3>
+{% partial application-table %}
+{% endif %}
+{% endwith %}
+
+{% with applications|get:ApplicationStatus.WITHDRAWN as applications %}
+{% if applications %}
+<h3>Withdrawn ({{ applications|length }})</h3>
 {% partial application-table %}
 {% endif %}
 {% endwith %}

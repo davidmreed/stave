@@ -538,6 +538,7 @@ class EventListView(generic.ListView):
     def get_queryset(self) -> QuerySet[models.Event]:
         return models.Event.objects.visible(self.request.user)
 
+
 class FormCreateUpdateView(LoginRequiredMixin, views.View):
     def get(
         self,
@@ -784,25 +785,9 @@ class ApplicationStatusView(LoginRequiredMixin, views.View):
 
         # There are different legal state transformations based on whether the actor
         # is the applicant or the event manager.
-        is_this_user = request.user.id == application.user_id
-        legal_changes = [
-            not is_this_user
-            and application.status == models.ApplicationStatus.APPLIED
-            and status
-            in [
-                models.ApplicationStatus.INVITED,
-                models.ApplicationStatus.CONFIRMED,
-                models.ApplicationStatus.REJECTED,
-            ],
-            application.status in [models.ApplicationStatus.INVITED]
-            and status
-            in [models.ApplicationStatus.CONFIRMED, models.ApplicationStatus.DECLINED],
-            application.status
-            in [models.ApplicationStatus.APPLIED, models.ApplicationStatus.CONFIRMED]
-            and status == models.ApplicationStatus.WITHDRAWN,
-        ]
+        legal_changes = application.get_legal_state_changes(request.user)
 
-        if any(legal_changes):
+        if status in legal_changes:
             application.status = status
             application.save()
             redirect_url = request.POST.get("redirect_url")

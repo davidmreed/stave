@@ -33,6 +33,13 @@ def inputs(context: template.Context, model_name: str) -> str:
 
 
 @register.filter
+def get_legal_state_changes(
+    app: models.Application, user: models.User
+) -> list[models.ApplicationStatus]:
+    return app.get_legal_state_changes(user)
+
+
+@register.filter
 def is_staffed_on_event(user: models.User, event: models.Event) -> bool:
     if user.is_authenticated:
         return models.User.objects.staffed(event).filter(id=user.id).exists()

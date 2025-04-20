@@ -786,6 +786,21 @@ class ApplicationStatus(models.IntegerChoices):
     REJECTED = 5, _("Rejected")
     WITHDRAWN = 6, _("Withdrawn")
 
+    def get_action_verb(self) -> str:
+        match self:
+            case ApplicationStatus.APPLIED:
+                return _("Apply")
+            case ApplicationStatus.INVITED:
+                return _("Invite")
+            case ApplicationStatus.CONFIRMED:
+                return _("Confirm")
+            case ApplicationStatus.DECLINED:
+                return _("Decline")
+            case ApplicationStatus.REJECTED:
+                return _("Reject")
+            case ApplicationStatus.WITHDRAWN:
+                return _("Withdraw")
+
 
 class MessageTemplate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -839,7 +854,13 @@ class Message(models.Model):
 
 
 class ApplicationKind(models.IntegerChoices):
+    # With CONFIRM_ONLY, Applications go from Applied
+    # to either Confirmed, Rejected, or Withdrawn
+    # at the point when schedule emails are sent.
     CONFIRM_ONLY = 1, _("Confirm Only")
+    # With CONFIRM_THEN_ASSIGN, Applications go from
+    # Applied to Invited, then to Confirmed or Declined,
+    # or to Withdrawn/Rejected.
     CONFIRM_THEN_ASSIGN = 2, _("Confirm then Assign")
 
 
@@ -1419,7 +1440,7 @@ class Application(models.Model):
     roles: models.ManyToManyField["Application", Role] = models.ManyToManyField(Role)
     status = models.IntegerField(choices=ApplicationStatus.choices)
     invitation_email_sent = models.BooleanField(default=False)
-    decline_email_set = models.BooleanField(default=False)
+    decline_email_sent = models.BooleanField(default=False)
     schedule_email_sent = models.BooleanField(default=False)
 
     responses: models.Manager["ApplicationResponse"]
@@ -1466,6 +1487,52 @@ class Application(models.Model):
             ).delete()
 
         return super().save(*args, **kwargs)
+
+    def get_legal_state_changes(self, user: User) -> list[ApplicationStatus]:
+        states = list()
+
+        if self.form.application_kind == ApplicationKind.CONFIRM_THEN_ASSIGN:
+            match self.status:
+                case ApplicationStatus.APPLIED:
+                    if user == self.user:
+                        states.append(ApplicationStatus.WITHDRAWN)
+                    else:
+                        states.extend(
+                            [
+                                ApplicationStatus.INVITED,
+                                ApplicationStatus.CONFIRMED,
+                                ApplicationStatus.REJECTED,
+                                ApplicationStatus.WITHDRAWN,
+                            ]
+                        )
+                case ApplicationStatus.INVITED:
+                    states.extend(
+                        [
+                            ApplicationStatus.CONFIRMED,
+                            ApplicationStatus.DECLINED,
+                            ApplicationStatus.WITHDRAWN,
+                        ]
+                    )
+                case ApplicationStatus.DECLINED:
+                    pass
+                case ApplicationStatus.REJECTED:
+                    pass
+                case ApplicationStatus.CONFIRMED:
+                    states.extend(
+                        [
+                            ApplicationStatus.WITHDRAWN,
+                        ]
+                    )
+                case ApplicationStatus.WITHDRAWN:
+                    pass
+        else:
+            match self.status:
+                case ApplicationStatus.WITHDRAWN:
+                    pass
+                case _:
+                    states.append(ApplicationStatus.WITHDRAWN)
+
+        return states
 
 
 class ApplicationResponse(models.Model):
