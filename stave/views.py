@@ -537,7 +537,7 @@ class EventListView(generic.ListView):
     model = models.Event
 
     def get_queryset(self) -> QuerySet[models.Event]:
-        return models.Event.objects.visible(self.request.user)
+        return models.Event.objects.listed(self.request.user)
 
 
 class FormCreateUpdateView(LoginRequiredMixin, views.View):

@@ -551,33 +551,34 @@ class EventQuerySet(models.QuerySet["Event"]):
                         "league"
                     )
                 )
-            ).exclude(status__in=[EventStatus.CANCELED, EventStatus.COMPLETE])
+            )
         else:
             return self.exclude(
-                status__in=[
-                    EventStatus.DRAFTING,
-                    EventStatus.CANCELED,
-                    EventStatus.COMPLETE,
-                ]
+                status=EventStatus.DRAFTING,
             )
 
     def listed(self, user: User | AnonymousUser) -> models.QuerySet["Event"]:
         if isinstance(user, User):
-            return self.visible(user).filter(
-                ~Q(status=EventStatus.LINK_ONLY)
-                | Q(
-                    league__in=LeagueUserPermission.objects.filter(user=user).values(
-                        "league"
+            return (
+                self.visible(user)
+                .filter(
+                    ~Q(status=EventStatus.LINK_ONLY)
+                    | Q(
+                        league__in=LeagueUserPermission.objects.filter(
+                            user=user
+                        ).values("league")
                     )
                 )
+                .exclude(status__in=[EventStatus.CANCELED, EventStatus.COMPLETE])
             )
         else:
-            return self.visible(user).exclude(status=EventStatus.LINK_ONLY)
-
-    def open(self, user: User | AnonymousUser) -> models.QuerySet["Event"]:
-        return self.visible(user).filter(
-            status__in=[EventStatus.LINK_ONLY, EventStatus.OPEN]
-        )
+            return self.visible(user).exclude(
+                status__in=[
+                    EventStatus.LINK_ONLY,
+                    EventStatus.CANCELED,
+                    EventStatus.COMPLETE,
+                ]
+            )
 
     def manageable(self, user: User) -> models.QuerySet["Event"]:
         return self.filter(
