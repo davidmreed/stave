@@ -148,4 +148,9 @@ urlpatterns = [
         views.ScheduleView.as_view(),
         name="event-user-role-group-schedule",
     ),
+    path(
+        "_/<slug:league_slug>/events/<slug:event_slug>/staff-list/",
+        views.StaffedUserView.as_view(),
+        name="event-staff-list",
+    ),
 ]

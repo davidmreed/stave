@@ -123,3 +123,9 @@ class ParentChildCreateUpdateInputs:
     parent_name: str
     child_name: str
     child_name_plural: str
+
+
+@dataclass
+class StaffListInputs:
+    users: list[models.User]
+    event: models.Event

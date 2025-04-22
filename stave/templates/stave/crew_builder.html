@@ -19,7 +19,7 @@
 
 <header>
     <h1>
-        Staffing for {{ event.name }}
+        Staffing for <a href="{{ event.get_absolute_url }}">{{ event.name }}</a>
     </h1>
     {% if editable %}
     <a role="button" href="{% url 'send-email' form.event.league.slug form.event.slug form.slug 'schedule' %}{% querystring redirect_url=request.path %}">Send Schedule Emails</a>

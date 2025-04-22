@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <h1>Staff for <a href="{{ event.get_absolute_url }}">{{ event }}</a></h1>
+</header>
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.preferred_name }}</td>
+            <td>{{ user.email }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="2">
+                No staff are confirmed for {{ event }} yet.
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

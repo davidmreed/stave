@@ -843,6 +843,28 @@ class SetGameCrewView(LoginRequiredMixin, views.View):
             return HttpResponseRedirect(game.event.get_absolute_url())
 
 
+class StaffedUserView(LoginRequiredMixin, views.View):
+    def get(
+        self,
+        request: HttpRequest,
+        league_slug: str,
+        event_slug: str,
+    ) -> HttpResponse:
+        event: models.Event = get_object_or_404(
+            models.Event.objects.manageable(request.user),
+            slug=event_slug,
+            league__slug=league_slug,
+        )  # TODO: prefetch
+
+        staffed = models.User.objects.staffed(event)
+
+        return render(
+            request,
+            "stave/staff_list.html",
+            context=asdict(contexts.StaffListInputs(users=staffed, event=event)),
+        )
+
+
 class ScheduleView(LoginRequiredMixin, views.View):
     def get(
         self,

@@ -59,6 +59,9 @@
     {% if can_manage_this_event or is_staffed_on_event %}
     <a href="{% url 'event-schedule' event.league.slug event.slug %}">Staffing Schedule</a>
     {% endif %}
+    {% if can_manage_this_event %}
+    <a href="{% url 'event-staff-list' event.league.slug event.slug %}">Staff List</a>
+    {% endif %}
 
     {% if show_forms %}
     <header>
