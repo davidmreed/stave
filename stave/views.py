@@ -7,6 +7,7 @@ from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
+import re
 
 from django import views
 from django.contrib import messages
@@ -1163,7 +1164,66 @@ class ApplicationFormView(views.View):
         return render(request, "stave/view_application.html", asdict(context))
 
 
+@dataclasses.dataclass
+class MergeContext:
+    application: models.Application
+    app_form: models.ApplicationForm
+    event: models.Event
+    league: models.League
+    user: models.User
+
+    LEGAL_MERGE_FIELDS = {
+        "application": [
+            "availability_by_day",
+            "availability_by_game",
+            "roles",
+            "status",
+            "link",
+        ],
+        "app_form": [
+            "closed",
+            "close_date",
+            "hidden",
+            "intro_text",
+            "link",
+            "schedule_link",
+        ],
+        "event": ["name", "start_date", "end_date", "location", "link"],
+        "league": ["name", "website", "link"],
+        "user": ["preferred_name"],
+    }
+
+    def get_merge_field_value(self, merge_field: str) -> str | None:
+        field_components = merge_field.split(".")
+        if len(field_components) != 2:
+            return None
+
+        domain = "https://stave.app"  # FIXME: dynamic
+        (entity, attr) = field_components
+        if (
+            entity not in self.LEGAL_MERGE_FIELDS
+            or attr not in self.LEGAL_MERGE_FIELDS.get(entity, {})
+        ):
+            return None
+
+        if attr == "link":
+            return domain + getattr(self, entity).get_absolute_url()
+        elif attr == "schedule_link":
+            return domain + reverse(
+                "event-user-role-group-schedule",
+                args=[
+                    self.league.slug,
+                    self.event.slug,
+                    self.user.id,
+                    ",".join(str(rg.id) for rg in self.app_form.role_groups.all()),
+                ],
+            )
+        else:
+            return getattr(getattr(self, entity), attr)
+
+
 class SendEmailView(LoginRequiredMixin, views.View):
+    # TODO: do nothing if there are no recipients.
     def get(
         self,
         request: HttpRequest,
@@ -1222,6 +1282,8 @@ class SendEmailView(LoginRequiredMixin, views.View):
             event__slug=event_slug,
             slug=application_form_slug,
         )
+        event = application_form.event
+        league = event.league
 
         try:
             email_type = models.SendEmailContextType(email_type)
@@ -1235,64 +1297,71 @@ class SendEmailView(LoginRequiredMixin, views.View):
             content: str = email_form.cleaned_data["content"]
             subject: str = email_form.cleaned_data["subject"]
 
-            domain = "https://stave.app"  # FIXME: dynamic
-
             with transaction.atomic():
                 for user in application_form.get_user_queryset_for_context_type(
                     email_type
                 ):
                     application = application_form.applications.get(user=user)
-                    # Substitute values for any of the user's tags.
-                    # Note that the content will be sanitized when we
-                    # render Markdown into HTML.
-                    # TODO: we should sanitize the strings first and substitute after rendering.
-                    this_message_content = content.replace(
-                        "{name}", user.preferred_name
-                    )
-                    this_message_content = this_message_content.replace(
-                        "{schedule}",
-                        "`"
-                        + domain
-                        + reverse(
-                            "event-user-role-group-schedule",
-                            args=[
-                                application_form.event.league.slug,
-                                application_form.event.slug,
-                                user.id,
-                                ",".join(
-                                    str(rg.id)
-                                    for rg in application_form.role_groups.all()
-                                ),
-                            ],
-                        )
-                        + "`",
+                    context = MergeContext(
+                        league=league,
+                        event=event,
+                        app_form=application_form,
+                        application=application,
+                        user=user,
                     )
 
-                    this_message_content = this_message_content.replace(
-                        "{application}",
-                        "`" + domain + application.get_absolute_url() + "`",
+                    # Substitute values for any of the user's tags.
+                    pattern = re.compile(r"\{([a-zA-Z\._]+?)\}")
+                    this_message_subject = pattern.sub(
+                        lambda match: (
+                            context.get_merge_field_value(match.group(1))
+                            or match.group()
+                        ),
+                        subject,
                     )
-                    this_message_content = this_message_content.replace(
-                        "{event}",
-                        "`" + domain + application_form.event.get_absolute_url() + "`",
+                    this_message_content = pattern.sub(
+                        lambda match: (
+                            context.get_merge_field_value(match.group(1))
+                            or match.group()
+                        ),
+                        content,
                     )
 
                     content_html = render_to_string(
                         "stave/email/invitation.html",
-                        {"content": this_message_content, "domain": domain},
+                        {
+                            "content": this_message_content,
+                            "domain": "https://stave.app",
+                        },
                     )
                     content_plain_text = render_to_string(
                         "stave/email/invitation.txt",
-                        {"content": this_message_content, "domain": domain},
+                        {
+                            "content": this_message_content,
+                            "domain": "https://stave.app",
+                        },
                     )
 
                     _ = models.Message.objects.create(
                         user=user,
-                        subject=subject,
+                        subject=this_message_subject,
                         content_plain_text=content_plain_text,
                         content_html=content_html,
                     )
-                    application.invitation_email_sent = True
+
+                    match email_type:
+                        case models.SendEmailContextType.INVITATION:
+                            application.invitation_email_sent = True
+                        case models.SendEmailContextType.REJECTION:
+                            application.rejection_email_sent = True
+                        case models.SendEmailContextType.SCHEDULE:
+                            application.schedule_email_sent = True
+                            if (
+                                application_form.application_kind
+                                == models.ApplicationKind.CONFIRM_ONLY
+                            ):
+                                application.status = models.ApplicationStatus.CONFIRMED
+
                     application.save()
 
         messages.info(request, gettext_lazy("Your emails are being sent"))
@@ -1302,4 +1371,4 @@ class SendEmailView(LoginRequiredMixin, views.View):
         ):
             return HttpResponseRedirect(redirect_url)
 
-        return HttpResponseRedirect(application_form.event.get_absolute_url())
+        return HttpResponseRedirect(event.get_absolute_url())

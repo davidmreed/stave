@@ -23,8 +23,8 @@ class CertificationLevel(models.TextChoices):
 class UserQuerySet(models.QuerySet["User"]):
     def staffed(self, event: "Event") -> "UserQuerySet":
         return self.filter(
-            id__in=CrewAssignment.objects.filter(
-                crew__event=event,
+            id__in=Application.objects.filter(
+                form__event=event, schedule_email_sent=True
             ).values("user_id")
         ).distinct()
 
@@ -1440,8 +1440,22 @@ class Application(models.Model):
     roles: models.ManyToManyField["Application", Role] = models.ManyToManyField(Role)
     status = models.IntegerField(choices=ApplicationStatus.choices)
     invitation_email_sent = models.BooleanField(default=False)
-    decline_email_sent = models.BooleanField(default=False)
+    rejection_email_sent = models.BooleanField(default=False)
     schedule_email_sent = models.BooleanField(default=False)
+
+    @property
+    def user_visible_status(self) -> ApplicationStatus:
+        match self.status:
+            case ApplicationStatus.INVITED:
+                if not self.invitation_email_sent:
+                    return ApplicationStatus.APPLIED
+            case ApplicationStatus.REJECTED:
+                if not self.rejection_email_sent:
+                    return ApplicationStatus.APPLIED
+            case _:
+                pass
+
+        return ApplicationStatus(self.status)
 
     responses: models.Manager["ApplicationResponse"]
 

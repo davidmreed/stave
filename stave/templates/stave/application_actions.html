@@ -12,7 +12,7 @@
     {% for state in application|get_legal_state_changes:user %}
     <input type="submit"
            formaction="{% url 'application-status' application.id state %}"
-           value="{% if user == application.user %}{{ state.get_action_verb }}{% else %}Mark {{ state.name|title }}{% endif %}"
+           value="{% if user == application.user %}{{ state.get_action_verb }}{% else %}Mark {{ state.label|title }}{% endif %}"
     >
     {% endfor %}
 </div>

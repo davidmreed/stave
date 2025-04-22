@@ -28,7 +28,7 @@ There aren't any open applications for you right now.
 
 <ul>
 {% for application in applications %}
-<li><a href="{% url 'view-application' application.id %}">{{ application.form.event }} ({{application.get_status_display}})</a></li>
+<li><a href="{% url 'view-application' application.id %}">{{ application.form.event }} ({{application.user_visible_status.label|title}})</a></li>
 {% empty %}
 <p>
 You don't have any open applications right now.
