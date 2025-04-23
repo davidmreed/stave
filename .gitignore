@@ -1,5 +1,5 @@
-images
-static
+/images
+/static
 .env
 .direnv
 *.sqlite3

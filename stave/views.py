@@ -1,5 +1,6 @@
 import dataclasses
 import itertools
+import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import asdict, is_dataclass
@@ -7,7 +8,6 @@ from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
-import re
 
 from django import views
 from django.contrib import messages

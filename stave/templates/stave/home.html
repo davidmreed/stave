@@ -35,6 +35,8 @@ You don't have any open applications right now.
 </p>
 {% endfor %}
 </ul>
+{% url 'calendar-user' request.user.id as url %}
+{% include "stave/partials/calendar.html" with url=url only %}
 </article>
 
 <article style="flex: 1 1 auto;">
@@ -48,6 +50,8 @@ You don't have any open applications right now.
 You aren't managing any events.
 {% endfor %}
 </ul>
+{% url 'calendar-user' request.user.id as url %}
+{% include "stave/partials/calendar.html" with url=url only %}
 </article>
 {% else %}
 <article style="flex: 1 1 auto;">

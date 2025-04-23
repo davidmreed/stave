@@ -542,7 +542,7 @@ class EventStatus(models.IntegerChoices):
 
 
 class EventQuerySet(models.QuerySet["Event"]):
-    def visible(self, user: User | AnonymousUser) -> models.QuerySet["Event"]:
+    def visible(self, user: User | AnonymousUser | None) -> models.QuerySet["Event"]:
         if isinstance(user, User):
             return self.filter(
                 ~Q(status=EventStatus.DRAFTING)
@@ -557,7 +557,7 @@ class EventQuerySet(models.QuerySet["Event"]):
                 status=EventStatus.DRAFTING,
             )
 
-    def listed(self, user: User | AnonymousUser) -> models.QuerySet["Event"]:
+    def listed(self, user: User | AnonymousUser | None) -> models.QuerySet["Event"]:
         if isinstance(user, User):
             return (
                 self.visible(user)

@@ -4,15 +4,14 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0037_rolegroup_event_only'),
+        ("stave", "0037_rolegroup_event_only"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='application',
-            old_name='decline_email_set',
-            new_name='decline_email_sent',
+            model_name="application",
+            old_name="decline_email_set",
+            new_name="decline_email_sent",
         ),
     ]

@@ -579,7 +579,7 @@ class Command(BaseCommand):
 
         create_tournament_app(
             drummer,
-
+            [
                 role_hnso,
                 role_jt,
                 role_plt,

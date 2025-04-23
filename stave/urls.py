@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import include, path
 
-from . import settings, views
+from . import calendars, settings, views
 
 urlpatterns = [
     path(f"{settings.MEDIA_URL}<str:path>", view=views.MediaView.as_view()),
@@ -152,5 +152,15 @@ urlpatterns = [
         "_/<slug:league_slug>/events/<slug:event_slug>/staff-list/",
         views.StaffedUserView.as_view(),
         name="event-staff-list",
+    ),
+    # Calendars
+    path(
+        "_/<slug:league_slug>/calendar/",
+        calendars.LeagueEventsFeed(),
+        name="calendar-league",
+    ),
+    path("calendar/", calendars.AllEventsFeed(), name="calendar-all"),
+    path(
+        "calendar/user/<uuid:user_id>", calendars.MyEventsFeed(), name="calendar-user"
     ),
 ]

@@ -4,15 +4,14 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0038_rename_decline_email_set_application_decline_email_sent'),
+        ("stave", "0038_rename_decline_email_set_application_decline_email_sent"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='application',
-            old_name='decline_email_sent',
-            new_name='rejection_email_sent',
+            model_name="application",
+            old_name="decline_email_sent",
+            new_name="rejection_email_sent",
         ),
     ]

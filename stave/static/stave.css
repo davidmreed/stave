@@ -127,3 +127,7 @@ a {
         padding: 0.25rem;
     }
 }
+
+details {
+    margin: 1rem;
+}

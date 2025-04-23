@@ -129,3 +129,8 @@ class ParentChildCreateUpdateInputs:
 class StaffListInputs:
     users: list[models.User]
     event: models.Event
+
+
+@dataclass
+class CalendarInputs:
+    url: str
