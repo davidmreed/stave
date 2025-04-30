@@ -195,6 +195,8 @@ MARKDOWNIFY = {
             "acronym",
             "b",
             "blockquote",
+            "br",
+            "hr",
             "code",
             "em",
             "i",
