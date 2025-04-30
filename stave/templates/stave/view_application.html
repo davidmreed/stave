@@ -119,7 +119,7 @@
 
 <p>This application covers multiple games. {% if editable %}Select your availability below.{% endif %}</p>
 
-{% timezone form.event.league.time_zone %}
+{% timezone app_form.event.league.time_zone %}
 {{ form.availability_form }}
 {% endtimezone %}
 
