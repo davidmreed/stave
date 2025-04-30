@@ -42,7 +42,7 @@
         </div>
         <div>
             <dt>Time</dt>
-            <dd>{{ event.games.first.start_time|time }}&ndash;{{ event.games.last.end_time|time }} {{ event.games.last.end_time|tzname }}</dd>
+            <dd>{% if event.games.all %}{{ event.games.first.start_time|time }}&ndash;{{ event.games.last.end_time|time }} {{ event.games.last.end_time|tzname }}{% endif %}</dd>
         </div>
         {% endif %}
         {% if event.games.all|length > 1 %}
