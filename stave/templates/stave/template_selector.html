@@ -1,5 +1,8 @@
 {% extends "base.html" %}
+
 {% load stave_tags %}
+{% load markdownify %}
+
 {% inputs 'TemplateSelectorInputs' %}
 
 {% block content %}
@@ -38,6 +41,10 @@
     {% endif %}
     {% if selected_template %}
     <input type="hidden" name="template_id" value="{{ selected_template.id }}">
+    {% endif %}
+
+    {% if disclaimer %}
+    {{ disclaimer|markdownify }}
     {% endif %}
 
     <input type="submit" value="{% if not selected_template and require_template_selection_first %}Next{% else %}Create{% endif %}">

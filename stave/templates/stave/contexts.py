@@ -98,6 +98,7 @@ class TemplateSelectorInputs:
     object_type: str
     require_template_selection_first: bool
     selected_template: models.LeagueTemplate | models.EventTemplate | None = None
+    disclaimer: str | None = None
 
 
 @dataclass

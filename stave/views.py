@@ -497,6 +497,13 @@ class LeagueCreateView(
             templates=models.LeagueTemplate.objects.all(),
             object_type="League",
             require_template_selection_first=False,
+            disclaimer=gettext_lazy(
+                "To use Stave, you must agree not to use data you receive in applications "
+                "for purposes that are not connected to the applicant's event participation "
+                "or volunteer service. Misuse of data may result in your removal from the service. "
+                "See the [Stave privacy policy](https://stave.app/privacy) for more details.\n\n"
+                "**Click Create to indicate you accept these terms.**"
+            ),
         )
 
     def form_valid(self, form: forms.LeagueForm) -> HttpResponse:
