@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.forms.utils import ErrorDict
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 
 from . import models
 
@@ -594,7 +595,7 @@ class ApplicationFormForm(forms.ModelForm):
 class LeagueForm(forms.ModelForm):
     class Meta:
         model = models.League
-        fields = ["name", "slug", "description", "logo", "website"]
+        fields = ["name", "slug", "description", "logo", "website", "time_zone"]
 
     def __init__(self, *args, **kwargs):
         kwargs["label_suffix"] = ""
@@ -733,6 +734,13 @@ class EventCreateUpdateForm(ParentChildForm):
 
         return formset
 
+    def is_valid(self):
+        # This is super unintuitive, but is_valid() is where full_clean()
+        # gets called on the child forms. That's where timezones get
+        # interpreted.
+        with timezone.override(self.league.time_zone):
+            return super().is_valid()
+
     def clean(self):
         super().clean()
 
@@ -740,14 +748,14 @@ class EventCreateUpdateForm(ParentChildForm):
         # m2m fields aren't saved, so use cleaned_data rather than instance.
         event_role_groups = [
             role_group
-            for role_group in self.parent_form.cleaned_data["role_groups"]
+            for role_group in self.parent_form.cleaned_data.get("role_groups", [])
             if not role_group.event_only
         ]
 
         for game_form in self.child_formset.forms:
             if not all(
                 role_group in event_role_groups
-                for role_group in game_form.cleaned_data["role_groups"]
+                for role_group in game_form.cleaned_data.get("role_groups", [])
             ):
                 game_form.add_error(
                     "role_groups",

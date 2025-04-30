@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% load stave_tags %}
+{% load tz %}
 
 {% inputs 'ParentChildCreateUpdateInputs' %}
 
 {% block content %}
+{% timezone time_zone %}
 
 <header>
     <h1>{% if object %}{{ object }}{% else %}New {{ parent_name|title }}{% endif %}</h1>
@@ -33,5 +35,7 @@
     <hr>
     <input type="submit" value="Save">
 </form>
+
+{% endtimezone %}
 
 {% endblock %}

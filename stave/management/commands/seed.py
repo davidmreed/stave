@@ -1,4 +1,5 @@
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time
+import zoneinfo
 
 from allauth.account.models import EmailAddress
 from django.core.management.base import BaseCommand
@@ -151,6 +152,8 @@ class Command(BaseCommand):
             enabled=True,
         )
 
+        timezone = zoneinfo.ZoneInfo(league.time_zone)
+
         role_group_nso = league.role_groups.get(name="NSO")
         role_hnso = role_group_nso.roles.get(name="HNSO")
         role_jt = role_group_nso.roles.get(name="JT")
@@ -195,12 +198,8 @@ class Command(BaseCommand):
             visiting_team="Green Sprouts",
             association=models.GameAssociation.WFTDA,
             kind=models.GameKind.REG,
-            start_time=datetime.combine(
-                tournament.start_date, time(10, 00), timezone.utc
-            ),
-            end_time=datetime.combine(
-                tournament.start_date, time(12, 00), timezone.utc
-            ),
+            start_time=datetime.combine(tournament.start_date, time(10, 00), timezone),
+            end_time=datetime.combine(tournament.start_date, time(12, 00), timezone),
             order_key=1,
         )
 
@@ -213,12 +212,8 @@ class Command(BaseCommand):
             visiting_team="All Stars",
             association=models.GameAssociation.WFTDA,
             kind=models.GameKind.REG,
-            start_time=datetime.combine(
-                tournament.start_date, time(12, 00), timezone.utc
-            ),
-            end_time=datetime.combine(
-                tournament.start_date, time(14, 00), timezone.utc
-            ),
+            start_time=datetime.combine(tournament.start_date, time(12, 00), timezone),
+            end_time=datetime.combine(tournament.start_date, time(14, 00), timezone),
             order_key=2,
         )
         tournament_game_3 = models.Game.objects.create(
@@ -230,12 +225,8 @@ class Command(BaseCommand):
             visiting_team="Thin Airs",
             association=models.GameAssociation.JRDA,
             kind=models.GameKind.REG,
-            start_time=datetime.combine(
-                tournament.start_date, time(16, 00), timezone.utc
-            ),
-            end_time=datetime.combine(
-                tournament.start_date, time(18, 00), timezone.utc
-            ),
+            start_time=datetime.combine(tournament.start_date, time(16, 00), timezone),
+            end_time=datetime.combine(tournament.start_date, time(18, 00), timezone),
             order_key=3,
         )
 
@@ -248,10 +239,8 @@ class Command(BaseCommand):
             visiting_team="Gearheads",
             association=models.GameAssociation.WFTDA,
             kind=models.GameKind.REG,
-            start_time=datetime.combine(
-                tournament.end_date, time(12, 00), timezone.utc
-            ),
-            end_time=datetime.combine(tournament.end_date, time(14, 00), timezone.utc),
+            start_time=datetime.combine(tournament.end_date, time(12, 00), timezone),
+            end_time=datetime.combine(tournament.end_date, time(14, 00), timezone),
             order_key=4,
         )
         tournament_game_5 = models.Game.objects.create(
@@ -263,10 +252,8 @@ class Command(BaseCommand):
             visiting_team="All Stars",
             association=models.GameAssociation.WFTDA,
             kind=models.GameKind.REG,
-            start_time=datetime.combine(
-                tournament.end_date, time(14, 00), timezone.utc
-            ),
-            end_time=datetime.combine(tournament.end_date, time(16, 00), timezone.utc),
+            start_time=datetime.combine(tournament.end_date, time(14, 00), timezone),
+            end_time=datetime.combine(tournament.end_date, time(16, 00), timezone),
             order_key=5,
         )
 
@@ -353,6 +340,7 @@ class Command(BaseCommand):
         doubleheader = models.Event.objects.create(
             name="2218-02-28 Doubleheader",
             slug="2218-02-28-doubleheader",
+            location="Ceres Arena",
             league=league,
             status=models.EventStatus.OPEN,
             start_date=date(2218, 2, 28),
@@ -370,11 +358,9 @@ class Command(BaseCommand):
             association=models.GameAssociation.WFTDA,
             kind=models.GameKind.SANC,
             start_time=datetime.combine(
-                doubleheader.start_date, time(10, 00), timezone.utc
+                doubleheader.start_date, time(10, 00), timezone
             ),
-            end_time=datetime.combine(
-                doubleheader.start_date, time(12, 00), timezone.utc
-            ),
+            end_time=datetime.combine(doubleheader.start_date, time(12, 00), timezone),
             order_key=1,
         )
 
@@ -388,11 +374,9 @@ class Command(BaseCommand):
             association=models.GameAssociation.JRDA,
             kind=models.GameKind.SANC,
             start_time=datetime.combine(
-                doubleheader.start_date, time(14, 00), timezone.utc
+                doubleheader.start_date, time(14, 00), timezone
             ),
-            end_time=datetime.combine(
-                doubleheader.start_date, time(16, 00), timezone.utc
-            ),
+            end_time=datetime.combine(doubleheader.start_date, time(16, 00), timezone),
             order_key=2,
         )
         for role_group in [role_group_so, role_group_nso]:
@@ -404,6 +388,7 @@ class Command(BaseCommand):
         singleheader = models.Event.objects.create(
             name="2218-01-19 Game",
             slug="2218-01-19-game",
+            location="Ceres Arena",
             status=models.EventStatus.OPEN,
             league=league,
             start_date=date(2218, 3, 20),
@@ -420,11 +405,9 @@ class Command(BaseCommand):
             association=models.GameAssociation.WFTDA,
             kind=models.GameKind.REG,
             start_time=datetime.combine(
-                singleheader.start_date, time(10, 00), timezone.utc
+                singleheader.start_date, time(10, 00), timezone
             ),
-            end_time=datetime.combine(
-                singleheader.start_date, time(12, 00), timezone.utc
-            ),
+            end_time=datetime.combine(singleheader.start_date, time(12, 00), timezone),
             order_key=1,
         )
         for role_group in [role_group_so, role_group_nso]:

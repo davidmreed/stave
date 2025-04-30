@@ -7,6 +7,7 @@ from dataclasses import asdict, is_dataclass
 from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from zoneinfo import ZoneInfo
 from uuid import UUID
 
 from django import views
@@ -28,6 +29,7 @@ from django.shortcuts import get_object_or_404, render
 from django.template.defaultfilters import slugify
 from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.utils.translation import gettext_lazy
@@ -139,6 +141,7 @@ class HomeView(generic.TemplateView):
     template_name = "stave/home.html"
 
     def get_context_data(self, *args, **kwargs):
+        # TODO: switch to typed approach
         context = super().get_context_data(*args, **kwargs)
 
         application_forms = models.ApplicationForm.objects.listed(self.request.user)
@@ -205,6 +208,9 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
     @abstractmethod
     def get_view_url(self) -> str: ...
 
+    def get_time_zone(self) -> str | None:
+        return None
+
     def get_form(self, **kwargs) -> forms.ParentChildForm:
         return self.form_class(**kwargs)
 
@@ -226,6 +232,7 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
                 "parent_name": self.form_class.parent_form_class._meta.model._meta.verbose_name,
                 "child_name": self.form_class.child_form_class._meta.model._meta.verbose_name,
                 "child_name_plural": self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
+                "time_zone": self.get_time_zone(),
             },
         )
 
@@ -263,6 +270,7 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
                 "parent_name": self.form_class.parent_form_class._meta.model._meta.verbose_name,
                 "child_name": self.form_class.child_form_class._meta.model._meta.verbose_name,
                 "child_name_plural": self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
+                "time_zone": self.get_time_zone(),
             },
         )
 
@@ -292,11 +300,12 @@ class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView)
                 "location": template.location,
                 "role_groups": template.role_groups.all(),
                 "start_date": start_date,
-                "end_date": start_date + timedelta(days=template.days)
+                "end_date": start_date + timedelta(days=template.days - 1)
                 if start_date
                 else None,
             }
 
+            timezone = ZoneInfo(league.time_zone)
             game_template_initial = []
             for game_template in template.game_templates.all():
                 game_template_initial.append(
@@ -304,12 +313,14 @@ class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView)
                         "start_time": datetime.combine(
                             start_date + timedelta(days=game_template.day - 1),
                             game_template.start_time or time(12, 00),
+                            tzinfo=timezone,
                         )
                         if start_date
                         else None,
                         "end_time": datetime.combine(
                             start_date + timedelta(days=game_template.day - 1),
                             game_template.end_time or time(14, 00),
+                            tzinfo=timezone,
                         )
                         if start_date
                         else None,
@@ -363,6 +374,13 @@ class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView)
             return reverse("event-edit", args=[league_slug])
 
         return ""  # FIXME: raise appropriate exception
+
+    def get_time_zone(self) -> str | None:
+        league = get_object_or_404(
+            models.League.objects.manageable(self.request.user),
+            slug=self.kwargs.get("league_slug"),
+        )
+        return league.time_zone
 
 
 class EventCreateView(

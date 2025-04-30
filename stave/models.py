@@ -4,6 +4,7 @@ import uuid
 from collections import defaultdict
 from collections.abc import Iterable
 from datetime import datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
 from django.core.exceptions import ValidationError
@@ -11,6 +12,10 @@ from django.db import models
 from django.db.models import Q
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
+
+import zoneinfo
+
+TIMEZONES_CHOICES = [(tz, tz) for tz in sorted(zoneinfo.available_timezones())]
 
 
 class CertificationLevel(models.TextChoices):
@@ -206,6 +211,9 @@ class League(models.Model):
     location = models.CharField(max_length=256)
     description = models.TextField(null=True, blank=True)
     website = models.URLField(null=True, blank=True)
+    time_zone = models.CharField(
+        max_length=256, choices=TIMEZONES_CHOICES, default="America/Denver"
+    )
 
     events: models.Manager["Event"]
     event_templates: models.Manager["EventTemplate"]
@@ -442,13 +450,18 @@ class GameTemplate(models.Model):
         return new_object
 
     def clone(self, event: "Event", **kwargs) -> "Game":
+        timezone = ZoneInfo(event.league.time_zone)
         new_object = Game.objects.create(
             event=event,
             start_time=datetime.combine(
-                event.start_date + timedelta(days=self.day - 1), self.start_time
+                event.start_date + timedelta(days=self.day - 1),
+                self.start_time,
+                tzinfo=timezone,
             ),
             end_time=datetime.combine(
-                event.start_date + timedelta(days=self.day - 1), self.end_time
+                event.start_date + timedelta(days=self.day - 1),
+                self.end_time,
+                tzinfo=timezone,
             ),
             **kwargs,
         )

@@ -2,6 +2,7 @@
 
 {% load markdownify %}
 {% load stave_tags %}
+{% load tz %}
 
 {% inputs 'ViewApplicationContext' %}
 
@@ -118,7 +119,9 @@
 
 <p>This application covers multiple games. {% if editable %}Select your availability below.{% endif %}</p>
 
+{% timezone form.event.league.time_zone %}
 {{ form.availability_form }}
+{% endtimezone %}
 
 {% endif %}
 </fieldset>

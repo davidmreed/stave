@@ -123,6 +123,7 @@ class ParentChildCreateUpdateInputs:
     parent_name: str
     child_name: str
     child_name_plural: str
+    time_zone: str | None = None
 
 
 @dataclass

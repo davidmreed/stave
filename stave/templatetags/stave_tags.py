@@ -1,8 +1,10 @@
 from collections.abc import Mapping, Sequence
 from typing import Any
+from datetime import datetime
 
 from django import forms, template
 from django.db.models import QuerySet
+from django.utils.timezone import get_current_timezone
 
 from stave.templates.stave import contexts
 
@@ -13,6 +15,11 @@ register = template.Library()
 
 class TemplateValidationException(Exception):
     pass
+
+
+@register.filter
+def tzname(date: datetime) -> str:
+    return get_current_timezone().tzname(date)
 
 
 @register.filter
