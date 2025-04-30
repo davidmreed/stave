@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 
 {% load stave_tags %}
+{% load tz %}
+
 {% inputs 'CrewBuilderInputs' %}
 
 {% block content %}
+{% timezone event.league.time_zone %}
 
 <style type="text/css">
     .crew-container, .game-container {
@@ -155,5 +158,5 @@ No static crews yet.
     </div>
     {# end of flex container for day #}
 {% endfor %}
-
+{% endtimezone %}
 {% endblock %}
