@@ -1212,6 +1212,12 @@ class ApplicationFormView(views.View):
 
 
 @dataclasses.dataclass
+class MergeField:
+    field: str
+    description: str
+
+
+@dataclasses.dataclass
 class MergeContext:
     application: models.Application
     app_form: models.ApplicationForm
@@ -1239,6 +1245,21 @@ class MergeContext:
         "league": ["name", "website", "link"],
         "user": ["preferred_name"],
     }
+
+    def get_merge_fields(self) -> list[MergeField]:
+        merge_fields = []
+        for entity in self.LEGAL_MERGE_FIELDS:
+            for field in self.LEGAL_MERGE_FIELDS[entity]
+                entity_obj = getattr(self, entity)
+                entity_name = entity_obj._meta.verbose_name
+                field_name = entity_obj._meta.get_field(field).verbose_name
+                merge_fields.append(
+                    MergeField(
+                        f"{{{entity}.{field}}}", f"the {entity_name}'s {field_name}"
+                    )
+                )
+
+        return merge_fields
 
     def get_merge_field_value(self, merge_field: str) -> str | None:
         field_components = merge_field.split(".")
