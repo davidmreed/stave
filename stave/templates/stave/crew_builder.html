@@ -98,11 +98,12 @@ No static crews yet.
 
     <div class="day-container">
         {% for game in games %}
-            {% if game.start_time.date|date:"Y-m-d" == day %}
+            {% with start_time=game.start_time|localtime end_time=game.end_time|localtime %}
+            {% if start_time.date|date:"Y-m-d" == day %}
                 <div class="game-container">
                     {% if games|length > 1 %}
                         <h3>
-                            Game {{ game.order_key }} ({{ game.start_time.time }}&ndash;{{ game.end_time.time }})
+                            Game {{ game.order_key }} ({{ start_time.time }}&ndash;{{ end_time.time }} {{ start_time|tzname }})
                         </h3>
                     {% endif %}
                     <div class="crews-container">
@@ -154,6 +155,7 @@ No static crews yet.
                     </div>
                 </div>{# end of flex container for game #}
                 {% endif %}
+        {% endwith %}
         {% endfor %}
     </div>
     {# end of flex container for day #}
