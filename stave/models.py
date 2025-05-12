@@ -1,9 +1,10 @@
 import copy
+import dataclasses
 import enum
 import uuid
+import zoneinfo
 from collections import defaultdict
 from collections.abc import Iterable
-import dataclasses
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -13,8 +14,6 @@ from django.db import models
 from django.db.models import Q
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
-
-import zoneinfo
 
 TIMEZONES_CHOICES = [(tz, tz) for tz in sorted(zoneinfo.available_timezones())]
 
