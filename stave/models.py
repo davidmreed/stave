@@ -3,6 +3,7 @@ import enum
 import uuid
 from collections import defaultdict
 from collections.abc import Iterable
+import dataclasses
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -1626,3 +1627,88 @@ class GameHistory:
         self.user = user
         self.role = role
         self.secondary_role = secondary_role
+
+
+@dataclasses.dataclass
+class MergeField:
+    field: str
+    description: str
+
+
+@dataclasses.dataclass
+class MergeContext:
+    application: Application
+    app_form: ApplicationForm
+    event: Event
+    league: League
+    user: User
+
+    LEGAL_MERGE_FIELDS = {
+        "application": [
+            "availability_by_day",
+            "availability_by_game",
+            "roles",
+            "status",
+            "link",
+        ],
+        "app_form": [
+            "closed",
+            "close_date",
+            "hidden",
+            "intro_text",
+            "link",
+            "schedule_link",
+        ],
+        "event": ["name", "start_date", "end_date", "location", "link"],
+        "league": ["name", "website", "link"],
+        "user": ["preferred_name"],
+    }
+
+    def get_merge_fields(self) -> list[MergeField]:
+        merge_fields = []
+        for entity in self.LEGAL_MERGE_FIELDS:
+            for field in self.LEGAL_MERGE_FIELDS[entity]:
+                entity_obj = getattr(self, entity)
+                if entity_obj:
+                    entity_name = entity_obj._meta.verbose_name
+                    if field_meta := entity_obj._meta.fields_map.get(field):
+                        field_name = field_meta.verbose_name
+                    else:
+                        # pseudo-fields we provide.
+                        field_name = field
+
+                    merge_fields.append(
+                        MergeField(
+                            f"{{{entity}.{field}}}", f"the {entity_name}'s {field_name}"
+                        )
+                    )
+
+        return merge_fields
+
+    def get_merge_field_value(self, merge_field: str) -> str | None:
+        field_components = merge_field.split(".")
+        if len(field_components) != 2:
+            return None
+
+        domain = "https://stave.app"  # FIXME: dynamic
+        (entity, attr) = field_components
+        if (
+            entity not in self.LEGAL_MERGE_FIELDS
+            or attr not in self.LEGAL_MERGE_FIELDS.get(entity, {})
+        ):
+            return None
+
+        if attr == "link":
+            return domain + getattr(self, entity).get_absolute_url()
+        elif attr == "schedule_link":
+            return domain + reverse(
+                "event-user-role-group-schedule",
+                args=[
+                    self.league.slug,
+                    self.event.slug,
+                    self.user.id,
+                    ",".join(str(rg.id) for rg in self.app_form.role_groups.all()),
+                ],
+            )
+        else:
+            return getattr(getattr(self, entity), attr)

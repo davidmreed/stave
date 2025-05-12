@@ -23,10 +23,9 @@
     <summary>Merge Fields</summary>
 You can include the following merge fields in your message:
 <ul>
-    <li><code>{name}</code> (the user's preferred name)</li>
-    <li><code>{schedule}</code> (link to user's schedule)</li>
-    <li><code>{application}</code> (link to user's application)</li>
-    <li><code>{event}</code> (link to event)</li>
+    {% for merge_field in merge_fields %}
+    <li><code>{{ merge_field.field }}</code></li>
+    {% endfor %}
 </ul>
 </details>
 </div>

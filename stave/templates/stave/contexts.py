@@ -90,6 +90,7 @@ class SendEmailInputs:
     email_form: forms.SendEmailForm
     members: QuerySet[models.User]
     redirect_url: str | None
+    merge_fields: list[models.MergeField]
 
 
 @dataclass
