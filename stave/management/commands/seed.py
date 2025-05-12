@@ -1,5 +1,5 @@
-from datetime import date, datetime, time
 import zoneinfo
+from datetime import date, datetime, time
 
 from allauth.account.models import EmailAddress
 from django.core.management.base import BaseCommand

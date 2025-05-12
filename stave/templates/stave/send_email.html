@@ -7,13 +7,28 @@
     <h1>Send {{ kind.value|title }} Email for {{ application_form }}</h1>
 </header>
 
+<div style="display: flex; flex-wrap: wrap;">
+
+<details style="flex: 1 1 45%; box-sizing: border-box;">
+    <summary>Recipients ({{ members|length }})</summary>
+<ul>
+    {% for member in members %}
+    <li>{{ member }}</li>
+    {% empty %}
+    <li>There aren't any recipients.</li>
+    {% endfor %}
+</ul>
+</details>
+<details style="flex: 1 1 45%; box-sizing: border-box;">
+    <summary>Merge Fields</summary>
 You can include the following merge fields in your message:
 <ul>
-    <li><code>{name}</code> (the user's preferred name)</li>
-    <li><code>{schedule}</code> (link to user's schedule)</li>
-    <li><code>{application}</code> (link to user's application)</li>
-    <li><code>{event}</code> (link to event)</li>
+    {% for merge_field in merge_fields %}
+    <li><code>{{ merge_field.field }}</code></li>
+    {% endfor %}
 </ul>
+</details>
+</div>
 
 <form action="{{ request.path }}" method="POST">
     {% csrf_token %}
@@ -25,11 +40,5 @@ You can include the following merge fields in your message:
     <input type="submit" value="Send">
 </form>
 
-Recipients:
-<ul>
-    {% for member in members %}
-    <li>{{ member }}</li>
-    {% endfor %}
-</ul>
 
 {% endblock %}

@@ -7,8 +7,8 @@ from dataclasses import asdict, is_dataclass
 from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-from zoneinfo import ZoneInfo
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from django import views
 from django.contrib import messages
@@ -1211,64 +1211,6 @@ class ApplicationFormView(views.View):
         return render(request, "stave/view_application.html", asdict(context))
 
 
-@dataclasses.dataclass
-class MergeContext:
-    application: models.Application
-    app_form: models.ApplicationForm
-    event: models.Event
-    league: models.League
-    user: models.User
-
-    LEGAL_MERGE_FIELDS = {
-        "application": [
-            "availability_by_day",
-            "availability_by_game",
-            "roles",
-            "status",
-            "link",
-        ],
-        "app_form": [
-            "closed",
-            "close_date",
-            "hidden",
-            "intro_text",
-            "link",
-            "schedule_link",
-        ],
-        "event": ["name", "start_date", "end_date", "location", "link"],
-        "league": ["name", "website", "link"],
-        "user": ["preferred_name"],
-    }
-
-    def get_merge_field_value(self, merge_field: str) -> str | None:
-        field_components = merge_field.split(".")
-        if len(field_components) != 2:
-            return None
-
-        domain = "https://stave.app"  # FIXME: dynamic
-        (entity, attr) = field_components
-        if (
-            entity not in self.LEGAL_MERGE_FIELDS
-            or attr not in self.LEGAL_MERGE_FIELDS.get(entity, {})
-        ):
-            return None
-
-        if attr == "link":
-            return domain + getattr(self, entity).get_absolute_url()
-        elif attr == "schedule_link":
-            return domain + reverse(
-                "event-user-role-group-schedule",
-                args=[
-                    self.league.slug,
-                    self.event.slug,
-                    self.user.id,
-                    ",".join(str(rg.id) for rg in self.app_form.role_groups.all()),
-                ],
-            )
-        else:
-            return getattr(getattr(self, entity), attr)
-
-
 class SendEmailView(LoginRequiredMixin, views.View):
     # TODO: do nothing if there are no recipients.
     def get(
@@ -1299,6 +1241,13 @@ class SendEmailView(LoginRequiredMixin, views.View):
 
         email_form = forms.SendEmailForm()
 
+        merge_context = models.MergeContext(
+            league=application_form.event.league,
+            event=application_form.event,
+            app_form=application_form,
+            application=models.Application(),
+            user=request.user,
+        )
         return render(
             request,
             "stave/send_email.html",
@@ -1310,6 +1259,7 @@ class SendEmailView(LoginRequiredMixin, views.View):
                     members=application_form.get_user_queryset_for_context_type(
                         email_type
                     ),
+                    merge_fields=merge_context.get_merge_fields(),
                     redirect_url=request.GET.get("redirect_url"),
                 )
             ),
@@ -1349,7 +1299,7 @@ class SendEmailView(LoginRequiredMixin, views.View):
                     email_type
                 ):
                     application = application_form.applications.get(user=user)
-                    context = MergeContext(
+                    context = models.MergeContext(
                         league=league,
                         event=event,
                         app_form=application_form,
