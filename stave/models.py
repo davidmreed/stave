@@ -1,6 +1,7 @@
 import copy
 import dataclasses
 import enum
+import re
 import uuid
 import zoneinfo
 from collections import defaultdict
@@ -12,6 +13,7 @@ from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -855,6 +857,8 @@ class MessageTemplate(models.Model):
 
 
 class Message(models.Model):
+    MERGE_FIELD_PATTERN = re.compile(r"\{([a-zA-Z\._]+?)\}")
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     subject = models.CharField(max_length=256)
     content_plain_text = models.TextField()
@@ -863,6 +867,49 @@ class Message(models.Model):
     sent = models.BooleanField(default=False)
     sent_date = models.DateTimeField(null=True)
     tries = models.IntegerField(default=0)
+
+    @staticmethod
+    def from_template(
+        template_name: str,
+        context: "MergeContext",
+        subject: str,
+        content: str,
+    ) -> "Message":
+        # Substitute values for any of the user's tags.
+        this_message_subject = Message.MERGE_FIELD_PATTERN.sub(
+            lambda match: (
+                context.get_merge_field_value(match.group(1)) or match.group()
+            ),
+            subject,
+        )
+        this_message_content = Message.MERGE_FIELD_PATTERN.sub(
+            lambda match: (
+                context.get_merge_field_value(match.group(1)) or match.group()
+            ),
+            content,
+        )
+
+        content_html = render_to_string(
+            f"stave/email/{template_name}.html",
+            {
+                "content": this_message_content,
+                "domain": "https://stave.app",
+            },
+        )
+        content_plain_text = render_to_string(
+            f"stave/email/{template_name}.txt",
+            {
+                "content": this_message_content,
+                "domain": "https://stave.app",
+            },
+        )
+
+        return Message(
+            user=context.user,
+            subject=this_message_subject,
+            content_plain_text=content_plain_text,
+            content_html=content_html,
+        )
 
 
 # Application models

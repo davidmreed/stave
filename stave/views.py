@@ -1,6 +1,5 @@
 import dataclasses
 import itertools
-import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import asdict, is_dataclass
@@ -27,12 +26,11 @@ from django.http import (
 )
 from django.shortcuts import get_object_or_404, render
 from django.template.defaultfilters import slugify
-from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
-from django.utils.translation import gettext_lazy
+from django.utils.translation import gettext, gettext_lazy
 from django.views import generic
 
 from stave.templates.stave import contexts
@@ -149,10 +147,10 @@ class HomeView(generic.TemplateView):
             application_forms = application_forms.exclude(
                 applications__user=self.request.user
             )
-
             applications = models.Application.objects.filter(
-                user=self.request.user, form__event__start_date__gt=datetime.now()
-            )
+                user=self.request.user,
+                form__event__start_date__gt=datetime.now(),
+            ).exclude(status=models.ApplicationStatus.WITHDRAWN)
             events = models.Event.objects.manageable(self.request.user).exclude(
                 status__in=[models.EventStatus.CANCELED, models.EventStatus.COMPLETE]
             )
@@ -1244,6 +1242,25 @@ class ApplicationFormView(views.View):
 
         if form.is_valid():
             app = form.save()
+            # Send the user an acknowledgement email.
+            context = models.MergeContext(
+                app, app_form, app_form.event, app_form.event.league, request.user
+            )
+            message = models.Message.from_template(
+                "application",
+                context,
+                gettext("Your application to {event.name}"),
+                gettext(
+                    "We received your application to [{event.name}]({event.link}). "
+                    "You can manage your [application]({application.link}) on Stave. "
+                    "You'll receive an email when the {event.name} organizers update "
+                    "your application.\n\n"
+                    "Please don't reply to this message. It is not monitored.\n\n"
+                    "Thank you for your application!"
+                ),
+            )
+            message.save()
+
             return HttpResponseRedirect(reverse("view-application", args=[app.id]))
 
         context = contexts.ViewApplicationContext(
@@ -1347,7 +1364,11 @@ class SendEmailView(LoginRequiredMixin, views.View):
                 for user in application_form.get_user_queryset_for_context_type(
                     email_type
                 ):
-                    application = application_form.applications.get(user=user)
+                    application = (
+                        application_form.applications.filter(user=user)
+                        .exclude(status=models.ApplicationStatus.WITHDRAWN)
+                        .first()
+                    )
                     context = models.MergeContext(
                         league=league,
                         event=event,
@@ -1356,44 +1377,10 @@ class SendEmailView(LoginRequiredMixin, views.View):
                         user=user,
                     )
 
-                    # Substitute values for any of the user's tags.
-                    pattern = re.compile(r"\{([a-zA-Z\._]+?)\}")
-                    this_message_subject = pattern.sub(
-                        lambda match: (
-                            context.get_merge_field_value(match.group(1))
-                            or match.group()
-                        ),
-                        subject,
+                    message = models.Message.from_template(
+                        email_type.value.lower(), context, subject, content
                     )
-                    this_message_content = pattern.sub(
-                        lambda match: (
-                            context.get_merge_field_value(match.group(1))
-                            or match.group()
-                        ),
-                        content,
-                    )
-
-                    content_html = render_to_string(
-                        "stave/email/invitation.html",
-                        {
-                            "content": this_message_content,
-                            "domain": "https://stave.app",
-                        },
-                    )
-                    content_plain_text = render_to_string(
-                        "stave/email/invitation.txt",
-                        {
-                            "content": this_message_content,
-                            "domain": "https://stave.app",
-                        },
-                    )
-
-                    _ = models.Message.objects.create(
-                        user=user,
-                        subject=this_message_subject,
-                        content_plain_text=content_plain_text,
-                        content_html=content_html,
-                    )
+                    message.save()
 
                     match email_type:
                         case models.SendEmailContextType.INVITATION:
