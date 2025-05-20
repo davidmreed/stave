@@ -76,8 +76,14 @@
         {% endif %}
     </header>
     {% for form in application_forms %}
-    <h6>{{ form.role_groups.all|commalist }}</h6>
-    <a href="{% url 'application-form' event.league.slug event.slug form.slug %}">Form</a>
+    <header>
+        <h6>{{ form.role_groups.all|commalist }}</h6>
+        {% if can_manage_this_event %}
+        <a role="button" href="{% url 'form-update' event.league.slug event.slug form.slug %}">Edit</a>
+        <a role="button" href="{% url 'form-delete' event.league.slug event.slug form.slug %}">Delete</a>
+        {% endif %}
+    </header>
+    <a href="{% url 'application-form' event.league.slug event.slug form.slug %}">View Form</a>
     {% if can_manage_this_event %}
     <a href="{% url 'form-applications' event.league.slug event.slug form.slug %}">Applications</a>
     <a href="{% url 'crew-builder' event.league.slug event.slug form.slug %}">Crew Builder</a>

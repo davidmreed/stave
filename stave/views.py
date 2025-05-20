@@ -583,7 +583,7 @@ class FormCreateUpdateView(LoginRequiredMixin, views.View):
         question_queryset = models.Question.objects.none()
         if form_slug:
             form = get_object_or_404(
-                event.forms.manageable(request.user),
+                event.application_forms.manageable(request.user),
                 slug=form_slug,
             )
             question_queryset = form.form_questions.all()
@@ -690,6 +690,31 @@ class FormCreateUpdateView(LoginRequiredMixin, views.View):
                 "QuestionKind": models.QuestionKind,
                 "url_base": url_base,
             },
+        )
+
+
+class FormDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
+    template_name = "stave/confirm_delete.html"
+    model = models.ApplicationForm
+
+    def get_object(self) -> models.ApplicationForm:
+        return get_object_or_404(
+            models.ApplicationForm.objects.manageable(self.request.user).filter(
+                event__league__slug=self.kwargs.get("league_slug"),
+                event__slug=self.kwargs.get("event_slug"),
+            ),
+            slug=self.kwargs.get("form_slug"),
+        )
+
+    def get_success_url(self) -> str:
+        return (
+            models.Event.objects.visible(self.request.user)
+            .filter(
+                league__slug=self.kwargs.get("league_slug"),
+                slug=self.kwargs.get("event_slug"),
+            )
+            .first()
+            .get_absolute_url()
         )
 
 

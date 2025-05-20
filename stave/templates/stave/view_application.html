@@ -14,8 +14,9 @@
     <h1>
         <a href="{{ app_form.event.get_absolute_url }}">{{ app_form.event.name }}</a>
     </h1>
-    {% if not application and request.user|can_manage_event:form.event %}
+    {% if not application and request.user|can_manage_event:app_form.event %}
     <a href="{% url 'form-update' app_form.event.league.slug app_form.event.slug app_form.slug %}" role="button">Edit Form</a>
+    <a href="{% url 'form-delete' app_form.event.league.slug app_form.event.slug app_form.slug %}" role="button">Delete Form</a>
     {% endif %}
 </header>
 

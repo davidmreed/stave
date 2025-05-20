@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<form method="post">
+    {% csrf_token %}
+    <p>Are you sure you want to delete "{{ object }}"? This cannot be undone.</p>
+    {{ form }}
+    <input type="submit" value="Delete">
+</form>
+
+{% endblock %}

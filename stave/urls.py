@@ -56,6 +56,11 @@ urlpatterns = [
         name="form-update",
     ),
     path(
+        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/delete/",
+        views.FormDeleteView.as_view(),
+        name="form-delete",
+    ),
+    path(
         "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/edit/<int:kind>/",
         views.FormCreateUpdateView.as_view(),
         name="form-update-question",
