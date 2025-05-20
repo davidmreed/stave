@@ -604,6 +604,7 @@ class EventQuerySet(models.QuerySet["Event"]):
 
 
 class Event(models.Model):
+    EventStatus = EventStatus
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     league = models.ForeignKey(League, related_name="events", on_delete=models.CASCADE)
     status = models.IntegerField(

@@ -10,6 +10,13 @@
 
 {% include "stave/partials/event_banner.html" with event=app_form.event only %}
 
+{% if not app_form.event.league.enabled %}
+<div class="disabled-warning">{{ app_form.event.league }} is not yet enabled by an administrator. This form is visible only to you.</div>
+{% endif %}
+
+{% if app_form.event.status == app_form.event.EventStatus.DRAFTING %}
+<div class="disabled-warning">{{ app_form.event }} is in Drafting status. The event and its forms cannot be viewed by other users.</div>
+{% endif %}
 <header>
     <h1>
         <a href="{{ app_form.event.get_absolute_url }}">{{ app_form.event.name }}</a>

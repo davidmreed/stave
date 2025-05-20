@@ -5,7 +5,17 @@
 {% inputs 'EventDetailInputs' %}
 
 {% block content %}
+
 {% include "stave/partials/event_banner.html" with event=event only %}
+
+{% if not event.league.enabled %}
+<div class="disabled-warning">{{ event.league }} is not yet enabled by an administrator. This event is visible only to you.</div>
+{% endif %}
+
+{% if event.status == event.EventStatus.DRAFTING %}
+<div class="disabled-warning">This event is in Drafting status and cannot be viewed by other users.</div>
+{% endif %}
+
 {% include "stave/event_card.html" with user=request.user event=event application_forms=user|listed_application_forms:event show_host=True show_details=False show_forms=True show_games=True only %}
 
 {% endblock %}
