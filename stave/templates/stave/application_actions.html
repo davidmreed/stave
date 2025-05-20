@@ -6,7 +6,7 @@
     {% if include_view %}
         <a role="button" href="{% url 'view-application' application.id %}">View</a>
     {% endif %}
-    {% if user == application.user %}
+    {% if user == application.user and application.status != application.ApplicationStatus.WITHDRAWN %}
         <a role="button" href="{% url 'update-application' application.id %}">Edit</a>
     {% endif %}
     {% for state in application|get_legal_state_changes:user %}

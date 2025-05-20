@@ -1439,6 +1439,7 @@ class ApplicationQuerySet(models.QuerySet["Application"]):
 
 
 class Application(models.Model):
+    ApplicationStatus = ApplicationStatus
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     form = models.ForeignKey(
         ApplicationForm, related_name="applications", on_delete=models.CASCADE
@@ -1467,6 +1468,9 @@ class Application(models.Model):
             case ApplicationStatus.REJECTED:
                 if not self.rejection_email_sent:
                     return ApplicationStatus.APPLIED
+            case ApplicationStatus.CONFIRMED:
+                if not self.schedule_email_sent:
+                    return ApplicationStatus.APPLIED
             case _:
                 pass
 
@@ -1478,11 +1482,7 @@ class Application(models.Model):
 
     class Meta:
         # TODO: require population of the relevant availability type for the form.
-        constraints = [
-            models.UniqueConstraint(
-                fields=["form", "user"], name="one_app_per_event_per_user"
-            )
-        ]
+        pass
 
     def __str__(self) -> str:
         return f"{self.form}: {self.user}"
@@ -1506,7 +1506,11 @@ class Application(models.Model):
         return names
 
     def save(self, *args, **kwargs):
-        if self.status == ApplicationStatus.WITHDRAWN:
+        if self.status in [
+            ApplicationStatus.WITHDRAWN,
+            ApplicationStatus.REJECTED,
+            ApplicationStatus.DECLINED,
+        ]:
             # Remove all CrewAssignments for this user that correspond
             # to this application's form's Role Groups.
             _ = CrewAssignment.objects.filter(

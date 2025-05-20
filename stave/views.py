@@ -425,9 +425,7 @@ class EventCreateView(
     def form_valid(self, form: forms.EventFromTemplateForm) -> HttpResponse:
         template_id = self.request.POST.get("template_id")
         if template_id and template_id != "none":
-            selected_template = get_object_or_404(
-                self.league.event_templates.all(), pk=template_id
-            )
+            _ = get_object_or_404(self.league.event_templates.all(), pk=template_id)
             url = reverse("event-create-template", args=[self.league.slug, template_id])
             querystring = urlencode(
                 {"name": form.instance.name, "start_date": form.instance.start_date}
@@ -1163,11 +1161,17 @@ class ApplicationFormView(views.View):
             event__league__slug=league_slug,
         )
         if request.user.is_authenticated:
-            existing_application = app_form.applications.filter(
-                user=request.user
-            ).first()
+            # If the user has an existing non-withdrawn application, redirect them to it.
+            existing_application = (
+                app_form.applications.filter(
+                    user=request.user,
+                )
+                .exclude(status=models.ApplicationStatus.WITHDRAWN)
+                .first()
+            )
             if existing_application:
                 return HttpResponseRedirect(existing_application.get_absolute_url())
+
         editable = (
             request.user.is_authenticated
             and models.ApplicationForm.objects.submittable(request.user)
@@ -1181,7 +1185,6 @@ class ApplicationFormView(views.View):
             editable=editable,
             label_suffix="",
         )
-
         context = contexts.ViewApplicationContext(
             ApplicationStatus=models.ApplicationStatus,
             application=None,
@@ -1210,6 +1213,24 @@ class ApplicationFormView(views.View):
             event__slug=event_slug,
             event__league__slug=league_slug,
         )
+        existing_application = (
+            app_form.applications.filter(
+                user=request.user,
+            )
+            .exclude(status=models.ApplicationStatus.WITHDRAWN)
+            .first()
+        )
+
+        if existing_application:
+            # Show the user a message and redirect them to their existing application
+            messages.info(
+                request,
+                gettext_lazy(
+                    "You've already applied to this event. Edit your existing application instead."
+                ),
+            )
+            return HttpResponseRedirect(existing_application.get_absolute_url())
+
         form = forms.ApplicationForm(
             app_form,
             request.user,
@@ -1218,6 +1239,7 @@ class ApplicationFormView(views.View):
             editable=True,
             label_suffix="",
         )
+
         if form.is_valid():
             app = form.save()
             return HttpResponseRedirect(reverse("view-application", args=[app.id]))
