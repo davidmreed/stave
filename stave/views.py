@@ -564,6 +564,8 @@ class EventListView(generic.ListView):
 
 
 class FormCreateUpdateView(LoginRequiredMixin, views.View):
+    # TODO: add TypedContextMixin
+    # TODO: use ParentChildCreateUpdateView
     def get(
         self,
         request: HttpRequest,

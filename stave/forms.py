@@ -492,6 +492,11 @@ class QuestionForm(forms.ModelForm):
         if self.instance:
             self.kind = self.instance.kind
 
+            if not self.instance.application_form.editable:
+                self.fields["required"].disabled = True
+                self.fields["options"].disabled = True
+                self.fields["allow_other"].disabled = True
+
         if not self.kind:
             kind_data = kwargs.get("data", {}).get(kwargs["prefix"] + "-kind")
             if not kind_data:
@@ -590,6 +595,14 @@ class ApplicationFormForm(forms.ModelForm):
             self.fields["role_groups"].queryset = event.role_groups.all()
         elif self.instance:
             self.fields["role_groups"].queryset = self.instance.event.role_groups.all()
+
+        if self.instance and not self.instance.editable:
+            # Our instance might not be editable due to receiving applications.
+            # Block edits to fields that would cause issues.
+            self.fields["role_groups"].disabled = True
+            self.fields["application_kind"].disabled = True
+            self.fields["application_availability_kind"].disabled = True
+            self.fields["requires_profile_fields"].disabled = True
 
 
 class LeagueForm(forms.ModelForm):

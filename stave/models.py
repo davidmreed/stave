@@ -1177,6 +1177,10 @@ class ApplicationForm(models.Model):
     form_questions: models.Manager["Question"]
     applications: models.Manager["Application"]
 
+    @property
+    def editable(self) -> bool:
+        return not self.applications.exists()
+
     def event_crews(self) -> models.QuerySet[Crew]:
         return self.event.event_crews().filter(role_group__in=self.role_groups.all())
 

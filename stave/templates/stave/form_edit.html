@@ -4,6 +4,11 @@
 <header>
     <h1>Application Form for {{ event }}</h1>
 </header>
+{% if form.instance and not form.instance.editable %}
+<p class="disabled-warning">
+This form has already received applications. You can only edit some elements of the form.
+</p>
+{% endif %}
 <form method="post" action="{{ url_base }}">
     {% csrf_token %}
     {{ form }}
@@ -18,6 +23,7 @@
     </div>
     <hr>
     {% endfor %}
+    {% if not form.instance or form.instance.editable %}
     <div>
         <input type="submit" formaction="{{ url_base }}{{ QuestionKind.SHORT_TEXT }}/" formnovalidate value="Add Short Text">
         <input type="submit" formaction="{{ url_base }}{{ QuestionKind.LONG_TEXT }}/" formnovalidate value="Add Long Text">
@@ -25,6 +31,7 @@
         <input type="submit" formaction="{{ url_base }}{{ QuestionKind.SELECT_MANY }}/" formnovalidate value="Add Multiple Choice">
     </div>
     <hr>
+    {% endif %}
     <input type="submit" value="Save" method="POST">
 </form>
 {% endblock %}
