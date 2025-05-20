@@ -44,7 +44,32 @@
 This form has not received any applications yet.
 {% endif %}
 
-{% if invited_unsent_count and form.event.application_kind == form.event.ApplicationKind.CONFIRM_THEN_ASSIGN %}
+<details>
+    <summary>How to use this page</summary>
+{% if form.application_kind == form.ApplicationKind.CONFIRM_THEN_ASSIGN %}
+<p>This application form is using the Confirm, then Assign model.
+
+<ol>
+    <li>Mark the application Invited here.</li>
+    <li>When you're ready to send invitations, click Send Emails here.</li>
+    <li>Users confirm or decline their invitations via email. You'll see their status here as they update.</li>
+    <li>Use Crew Builder to make assignments. You can select users who've confirmed their invitations.</li>
+    <li>When you're ready to send out a schedule, click Send Schedule Emails in Crew Builder.</li>
+</ol>
+</p>
+{% else %}
+<p>This application form is using the Confirm Only model.
+
+<ol>
+    <li>Browse available applications here. You can choose to mark applications Rejected to hide them in Crew Builder. This won't send any emails yet.</li>
+    <li>Use Crew Builder to make assignments. You can select users whose applications are in Applied status.</li>
+    <li>When you're ready to send out a schedule, click Send Schedule Emails in Crew Builder.</li>
+</ol>
+</p>
+{% endif %}
+</details>
+
+{% if invited_unsent_count and form.application_kind == form.ApplicationKind.CONFIRM_THEN_ASSIGN %}
 <div style="text-align: center; width: 100%">
 {{ invited_unsent_count }} need email invitations sent.
 <a role="button" href="{% url 'send-email' form.event.league.slug form.event.slug form.slug 'invitation' %}{% querystring redirect_url=request.path %}">Send Emails</a>

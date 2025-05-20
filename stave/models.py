@@ -1532,7 +1532,12 @@ class Application(models.Model):
             match self.status:
                 case ApplicationStatus.APPLIED:
                     if user == self.user:
-                        states.append(ApplicationStatus.WITHDRAWN)
+                        states.extend(
+                            [
+                                ApplicationStatus.WITHDRAWN,
+                                ApplicationStatus.INVITED,
+                            ]
+                        )
                     else:
                         states.extend(
                             [
