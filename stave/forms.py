@@ -492,7 +492,10 @@ class QuestionForm(forms.ModelForm):
         if self.instance:
             self.kind = self.instance.kind
 
-            if not self.instance.application_form.editable:
+            if (
+                self.instance.application_form
+                and not self.instance.application_form.editable
+            ):
                 self.fields["required"].disabled = True
                 self.fields["options"].disabled = True
                 self.fields["allow_other"].disabled = True
