@@ -809,7 +809,7 @@ class ProfileForm(forms.ModelForm):
 
 class SendEmailForm(forms.Form):
     subject = forms.CharField(max_length=256)
-    content = forms.CharField(max_length=2048, widget=forms.Textarea)  # TODO
+    content = forms.CharField(max_length=10240, widget=forms.Textarea)  # TODO
 
     def __init__(self, *args, **kwargs):
         kwargs["label_suffix"] = ""
