@@ -1106,8 +1106,6 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         role_id: UUID,
     ) -> HttpResponse:
         application_id = request.POST.get("application_id")
-        if not application_id:
-            return HttpResponseBadRequest("invalid application id")
 
         application_form: models.ApplicationForm = get_object_or_404(
             models.ApplicationForm.objects.manageable(request.user),
@@ -1115,26 +1113,36 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             event__slug=event_slug,
             event__league__slug=league,
         )
-        role = get_object_or_404(models.Role, pk=role_id)
-        crew = get_object_or_404(models.Crew, pk=crew_id)
-        # TODO: verification
-        applications = application_form.applications.filter(
-            id=application_id,
-            roles__name=role.name,
+        role = get_object_or_404(
+            models.Role.filter(role_group__in=application_form.role_groups.all()),
+            pk=role_id,
         )
-        if len(applications) != 1:
-            return HttpResponseBadRequest("multiple matching applications")
+        crew = get_object_or_404(
+            application_form.event.crews.filter(role_group=role.role_group), pk=crew_id
+        )
 
-        # If there's already a user assigned, we want to replace them in the
-        # target role.
+        if application_id:
+            applications = application_form.applications.filter(
+                id=application_id,
+                roles__name=role.name,
+            ).exclude(status=models.ApplicationStatus.WITHDRAWN)
+            if len(applications) != 1:
+                return HttpResponseBadRequest("invalid application_id")
+        else:
+            applications = []
+
         assignment = models.CrewAssignment.objects.filter(
             role=role,
             crew=crew,
         ).first()
 
         if assignment:
-            assignment.user = applications[0].user
-            assignment.save()
+            if applications:
+                assignment.user = applications[0].user
+                assignment.save()
+            else:
+                # We want to remove this assignment.
+                assignment.delete()
         else:
             _ = models.CrewAssignment.objects.create(
                 role=role, crew=crew, user=applications[0].user
