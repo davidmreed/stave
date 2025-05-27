@@ -27,11 +27,11 @@
     {% endwith %}
     {% if editable %}
     <td>
+        {% with assignment=crew_assignments|get:role.id %}
         <a href="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug crew.id role.id %}">
-            {% if role.id in crew_assignments %}Reassign{% else %}Assign{% endif %}
+            {% if assignment %}{% if assignment.crew.id == crew.id %}Reassign{% else %}Override{% endif %}{% else %}Assign{% endif %}
         </a>
         {# You cannot clear an assignment if it's provided by an assigned crew #}
-        {% with assignment=crew_assignments|get:role.id %}
         {% if assignment and assignment.crew.id == crew.id %}
         <form class="inline"
               action="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug crew.id role.id %}"
