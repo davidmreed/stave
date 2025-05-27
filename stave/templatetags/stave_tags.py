@@ -1,6 +1,7 @@
 from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Any
+import copy
 
 from django import forms, template
 from django.db.models import QuerySet
@@ -31,8 +32,12 @@ def is_form_deleted(form: forms.BaseForm) -> bool:
 def inputs(context: template.Context, model_name: str) -> str:
     type_: type = getattr(contexts, model_name)
 
+    input_values = copy.copy(context.dicts[-1])
+    if "csrf_token" in input_values:
+        del input_values["csrf_token"]
+
     try:
-        _ = type_(**(context.dicts[-1]))
+        _ = type_(**input_values)
     except Exception as e:
         raise TemplateValidationException from e
 
