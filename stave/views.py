@@ -1114,7 +1114,9 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             event__league__slug=league,
         )
         role = get_object_or_404(
-            models.Role.filter(role_group__in=application_form.role_groups.all()),
+            models.Role.objects.filter(
+                role_group__in=application_form.role_groups.all()
+            ),
             pk=role_id,
         )
         crew = get_object_or_404(

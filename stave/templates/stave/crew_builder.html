@@ -83,7 +83,7 @@
 {% for crew in static_crews|get:role_group.id %}
 <div class="crew-container">
     <h6>{{ crew }}</h6>
-{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew=crew crew_assignments=crew.get_assignments_by_role_id role_group=crew.role_group focus_user_id=None only %}
+{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew=crew crew_assignments=crew.get_assignments_by_role_id role_group=crew.role_group focus_user_id=None csrf_token=csrf_token only %}
 </div>
 {% empty %}
 No static crews yet.
@@ -105,7 +105,7 @@ No static crews yet.
 {% with crew.get_assignments_by_role_id as crew_assignments %}
 <div class="crew-container">
 <h4>{{ crew }}</h4>
-{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=crew_assignments role_group=role_group crew=crew focus_user_id=None only %}
+{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=crew_assignments role_group=role_group crew=crew focus_user_id=None csrf_token=csrf_token only %}
 </div>
 {% endwith %}
 {% endfor %}
@@ -170,7 +170,7 @@ No static crews yet.
                                                 </div>
                                             </form>
                                         {% endif %}
-                                {% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=rgca.effective_crew_by_role_id role_group=role_group crew=rgca.crew_overrides focus_user_id=focus_user_id only %}
+                                {% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=rgca.effective_crew_by_role_id role_group=role_group crew=rgca.crew_overrides focus_user_id=focus_user_id csrf_token=csrf_token only %}
                             {% endif %}
                             {% endwith %}
                             {% endwith %}
