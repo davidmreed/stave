@@ -1387,7 +1387,7 @@ class ApplicationForm(models.Model):
                         crew__event=self.event,
                         crew__role_group__in=self.role_groups.all(),
                     ).values("user_id")
-                ).distinct()
+                ).distinct().exclude(id__in=self.applications.filter(schedule_email_sent=True).values("user_id"))
 
             case SendEmailContextType.REJECTION:
                 return User.objects.filter(
