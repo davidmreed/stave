@@ -49,5 +49,5 @@ def update_event_statuses():
 
     _ = models.Event.objects.filter(
         status=models.EventStatus.IN_PROGRESS,
-        end_date__lte=datetime.now(tz=timezone.utc),
+        end_date__lt=datetime.now(tz=timezone.utc),
     ).update(status=models.EventStatus.COMPLETE)
