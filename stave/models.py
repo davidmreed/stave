@@ -1382,12 +1382,20 @@ class ApplicationForm(models.Model):
             case SendEmailContextType.SCHEDULE:
                 # A Schedule email goes to any user who's assigned to a crew
                 # on our Event where the crew matches one of our Role Groups.
-                return User.objects.filter(
-                    id__in=CrewAssignment.objects.filter(
-                        crew__event=self.event,
-                        crew__role_group__in=self.role_groups.all(),
-                    ).values("user_id")
-                ).distinct().exclude(id__in=self.applications.filter(schedule_email_sent=True).values("user_id"))
+                return (
+                    User.objects.filter(
+                        id__in=CrewAssignment.objects.filter(
+                            crew__event=self.event,
+                            crew__role_group__in=self.role_groups.all(),
+                        ).values("user_id")
+                    )
+                    .distinct()
+                    .exclude(
+                        id__in=self.applications.filter(
+                            schedule_email_sent=True
+                        ).values("user_id")
+                    )
+                )
 
             case SendEmailContextType.REJECTION:
                 return User.objects.filter(
@@ -1771,4 +1779,4 @@ class MergeContext:
                 ],
             )
         else:
-            return getattr(getattr(self, entity), attr)
+            return str(getattr(getattr(self, entity), attr))
