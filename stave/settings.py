@@ -20,7 +20,9 @@ _ = sentry_sdk.init(
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 DEBUG = os.environ.get("DEBUG") == "True"
-EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "anymail.backends.resend.EmailBackend")
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND", "anymail.backends.amazon_ses.EmailBackend"
+)
 
 ALLOWED_HOSTS = [
     "stave.app",
