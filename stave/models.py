@@ -1287,7 +1287,7 @@ class ApplicationForm(models.Model):
                 ]
             )
         elif self.application_kind == ApplicationKind.CONFIRM_THEN_ASSIGN:
-            applications = applications.filter(status=ApplicationStatus.INVITED)
+            applications = applications.filter(status__in=[ApplicationStatus.INVITED, ApplicationStatus.CONFIRMED])
 
         # Exclude already-assigned users based on our given context.
         if isinstance(context, Game):
