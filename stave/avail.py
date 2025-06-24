@@ -10,6 +10,10 @@ import functools
 @dataclass
 class UserAvailabilityEntry:
     crew: models.Crew
+    # Denormalize these off the crew's Game
+    # to avoid excess queries.
+    start_time: datetime | None
+    end_time: datetime | None
     exclusive: bool
 
     def overlaps(self, other: "UserAvailabilityEntry") -> bool:
@@ -21,12 +25,8 @@ class UserAvailabilityEntry:
 
         match self.crew.kind:
             case models.CrewKind.OVERRIDE_CREW:
-                time_overlap = (
-                    self.crew.get_context().start_time
-                    < other.crew.get_context().end_time
-                ) and (
-                    self.crew.get_context().end_time
-                    > other.crew.get_context().start_time
+                time_overlap = (self.start_time < other.end_time) and (
+                    self.end_time > other.start_time
                 )
                 return time_overlap
             case models.CrewKind.GAME_CREW | models.CrewKind.EVENT_CREW:
@@ -144,6 +144,8 @@ class AvailabilityManager:
                 user_assigned_times_map[assignment.user_id].append(
                     UserAvailabilityEntry(
                         crew=rgca.crew_overrides,
+                        start_time=rgca.game.start_time,
+                        end_time=rgca.game.end_time,
                         exclusive=not assignment.role.nonexclusive,
                     )
                 )
@@ -159,6 +161,8 @@ class AvailabilityManager:
                 user_event_map[assignment.user_id].append(
                     UserAvailabilityEntry(
                         crew,
+                        None,
+                        None,
                         not assignment.role.nonexclusive,
                     )
                 )
@@ -174,6 +178,8 @@ class AvailabilityManager:
                 user_static_map[assignment.user_id].append(
                     UserAvailabilityEntry(
                         crew,
+                        None,
+                        None,
                         not assignment.role.nonexclusive,
                     )
                 )
@@ -181,26 +187,29 @@ class AvailabilityManager:
         return user_static_map
 
     def get_application_counts(
-        self, crew: models.Crew, role: models.Role
+        self, crew: models.Crew, game: models.Game | None, role: models.Role
     ) -> tuple[int, int]:
         return (
-            len(self.get_available_applications(crew, role)),
-            len(self.get_all_applications(crew, role)),
+            len(self.get_available_applications(crew, game, role)),
+            len(self.get_all_applications(crew, game, role)),
         )
 
+    @functools.cache
     def get_all_applications(
-        self, crew: models.Crew, role: models.Role
+        self, crew: models.Crew, game: models.Game | None, role: models.Role
     ) -> list[models.Application]:
         return self._filter_for_basic_availability(
-            self.applications[role.role_group_id][role.name], crew
+            self.applications[role.role_group_id][role.name], crew, game
         )
 
+    @functools.cache
     def get_available_applications(
-        self, crew: models.Crew, role: models.Role
+        self, crew: models.Crew, game: models.Game | None, role: models.Role
     ) -> list[models.Application]:
         return self._filter_for_already_assigned_users(
-            self.get_all_applications(crew, role),
+            self.get_all_applications(crew, game, role),
             crew,
+            game,
             role,
         )
 
@@ -209,6 +218,7 @@ class AvailabilityManager:
         self,
         applications: Iterable[models.Application],
         crew: models.Crew,
+        game: models.Game | None,
     ) -> Iterable[models.Application]:
         # Only game crews require this check.
         # Event crew forms aren't allowed to use BY_DAY, and static crews
@@ -221,8 +231,7 @@ class AvailabilityManager:
                 return [
                     app
                     for app in applications
-                    if str(crew.get_context().start_time.date())
-                    in app.availability_by_day
+                    if game.start_time.date in app.availability_by_day
                 ]
 
             elif (
@@ -232,7 +241,7 @@ class AvailabilityManager:
                 return [
                     app
                     for app in applications
-                    if crew.get_context() in app.availability_by_game.all()
+                    if game in app.availability_by_game.all()
                 ]
 
         return applications
@@ -241,10 +250,13 @@ class AvailabilityManager:
         self,
         applications: Iterable[models.Application],
         crew: models.Crew,
+        game: models.Game | None,
         role: models.Role,
     ) -> Iterable[models.Application]:
         entry = UserAvailabilityEntry(
             crew,
+            game.start_time if game else None,
+            game.end_time if game else None,
             not role.nonexclusive,
         )
 

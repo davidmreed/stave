@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import include, path
-
+from debug_toolbar.toolbar import debug_toolbar_urls
 from . import calendars, settings, views
 
 urlpatterns = [
@@ -168,4 +168,4 @@ urlpatterns = [
     path(
         "calendar/user/<uuid:user_id>", calendars.MyEventsFeed(), name="calendar-user"
     ),
-]
+] + debug_toolbar_urls()

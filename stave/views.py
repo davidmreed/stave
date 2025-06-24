@@ -990,15 +990,14 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         application_form_slug: str,
     ) -> HttpResponse:
         application_form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user)
-            .prefetch_applications()
-            .prefetch_crews(),
+            models.ApplicationForm.objects.manageable(request.user),
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league,
         )
 
         # Crew Builder requires that all Override Crews be present on our RoleGroupCrewAssignments.
+        override_crews_to_games = {}
         with transaction.atomic():
             games = application_form.event.games.all()
             for game in games:
@@ -1010,6 +1009,8 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
                             event=game.event,
                         )
                         rgca.save()
+
+                    override_crews_to_games[rgca.crew_overrides_id] = game
 
         am = AvailabilityManager.with_role_groups(
             application_form, application_form.role_groups.all()
@@ -1056,7 +1057,9 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
             for context in all_contexts:
                 for role in role_group.roles.all():
                     counts[role_group.id][context.id][role.name] = (
-                        am.get_application_counts(context, role)
+                        am.get_application_counts(
+                            context, override_crews_to_games.get(context.id), role
+                        )
                     )
 
         return render(
@@ -1114,8 +1117,8 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                 event=application_form.event,
             ),
             pk=crew_id,
+            role_group=role.role_group,
         )
-        # TODO: verification
         am = AvailabilityManager.with_role_group_and_roles(
             application_form, role.role_group, [role]
         )

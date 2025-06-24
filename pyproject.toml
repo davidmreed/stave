@@ -24,6 +24,7 @@ dependencies = [
     "whitenoise>=6.9.0",
     "sentry-sdk[django]>=2.24.0",
     "django-anymail[amazon-ses]>=13.0",
+    "django-debug-toolbar>=5.2.0",
 ]
 
 
