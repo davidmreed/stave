@@ -79,9 +79,13 @@ class AvailabilityManager:
     ) -> dict[str, Iterable[models.Application]]:
         # If our input roles and role_group are not sensical, this query will be empty.
         # No risk of incoherent output data.
-        applications = self.application_form.applications.filter(
-            roles__in=roles, roles__role_group_id=role_group.id
-        ).distinct()
+        applications = (
+            self.application_form.applications.filter(
+                roles__in=roles, roles__role_group_id=role_group.id
+            )
+            .distinct()
+            .prefetch_related("roles", "roles__role_group")
+        )
 
         # Filter based on our application model.
         if (
@@ -231,7 +235,7 @@ class AvailabilityManager:
                 return [
                     app
                     for app in applications
-                    if game.start_time.date in app.availability_by_day
+                    if str(game.start_time.date()) in app.availability_by_day
                 ]
 
             elif (

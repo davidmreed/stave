@@ -990,27 +990,28 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         application_form_slug: str,
     ) -> HttpResponse:
         application_form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user),
+            models.ApplicationForm.objects.manageable(request.user)
+            .prefetch_related("role_groups", "role_groups__roles")
+            .select_related("event"),
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league,
         )
-
         # Crew Builder requires that all Override Crews be present on our RoleGroupCrewAssignments.
         override_crews_to_games = {}
         with transaction.atomic():
             games = application_form.event.games.all()
             for game in games:
                 for rgca in game.role_group_crew_assignments.all().select_for_update():
-                    if not rgca.crew_overrides:
+                    if not rgca.crew_overrides_id:
                         rgca.crew_overrides = models.Crew.objects.create(
                             kind=models.CrewKind.OVERRIDE_CREW,
-                            role_group=rgca.role_group,
-                            event=game.event,
+                            role_group_id=rgca.role_group_id,
+                            event=application_form.event,
                         )
                         rgca.save()
 
-                    override_crews_to_games[rgca.crew_overrides_id] = game
+                    override_crews_to_games[rgca.crew_overrides] = game
 
         am = AvailabilityManager.with_role_groups(
             application_form, application_form.role_groups.all()
@@ -1044,13 +1045,7 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         all_contexts = (
             list(am.static_crews)
             + list(am.event_crews)
-            + list(
-                models.Crew.objects.filter(
-                    event=application_form.event,
-                    role_group__in=application_form.role_groups.all(),
-                    kind=models.CrewKind.OVERRIDE_CREW,
-                )
-            )
+            + list(override_crews_to_games.keys())
         )
 
         for role_group in application_form.role_groups.all():
@@ -1058,7 +1053,7 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
                 for role in role_group.roles.all():
                     counts[role_group.id][context.id][role.name] = (
                         am.get_application_counts(
-                            context, override_crews_to_games.get(context.id), role
+                            context, override_crews_to_games.get(context), role
                         )
                     )
 
@@ -1122,7 +1117,11 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         am = AvailabilityManager.with_role_group_and_roles(
             application_form, role.role_group, [role]
         )
-        applications = am.get_available_applications(crew, role)
+        if crew.kind == models.CrewKind.OVERRIDE_CREW:
+            game = crew.get_context()
+        else:
+            game = None
+        applications = am.get_available_applications(crew, game, role)
 
         return render(
             request,
