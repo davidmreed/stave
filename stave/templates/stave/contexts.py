@@ -57,10 +57,10 @@ class CrewBuilderInputs:
     focus_user_id: UUID | None
     static_crews: dict[UUID, models.Crew]
     event_crews: dict[UUID, models.Crew]
-    allow_static_crews: dict[UUID, bool]
-    any_static_crew_role_groups: bool
+    allow_static_crews: bool
     editable: bool
     counts: dict[models.Game | models.Event | None, dict[str, tuple[int, int]]]
+    show_day_header: bool
 
 
 @dataclass

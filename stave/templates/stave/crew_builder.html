@@ -120,9 +120,8 @@ No static crews yet.
 {# End of flex container #}
 
 {# Per-game roles #}
-
 {% for day in event.days %}
-    {% if event.days|length > 1 and games %}
+{% if show_day_header %}
         <h2>{{ day }}</h2>
     {% endif %}
 
@@ -138,6 +137,7 @@ No static crews yet.
                     {% endif %}
                     <div class="crews-container">
 
+                    {# This might be the problem here TODO #}
                     {% with game.get_crew_assignments_by_role_group as role_group_assignments %}
                     {% for role_group in role_groups %}
                     {% with counts=counts|get:role_group.id %}
@@ -147,9 +147,9 @@ No static crews yet.
                             {% if rgca %}
                                     <header>
                                         <h4>
-                                            {{ role_group.name }}{% if rgca.crew %} ({{ rgca.crew }}){% endif %}
+                                            {{ role_group.name }}{% if rgca.crew_id %} ({{ rgca.crew }}){% endif %}
                                         </h4>
-                                        {% if rgca.crew and editable %}
+                                        {% if rgca.crew_id and editable %}
                                             <form class="inline" action="{% url 'set-game-crew' form.event.league.slug form.event.slug form.slug game.id role_group.id %}" method="POST">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="redirect_url" value="{{ request.path }}">
@@ -157,7 +157,7 @@ No static crews yet.
                                             </form>
                                         {% endif %}
                                     </header>
-                                        {% if not rgca.crew and static_crews|get:role_group_id and editable %}
+                                        {% if not rgca.crew_id and static_crews|get:role_group_id and editable %}
                                             <form class="inline" action="" method="POST">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="redirect_url" value="{{ request.path }}">
@@ -175,7 +175,7 @@ No static crews yet.
                                                 </div>
                                             </form>
                                         {% endif %}
-                                {% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=rgca.effective_crew_by_role_id role_group=role_group crew=rgca.crew_overrides focus_user_id=focus_user_id csrf_token=csrf_token counts=counts|get:rgca.crew_overrides.id only %}
+                                {% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=rgca.effective_crew_by_role_id role_group=role_group crew=rgca.crew_overrides focus_user_id=focus_user_id csrf_token=csrf_token counts=counts|get:rgca.crew_overrides_id only %}
                             {% endif %}
                             {% endwith %}
                             {% endwith %}

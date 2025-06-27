@@ -227,7 +227,7 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
             context={
                 "object": object_,
                 "form": form,
-                "view_url": self.get_vie_url(),
+                "view_url": self.get_view_url(),
                 "parent_name": self.form_class.parent_form_class._meta.model._meta.verbose_name,
                 "child_name": self.form_class.child_form_class._meta.model._meta.verbose_name,
                 "child_name_plural": self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
@@ -990,32 +990,28 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         application_form_slug: str,
     ) -> HttpResponse:
         application_form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user)
-            .prefetch_related("role_groups", "role_groups__roles")
-            .select_related("event"),
+            models.ApplicationForm.objects.manageable(request.user),
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league,
         )
+
         # Crew Builder requires that all Override Crews be present on our RoleGroupCrewAssignments.
-        override_crews_to_games = {}
         with transaction.atomic():
-            games = application_form.event.games.all()
-            for game in games:
-                for rgca in game.role_group_crew_assignments.all().select_for_update():
-                    if not rgca.crew_overrides_id:
-                        rgca.crew_overrides = models.Crew.objects.create(
-                            kind=models.CrewKind.OVERRIDE_CREW,
-                            role_group_id=rgca.role_group_id,
-                            event=application_form.event,
-                        )
-                        rgca.save()
+            for rgca in models.RoleGroupCrewAssignment.objects.filter(
+                role_group__in=application_form.role_groups.all(),
+                game__event=application_form.event,
+            ).select_for_update():
+                if not rgca.crew_overrides_id:
+                    rgca.crew_overrides = models.Crew.objects.create(
+                        kind=models.CrewKind.OVERRIDE_CREW,
+                        role_group_id=rgca.role_group_id,
+                        event_id=application_form.event_id,
+                    )
+                    rgca.save()
 
-                    override_crews_to_games[rgca.crew_overrides] = game
-
-        am = AvailabilityManager.with_role_groups(
-            application_form, application_form.role_groups.all()
-        )
+        # After this point, all data access should be via am.
+        am = AvailabilityManager.with_application_form(application_form)
 
         static_crews_by_role_group_id = defaultdict(list)
         for crew in am.static_crews:
@@ -1025,11 +1021,20 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         for crew in am.event_crews:
             event_crews_by_role_group_id[crew.role_group_id].append(crew)
 
-        allow_static_crews_by_role_group_id = {
-            role_group.id: (role_group.id not in event_crews_by_role_group_id)
-            for role_group in application_form.role_groups.all()
-        }
-        any_static_crew_role_groups = any(allow_static_crews_by_role_group_id.values())
+        override_crews_to_games = {}
+        for game in am.application_form.event.games.all():
+            for rgca in game.role_group_crew_assignments.all():
+                if rgca.role_group in am.application_form.role_groups.all():
+                    override_crews_to_games[rgca.crew_overrides] = game
+
+        allow_static_crews = (
+            len(am.application_form.event.games.all()) > 1
+            and am.static_crews  # FIXME: this is wrong
+            and any(
+                not role_group.event_only
+                for role_group in am.application_form.role_groups.all()
+            )
+        )
 
         # For all of the crew editor elements we render (one per game per role group,
         # and one per static crew), we need to be able to answer the question
@@ -1042,20 +1047,17 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         counts = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
         # The contexts we're interested in are all of the static crews,
         # event crews, and per-game override crews.
-        all_contexts = (
-            list(am.static_crews)
-            + list(am.event_crews)
-            + list(override_crews_to_games.keys())
+        all_crews = (
+            am.static_crews + am.event_crews + list(override_crews_to_games.keys())
         )
 
-        for role_group in application_form.role_groups.all():
-            for context in all_contexts:
-                for role in role_group.roles.all():
-                    counts[role_group.id][context.id][role.name] = (
-                        am.get_application_counts(
-                            context, override_crews_to_games.get(context), role
-                        )
+        for crew in all_crews:
+            for role in crew.role_group.roles.all():
+                counts[crew.role_group.id][crew.id][role.name] = (
+                    am.get_application_counts(
+                        crew, override_crews_to_games.get(crew), role
                     )
+                )
 
         return render(
             request,
@@ -1063,16 +1065,19 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
             context=asdict(
                 contexts.CrewBuilderInputs(
                     editable=True,
-                    form=application_form,
-                    event=application_form.event,
-                    role_groups=application_form.role_groups.all(),
-                    games=application_form.games(),
+                    form=am.application_form,
+                    event=am.application_form.event,
+                    role_groups=am.application_form.role_groups.all(),
+                    games=am.application_form.event.games.all(),
                     focus_user_id=None,
                     static_crews=static_crews_by_role_group_id,
                     event_crews=event_crews_by_role_group_id,
-                    allow_static_crews=allow_static_crews_by_role_group_id,
-                    any_static_crew_role_groups=any_static_crew_role_groups,
+                    allow_static_crews=allow_static_crews,
                     counts=counts,
+                    show_day_header=(
+                        len(am.application_form.event.games.all())
+                        and len(am.application_form.event.days())
+                    ),
                 )
             ),
         )

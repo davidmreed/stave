@@ -5,6 +5,7 @@ from uuid import UUID
 from . import models
 from dataclasses import dataclass
 import functools
+from django.db.models import Prefetch
 
 
 @dataclass
@@ -35,64 +36,14 @@ class UserAvailabilityEntry:
 
 class AvailabilityManager:
     application_form: models.ApplicationForm
-    applications: dict[UUID, dict[str, Iterable[models.Application]]]
 
     @classmethod
-    def with_role_group_and_roles(
-        klass,
-        application_form: models.ApplicationForm,
-        role_group: models.RoleGroup,
-        roles: Iterable[models.Role],
+    def with_application_form(
+        klass, application_form: models.ApplicationForm
     ) -> "AvailabilityManager":
-        am = AvailabilityManager()
-        am.application_form = application_form
-        am.applications = {
-            role_group.id: am._load_applications_for_role_group(role_group, roles)
-        }
-
-        return am
-
-    @classmethod
-    def with_role_groups(
-        klass,
-        application_form: models.ApplicationForm,
-        role_groups: Iterable[models.RoleGroup],
-    ) -> "AvailabilityManager":
-        am = AvailabilityManager()
-        am.application_form = application_form
-        am.applications = am._load_applications_for_role_groups(role_groups)
-
-        return am
-
-    def _load_applications_for_role_groups(
-        self, role_groups: Iterable[models.RoleGroup]
-    ) -> dict[UUID, dict[str, Iterable[models.Application]]]:
-        return {
-            role_group.id: self._load_applications_for_role_group(
-                role_group, role_group.roles.all()
-            )
-            for role_group in role_groups
-        }
-
-    def _load_applications_for_role_group(
-        self, role_group: models.RoleGroup, roles: Iterable[models.Role]
-    ) -> dict[str, Iterable[models.Application]]:
-        # If our input roles and role_group are not sensical, this query will be empty.
-        # No risk of incoherent output data.
-        applications = (
-            self.application_form.applications.filter(
-                roles__in=roles, roles__role_group_id=role_group.id
-            )
-            .distinct()
-            .prefetch_related("roles", "roles__role_group")
-        )
-
         # Filter based on our application model.
-        if (
-            self.application_form.application_kind
-            == models.ApplicationKind.CONFIRM_ONLY
-        ):
-            applications = applications.filter(
+        if application_form.application_kind == models.ApplicationKind.CONFIRM_ONLY:
+            application_qs = models.Application.objects.filter(
                 status__in=[
                     models.ApplicationStatus.APPLIED,
                     models.ApplicationStatus.INVITED,
@@ -100,59 +51,114 @@ class AvailabilityManager:
                 ]
             )
         elif (
-            self.application_form.application_kind
+            application_form.application_kind
             == models.ApplicationKind.CONFIRM_THEN_ASSIGN
         ):
-            applications = applications.filter(
-                status=models.ApplicationStatus.CONFIRMED
+            application_qs = models.Application.objects.filter(
+                status__in=[
+                    models.ApplicationStatus.CONFIRMED,
+                ]
             )
+        application_form: models.ApplicationForm = (
+            models.ApplicationForm.objects.filter(id=application_form.id)
+            .prefetch_related(
+                "role_groups",
+                "role_groups__roles",
+                Prefetch("applications", queryset=application_qs),
+                Prefetch(
+                    "applications__roles",
+                    queryset=models.Role.objects.select_related("role_group"),
+                ),
+                "event__games",  # TODO: filter
+                Prefetch(
+                    "event__games__role_group_crew_assignments",
+                    queryset=models.RoleGroupCrewAssignment.objects.filter(
+                        role_group__in=application_form.role_groups.all()
+                    ).select_related("crew", "role_group"),
+                ),
+                "event__games__role_group_crew_assignments__crew__role_group__roles",
+                "event__games__role_group_crew_assignments__crew_overrides__role_group__roles",
+                Prefetch(
+                    "event__games__role_group_crew_assignments__crew__assignments",
+                    queryset=models.CrewAssignment.objects.select_related(
+                        "user", "role", "role__role_group"
+                    ),
+                ),
+                Prefetch(
+                    "event__games__role_group_crew_assignments__crew_overrides__assignments",
+                    queryset=models.CrewAssignment.objects.select_related(
+                        "user", "role", "role__role_group"
+                    ),
+                ),
+                Prefetch(
+                    "event__crews",
+                    queryset=models.Crew.objects.filter(
+                        role_group__in=application_form.role_groups.all()
+                    ).select_related("role_group"),
+                ),
+                "event__crews__role_group__roles",
+                Prefetch(
+                    "event__crews__assignments",
+                    queryset=models.CrewAssignment.objects.select_related(
+                        "user", "role", "role__role_group"
+                    ),
+                ),
+            )
+            .select_related("event", "event__league")
+        ).first()
+        am = AvailabilityManager()
+        am.application_form = application_form
 
-        result = defaultdict(list)
-        for application in applications:
-            app_roles = application.roles.all()
-            for role in roles:
-                if role in app_roles:
-                    result[role.name].append(application)
+        return am
 
-        return result
+    @property
+    def applications(self) -> dict[UUID, dict[str, list[models.Application]]]:
+        applications = defaultdict(lambda: defaultdict(list))
+        for application in self.application_form.applications.all():
+            for role in application.roles.all():
+                applications[role.role_group_id][role.name].append(application)
+
+        return applications
 
     @property
     @functools.cache
-    def static_crews(self):
-        return self.application_form.static_crews().prefetch_assignments()
+    def static_crews(self) -> list[models.Crew]:
+        return [
+            crew
+            for crew in self.application_form.event.crews.all()
+            if crew.kind == models.CrewKind.GAME_CREW
+        ]
 
     @property
     @functools.cache
-    def event_crews(self):
-        return self.application_form.event_crews().prefetch_assignments()
+    def event_crews(self) -> list[models.Crew]:
+        return [
+            crew
+            for crew in self.application_form.event.crews.all()
+            if crew.kind == models.CrewKind.EVENT_CREW
+        ]
 
     @property
     @functools.cache
     def user_availability(self) -> dict[UUID, list[UserAvailabilityEntry]]:
-        # Grab all of the crew assignments for this event.
-        rgcas = (
-            models.RoleGroupCrewAssignment.objects.filter(
-                game__event=self.application_form.event
-            )
-            .prefetch_related("crew__assignments", "crew_overrides__assignments")
-            .select_related("game")
-        )
         user_assigned_times_map = defaultdict(list)
-        for rgca in rgcas:
-            effective_crew = rgca.effective_crew_by_role_id().values()
-            for assignment in effective_crew:
-                # We squash all effective game assignments to appear
-                # as part of the override crew. This ensures we
-                # catch conflicts between the assigned static crew
-                # and the overrides.
-                user_assigned_times_map[assignment.user_id].append(
-                    UserAvailabilityEntry(
-                        crew=rgca.crew_overrides,
-                        start_time=rgca.game.start_time,
-                        end_time=rgca.game.end_time,
-                        exclusive=not assignment.role.nonexclusive,
+
+        for game in self.application_form.event.games.all():
+            for rgca in game.role_group_crew_assignments.all():
+                effective_crew = rgca.effective_crew_by_role_id().values()
+                for assignment in effective_crew:
+                    # We squash all effective game assignments to appear
+                    # as part of the override crew. This ensures we
+                    # catch conflicts between the assigned static crew
+                    # and the overrides.
+                    user_assigned_times_map[assignment.user_id].append(
+                        UserAvailabilityEntry(
+                            crew=rgca.crew_overrides,
+                            start_time=game.start_time,
+                            end_time=game.end_time,
+                            exclusive=not assignment.role.nonexclusive,
+                        )
                     )
-                )
 
         return user_assigned_times_map
 

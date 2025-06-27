@@ -486,7 +486,10 @@ class CrewKind(models.IntegerChoices):
 class CrewQuerySet(models.QuerySet["Crew"]):
     def prefetch_assignments(self) -> models.QuerySet["Crew"]:
         return self.prefetch_related(
-            "assignments__user", "assignments__role", "assignments__role__role_group"
+            "assignments",
+            "assignments__user",
+            "assignments__role",
+            "assignments__role__role_group",
         )
 
 
