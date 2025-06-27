@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Any
 from uuid import UUID
 
@@ -6,6 +6,10 @@ from django.contrib.auth.models import AnonymousUser
 from django.db.models import QuerySet
 
 from stave import forms, models
+
+
+def to_dict(obj) -> dict:
+    return {field.name: getattr(obj, field.name) for field in fields(obj)}
 
 
 @dataclass

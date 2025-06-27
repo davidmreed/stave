@@ -59,15 +59,16 @@
 {# Only available on multi-game events #}
 {# Not available on forms that only do event-wide role groups #}
 
-{% if any_static_crew_role_groups and editable %}
-{% if static_crews or event.games.all|length > 1 %}
+{% if allow_static_crews %}
 <header>
 <h4>Static Crews</h4>
 </header>
 
+{# This loop is structured thus so that we can present an empty header with a Create button where we don't have static crews for a given Role Group #}
+
 {% for role_group in role_groups %}
 {% with counts=counts|get:role_group.id %}
-{% if allow_static_crews|get:role_group.id %}
+{% if not role_group.event_only %}
 <header>
     <h5>{{ role_group }}</h5>
     {% if editable %}
@@ -94,7 +95,6 @@ No static crews yet.
 {% endwith %}
 {% endfor %}
 {% endif %}
-{% endif %}
 
 {# End of flex container #}
 
@@ -105,12 +105,10 @@ No static crews yet.
 <div class="crews-container">
 {% if role_group.id in event_crews %}
 {% for crew in event_crews|get:role_group.id %}
-{% with crew.get_assignments_by_role_id as crew_assignments %}
 <div class="crew-container">
 <h4>{{ crew }}</h4>
-{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=crew_assignments role_group=role_group crew=crew focus_user_id=None csrf_token=csrf_token counts=counts|get:crew.id only %}
+{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=crew.get_assignments_by_role_id role_group=role_group crew=crew focus_user_id=None csrf_token=csrf_token counts=counts|get:crew.id only %}
 </div>
-{% endwith %}
 {% endfor %}
 {% endif %}
 </div>
@@ -137,7 +135,6 @@ No static crews yet.
                     {% endif %}
                     <div class="crews-container">
 
-                    {# This might be the problem here TODO #}
                     {% with game.get_crew_assignments_by_role_group as role_group_assignments %}
                     {% for role_group in role_groups %}
                     {% with counts=counts|get:role_group.id %}

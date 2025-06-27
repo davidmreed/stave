@@ -2,7 +2,7 @@ import dataclasses
 import itertools
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from dataclasses import asdict, is_dataclass
+from dataclasses import is_dataclass
 from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -50,7 +50,7 @@ class TypedContextMixin[T: dict[str, Any] | DataclassInstance]:
 
         typed_context = self.get_context()
         if is_dataclass(typed_context):
-            _ = context.update(asdict(typed_context))
+            _ = context.update(contexts.to_dict(typed_context))
         else:
             _ = context.update(typed_context)
 
@@ -910,7 +910,9 @@ class StaffedUserView(LoginRequiredMixin, views.View):
         return render(
             request,
             "stave/staff_list.html",
-            context=asdict(contexts.StaffListInputs(users=staffed, event=event)),
+            context=contexts.to_dict(
+                contexts.StaffListInputs(users=staffed, event=event)
+            ),
         )
 
 
@@ -964,7 +966,7 @@ class ScheduleView(LoginRequiredMixin, views.View):
         return render(
             request,
             "stave/crew_builder.html",
-            context=asdict(
+            context=contexts.to_dict(
                 contexts.CrewBuilderInputs(
                     editable=False,
                     form=None,
@@ -989,7 +991,7 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         event_slug: str,
         application_form_slug: str,
     ) -> HttpResponse:
-        application_form: models.ApplicationForm = get_object_or_404(
+        application_form_check: models.ApplicationForm = get_object_or_404(
             models.ApplicationForm.objects.manageable(request.user),
             slug=application_form_slug,
             event__slug=event_slug,
@@ -999,19 +1001,26 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         # Crew Builder requires that all Override Crews be present on our RoleGroupCrewAssignments.
         with transaction.atomic():
             for rgca in models.RoleGroupCrewAssignment.objects.filter(
-                role_group__in=application_form.role_groups.all(),
-                game__event=application_form.event,
+                role_group__in=application_form_check.role_groups.all(),
+                game__event=application_form_check.event,
             ).select_for_update():
                 if not rgca.crew_overrides_id:
                     rgca.crew_overrides = models.Crew.objects.create(
                         kind=models.CrewKind.OVERRIDE_CREW,
                         role_group_id=rgca.role_group_id,
-                        event_id=application_form.event_id,
+                        event_id=application_form_check.event_id,
                     )
                     rgca.save()
 
-        # After this point, all data access should be via am.
-        am = AvailabilityManager.with_application_form(application_form)
+        # For all of the crew editor elements we render (one per game per role group,
+        # and one per static crew), we need to be able to answer the question
+        # "How many total apps are there for each role, and how many of those apps
+        # are actually available?"
+
+        # This is a fairly complicated data problem, so we're going to pre-compute
+        # everything here.
+        # After this point, all data access should be via `am` to use prefetched data.
+        am = AvailabilityManager.with_application_form(application_form_check)
 
         static_crews_by_role_group_id = defaultdict(list)
         for crew in am.static_crews:
@@ -1036,14 +1045,6 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
             )
         )
 
-        # For all of the crew editor elements we render (one per game per role group,
-        # and one per static crew), we need to be able to answer the question
-        # "How many total apps are there for each role, and how many of those apps
-        # are actually available?"
-
-        # This is a fairly complicated data problem, so we're going to pre-compute
-        # everything here.
-
         counts = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
         # The contexts we're interested in are all of the static crews,
         # event crews, and per-game override crews.
@@ -1062,7 +1063,7 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         return render(
             request,
             "stave/crew_builder.html",
-            context=asdict(
+            context=contexts.to_dict(
                 contexts.CrewBuilderInputs(
                     editable=True,
                     form=am.application_form,
@@ -1131,7 +1132,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         return render(
             request,
             "stave/crew_builder_detail.html",
-            dataclasses.asdict(
+            contexts.to_dict(
                 contexts.CrewBuilderDetailInputs(
                     form=application_form,
                     applications=applications,
@@ -1251,7 +1252,7 @@ class ApplicationFormView(views.View):
             editable=editable,
         )
 
-        return render(request, "stave/view_application.html", asdict(context))
+        return render(request, "stave/view_application.html", contexts.to_dict(context))
 
     def post(
         self,
@@ -1332,7 +1333,7 @@ class ApplicationFormView(views.View):
             .exists(),
         )
 
-        return render(request, "stave/view_application.html", asdict(context))
+        return render(request, "stave/view_application.html", contexts.to_dict(context))
 
 
 class SendEmailView(LoginRequiredMixin, views.View):
@@ -1375,7 +1376,7 @@ class SendEmailView(LoginRequiredMixin, views.View):
         return render(
             request,
             "stave/send_email.html",
-            asdict(
+            contexts.to_dict(
                 contexts.SendEmailInputs(
                     email_form=email_form,
                     kind=models.SendEmailContextType(email_type),
