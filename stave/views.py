@@ -36,7 +36,7 @@ from django.views import generic
 from stave.templates.stave import contexts
 
 from . import forms, models, settings
-from .avail import AvailabilityManager
+from .avail import AvailabilityManager, ScheduleManager
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
@@ -933,13 +933,12 @@ class ScheduleView(LoginRequiredMixin, views.View):
             models.Event.objects.all(),
             slug=event_slug,
             league__slug=league_slug,
-        )  # TODO: prefetch
+        )
 
         manageable = (
             models.Event.objects.filter(id=event.id).manageable(request.user).exists()
         )
         staffed = models.User.objects.staffed(event).filter(id=request.user.id).exists()
-
         if not manageable and not staffed:
             return HttpResponseForbidden()
 
@@ -947,21 +946,20 @@ class ScheduleView(LoginRequiredMixin, views.View):
         if role_group_ids:
             role_groups = role_groups.filter(id__in=role_group_ids.split(","))
 
-        games = event.games.filter(role_groups__in=role_groups).distinct()
+        sm = ScheduleManager(event, role_groups)
 
         static_crews_by_role_group_id = defaultdict(list)
-        for crew in event.static_crews().prefetch_assignments():
+        for crew in sm.static_crews:
             static_crews_by_role_group_id[crew.role_group_id].append(crew)
 
         event_crews_by_role_group_id = defaultdict(list)
-        for crew in event.event_crews().prefetch_assignments():
+        for crew in sm.event_crews:
             event_crews_by_role_group_id[crew.role_group_id].append(crew)
 
-        allow_static_crews_by_role_group_id = {
-            role_group.id: (role_group.id not in event_crews_by_role_group_id)
-            for role_group in event.role_groups.all()
-        }
-        any_static_crew_role_groups = any(allow_static_crews_by_role_group_id.values())
+        counts = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
+        for crew in sm.event.crews.all():
+            for role in crew.role_group.roles.all():
+                counts[crew.role_group.id][crew.id][role.name] = (0, 0)
 
         return render(
             request,
@@ -970,14 +968,17 @@ class ScheduleView(LoginRequiredMixin, views.View):
                 contexts.CrewBuilderInputs(
                     editable=False,
                     form=None,
-                    event=event,
-                    role_groups=role_groups,
-                    games=games,
+                    event=sm.event,
+                    role_groups=sm.event.role_groups.all(),
+                    games=sm.event.games.all(),
                     focus_user_id=user_id,
                     static_crews=static_crews_by_role_group_id,
                     event_crews=event_crews_by_role_group_id,
-                    allow_static_crews=allow_static_crews_by_role_group_id,
-                    any_static_crew_role_groups=any_static_crew_role_groups,
+                    allow_static_crews=False,
+                    counts=counts,
+                    show_day_header=(
+                        len(sm.event.games.all()) and len(sm.event.days())
+                    ),
                 )
             ),
         )
@@ -1036,15 +1037,13 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
                 if rgca.role_group in am.application_form.role_groups.all():
                     override_crews_to_games[rgca.crew_overrides] = game
 
-        allow_static_crews = (
-            len(am.application_form.event.games.all()) > 1
-            and am.static_crews  # FIXME: this is wrong
-            and any(
-                not role_group.event_only
-                for role_group in am.application_form.role_groups.all()
-            )
+        allow_static_crews = len(am.application_form.event.games.all()) > 1 and any(
+            not role_group.event_only
+            for role_group in am.application_form.role_groups.all()
         )
-
+        show_day_header = len(am.application_form.event.games.all()) and len(
+            am.application_form.event.days()
+        )
         counts = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
         # The contexts we're interested in are all of the static crews,
         # event crews, and per-game override crews.
@@ -1075,10 +1074,7 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
                     event_crews=event_crews_by_role_group_id,
                     allow_static_crews=allow_static_crews,
                     counts=counts,
-                    show_day_header=(
-                        len(am.application_form.event.games.all())
-                        and len(am.application_form.event.days())
-                    ),
+                    show_day_header=show_day_header,
                 )
             ),
         )
@@ -1099,9 +1095,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         role_id: UUID,
     ) -> HttpResponse:
         application_form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(
-                request.user
-            ).prefetch_applications(),
+            models.ApplicationForm.objects.manageable(request.user),
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league,
@@ -1120,15 +1114,15 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             pk=crew_id,
             role_group=role.role_group,
         )
-        am = AvailabilityManager.with_role_group_and_roles(
-            application_form, role.role_group, [role]
-        )
+        # TODO: this is not maximally efficient (filter by role)
+        am = AvailabilityManager.with_application_form(application_form)
         if crew.kind == models.CrewKind.OVERRIDE_CREW:
             game = crew.get_context()
         else:
             game = None
         applications = am.get_available_applications(crew, game, role)
 
+        # TODO: get the Game from AM to reduce queries.
         return render(
             request,
             "stave/crew_builder_detail.html",
@@ -1136,10 +1130,8 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                 contexts.CrewBuilderDetailInputs(
                     form=application_form,
                     applications=applications,
-                    game=crew.get_context()
-                    if crew.kind == models.CrewKind.OVERRIDE_CREW
-                    else None,
-                    event=application_form.event,
+                    game=game,
+                    event=am.application_form.event,
                     role=role,
                 )
             ),

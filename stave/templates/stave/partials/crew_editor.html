@@ -21,9 +21,11 @@
         {% if assignment %}
         {{ assignment.user.preferred_name }}
         {% else %}
+        {% if editable %}
         {% with role_counts=counts|get:role.name %}
         Open <small>({{ role_counts.0 }}/{{ role_counts.1 }} avail.)</small>
         {% endwith %}
+        {% endif %}
         {% endif %}
     </td>
     {% endwith %}

@@ -5,7 +5,7 @@ from uuid import UUID
 from . import models
 from dataclasses import dataclass
 import functools
-from django.db.models import Prefetch
+from django.db.models import Prefetch, QuerySet
 
 
 @dataclass
@@ -32,6 +32,76 @@ class UserAvailabilityEntry:
                 return time_overlap
             case models.CrewKind.GAME_CREW | models.CrewKind.EVENT_CREW:
                 return True
+
+
+class ScheduleManager:
+    event: models.Event
+
+    def __init__(self, event: models.Event, role_groups: QuerySet[models.RoleGroup]):
+        self.event = event
+        self.event = (
+            models.Event.objects.filter(id=event.id)
+            .prefetch_related(
+                Prefetch("role_groups", queryset=role_groups),
+                "role_groups__roles",
+                Prefetch(
+                    "games",
+                    queryset=models.Game.objects.filter(role_groups__in=role_groups),
+                ),
+                Prefetch(
+                    "games__role_group_crew_assignments",
+                    queryset=models.RoleGroupCrewAssignment.objects.filter(
+                        role_group__in=role_groups
+                    ).select_related("crew", "role_group"),
+                ),
+                "games__role_group_crew_assignments__crew__role_group__roles",
+                "games__role_group_crew_assignments__crew_overrides__role_group__roles",
+                Prefetch(
+                    "games__role_group_crew_assignments__crew__assignments",
+                    queryset=models.CrewAssignment.objects.select_related(
+                        "user", "role", "role__role_group"
+                    ),
+                ),
+                Prefetch(
+                    "games__role_group_crew_assignments__crew_overrides__assignments",
+                    queryset=models.CrewAssignment.objects.select_related(
+                        "user", "role", "role__role_group"
+                    ),
+                ),
+                Prefetch(
+                    "crews",
+                    queryset=models.Crew.objects.filter(
+                        role_group__in=role_groups
+                    ).select_related("role_group"),
+                ),
+                "crews__role_group__roles",
+                Prefetch(
+                    "crews__assignments",
+                    queryset=models.CrewAssignment.objects.select_related(
+                        "user", "role", "role__role_group"
+                    ),
+                ),
+            )
+            .select_related("league")
+        ).first()
+
+    @property
+    @functools.cache
+    def static_crews(self) -> list[models.Crew]:
+        return [
+            crew
+            for crew in self.event.crews.all()
+            if crew.kind == models.CrewKind.GAME_CREW
+        ]
+
+    @property
+    @functools.cache
+    def event_crews(self) -> list[models.Crew]:
+        return [
+            crew
+            for crew in self.event.crews.all()
+            if crew.kind == models.CrewKind.EVENT_CREW
+        ]
 
 
 class AvailabilityManager:
@@ -69,7 +139,12 @@ class AvailabilityManager:
                     "applications__roles",
                     queryset=models.Role.objects.select_related("role_group"),
                 ),
-                "event__games",  # TODO: filter
+                Prefetch(
+                    "event__games",
+                    queryset=models.Game.objects.filter(
+                        role_groups__in=application_form.role_groups.all()
+                    ),
+                ),
                 Prefetch(
                     "event__games__role_group_crew_assignments",
                     queryset=models.RoleGroupCrewAssignment.objects.filter(
