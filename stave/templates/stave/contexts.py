@@ -36,6 +36,7 @@ class CrewEditorInputs:
     crew_assignments: dict[UUID, models.CrewAssignment]
     editable: bool
     focus_user_id: UUID | None
+    counts: dict[str, tuple[int, int]]
 
 
 @dataclass
@@ -59,6 +60,7 @@ class CrewBuilderInputs:
     allow_static_crews: dict[UUID, bool]
     any_static_crew_role_groups: bool
     editable: bool
+    counts: dict[models.Game | models.Event | None, dict[str, tuple[int, int]]]
 
 
 @dataclass

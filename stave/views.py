@@ -36,6 +36,7 @@ from django.views import generic
 from stave.templates.stave import contexts
 
 from . import forms, models, settings
+from .avail import AvailabilityManager
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
@@ -226,7 +227,7 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
             context={
                 "object": object_,
                 "form": form,
-                "view_url": self.get_view_url(),
+                "view_url": self.get_vie_url(),
                 "parent_name": self.form_class.parent_form_class._meta.model._meta.verbose_name,
                 "child_name": self.form_class.child_form_class._meta.model._meta.verbose_name,
                 "child_name_plural": self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
@@ -1010,12 +1011,16 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
                         )
                         rgca.save()
 
+        am = AvailabilityManager.with_role_groups(
+            application_form, application_form.role_groups.all()
+        )
+
         static_crews_by_role_group_id = defaultdict(list)
-        for crew in application_form.static_crews().prefetch_assignments():
+        for crew in am.static_crews:
             static_crews_by_role_group_id[crew.role_group_id].append(crew)
 
         event_crews_by_role_group_id = defaultdict(list)
-        for crew in application_form.event_crews().prefetch_assignments():
+        for crew in am.event_crews:
             event_crews_by_role_group_id[crew.role_group_id].append(crew)
 
         allow_static_crews_by_role_group_id = {
@@ -1023,6 +1028,36 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
             for role_group in application_form.role_groups.all()
         }
         any_static_crew_role_groups = any(allow_static_crews_by_role_group_id.values())
+
+        # For all of the crew editor elements we render (one per game per role group,
+        # and one per static crew), we need to be able to answer the question
+        # "How many total apps are there for each role, and how many of those apps
+        # are actually available?"
+
+        # This is a fairly complicated data problem, so we're going to pre-compute
+        # everything here.
+
+        counts = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
+        # The contexts we're interested in are all of the static crews,
+        # event crews, and per-game override crews.
+        all_contexts = (
+            list(am.static_crews)
+            + list(am.event_crews)
+            + list(
+                models.Crew.objects.filter(
+                    event=application_form.event,
+                    role_group__in=application_form.role_groups.all(),
+                    kind=models.CrewKind.OVERRIDE_CREW,
+                )
+            )
+        )
+
+        for role_group in application_form.role_groups.all():
+            for context in all_contexts:
+                for role in role_group.roles.all():
+                    counts[role_group.id][context.id][role.name] = (
+                        am.get_application_counts(context, role)
+                    )
 
         return render(
             request,
@@ -1039,6 +1074,7 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
                     event_crews=event_crews_by_role_group_id,
                     allow_static_crews=allow_static_crews_by_role_group_id,
                     any_static_crew_role_groups=any_static_crew_role_groups,
+                    counts=counts,
                 )
             ),
         )
@@ -1080,8 +1116,11 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             pk=crew_id,
         )
         # TODO: verification
-        context = crew.get_context()
-        applications = list(application_form.get_applications_for_role(role, context))
+        am = AvailabilityManager.with_role_group_and_roles(
+            application_form, role.role_group, [role]
+        )
+        applications = am.get_available_applications(crew, role)
+
         return render(
             request,
             "stave/crew_builder_detail.html",
@@ -1089,7 +1128,9 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                 contexts.CrewBuilderDetailInputs(
                     form=application_form,
                     applications=applications,
-                    game=context if isinstance(context, models.Game) else None,
+                    game=crew.get_context()
+                    if crew.kind == models.CrewKind.OVERRIDE_CREW
+                    else None,
                     event=application_form.event,
                     role=role,
                 )

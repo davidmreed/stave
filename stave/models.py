@@ -709,6 +709,7 @@ class RoleGroupCrewAssignment(models.Model):
     )
 
     def effective_crew_by_role_id(self) -> dict[uuid.UUID, CrewAssignment]:
+        # TODO: ensure these queries are efficient
         crew_assignments_by_role: dict[uuid.UUID, CrewAssignment] = {}
 
         if self.crew:
@@ -1267,14 +1268,15 @@ class ApplicationForm(models.Model):
             "crew-builder", args=[self.event.league.slug, self.event.slug, self.slug]
         )
 
-    # TODO: make it possible to get applications that would otherwise match
-    # but are either un-accepted or assigned to other roles.
-    # TODO: handle games with overlapping times.
-    def get_applications_for_role(
-        self, role: Role, context: Game | Event | None
-    ) -> Iterable["Application"]:
+    def get_applications_for_roles(
+        self,
+        role_group: RoleGroup,
+        roles: Iterable[Role],
+    ) -> dict[str, Iterable["Application"]]:
+        # If our input roles and role_group are not sensical, this query will be empty.
+        # No risk of incoherent output data.
         applications = self.applications.filter(
-            roles__name=role.name, roles__role_group_id=role.role_group.id
+            roles__in=roles, roles__role_group_id=role_group.id
         )
 
         # Filter based on our application model.
@@ -1287,76 +1289,16 @@ class ApplicationForm(models.Model):
                 ]
             )
         elif self.application_kind == ApplicationKind.CONFIRM_THEN_ASSIGN:
-            applications = applications.filter(status__in=[ApplicationStatus.INVITED, ApplicationStatus.CONFIRMED])
+            applications = applications.filter(status=ApplicationStatus.CONFIRMED)
 
-        # Exclude already-assigned users based on our given context.
-        if isinstance(context, Game):
-            # TODO: profile this heinous query
+        result = defaultdict(set)
+        for application in applications:
+            app_roles = application.roles.all()
+            for role in roles:
+                if role in app_roles:
+                    result[role.name].add(application)
 
-            # A user can hold any number of nonexclusive roles on this game as well
-            # as one exclusive role on this game. Those roles need to be in the
-            # same Role Group.
-
-            # They can also hold any number of event-level roles.
-            if role.nonexclusive:
-                # Exclude those already holding roles in other role groups
-                applications = applications.exclude(
-                    user__in=User.objects.filter(
-                        ~Q(crews__role__role_group_id=role.role_group_id),
-                        Q(crews__crew__role_group_assignments__game=context)
-                        | Q(crews__crew__role_group_override_assignments__game=context),
-                    )
-                )
-            else:
-                # Exclude anyone holding another exclusive role (in any Role Group).
-                # Or a nonexclusive role in another Role Group.
-                applications = applications.exclude(
-                    user__in=User.objects.filter(
-                        # Find assignments through either static crews or override crews.
-                        Q(crews__crew__role_group_assignments__game=context)
-                        | Q(crews__crew__role_group_override_assignments__game=context),
-                        # where the role is exclusive, or is in a different Role Group
-                        Q(crews__role__nonexclusive=False)
-                        | ~Q(crews__role__role_group_id=role.role_group_id),
-                    )
-                )
-        elif isinstance(context, Event):
-            # A user can hold exactly one exclusive Event-level role
-            # and any number of nonexclusive Event-level roles.
-            # NOTE: we do not prohibit users who are in game-level
-            # roles from being assigned event-level roles and vice versa.
-
-            applications = applications.exclude(
-                user__in=User.objects.filter(
-                    crews__crew__event_role_group_assignments__event=context,
-                    crews__role__nonexclusive=False,
-                )
-            )
-        elif context is None:
-            # None means assigning to a static crew.
-            applications = applications.exclude(
-                user__in=User.objects.filter(crews__crew__event=self.event)
-            )
-
-        # Predicate for availability.
-        # TODO: figure out what this looks like for other contexts
-        if isinstance(context, Game):
-            if self.application_availability_kind == ApplicationAvailabilityKind.BY_DAY:
-                # TODO: can we do this with __contains on Postgres?
-                # It's not available on SQLite
-                applications = [
-                    app
-                    for app in applications
-                    if str(context.start_time.date()) in app.availability_by_day
-                ]
-
-            elif (
-                self.application_availability_kind
-                == ApplicationAvailabilityKind.BY_GAME
-            ):
-                applications = applications.filter(availability_by_game=context)
-
-        return applications
+        return result
 
     def get_template_for_context_type(
         self, context: SendEmailContextType
@@ -1491,7 +1433,7 @@ class ApplicationQuerySet(models.QuerySet["Application"]):
             "form__role_groups__roles",
             "form__event__games",
             "responses",
-            "availability_by_game",
+            # "availability_by_game",
             "roles",
             "roles__role_group",
         )

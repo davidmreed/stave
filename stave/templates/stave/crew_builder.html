@@ -66,6 +66,7 @@
 </header>
 
 {% for role_group in role_groups %}
+{% with counts=counts|get:role_group.id %}
 {% if allow_static_crews|get:role_group.id %}
 <header>
     <h5>{{ role_group }}</h5>
@@ -83,13 +84,14 @@
 {% for crew in static_crews|get:role_group.id %}
 <div class="crew-container">
     <h6>{{ crew }}</h6>
-{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew=crew crew_assignments=crew.get_assignments_by_role_id role_group=crew.role_group focus_user_id=None csrf_token=csrf_token only %}
+{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew=crew crew_assignments=crew.get_assignments_by_role_id role_group=crew.role_group focus_user_id=None counts=counts|get:crew.id csrf_token=csrf_token only %}
 </div>
 {% empty %}
 No static crews yet.
 {% endfor %}
 </div>
 {% endif %}
+{% endwith %}
 {% endfor %}
 {% endif %}
 {% endif %}
@@ -99,18 +101,20 @@ No static crews yet.
 {# Event-wide roles #}
 
 {% for role_group in role_groups %}
+{% with counts=counts|get:role_group.id %}
 <div class="crews-container">
 {% if role_group.id in event_crews %}
 {% for crew in event_crews|get:role_group.id %}
 {% with crew.get_assignments_by_role_id as crew_assignments %}
 <div class="crew-container">
 <h4>{{ crew }}</h4>
-{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=crew_assignments role_group=role_group crew=crew focus_user_id=None csrf_token=csrf_token only %}
+{% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=crew_assignments role_group=role_group crew=crew focus_user_id=None csrf_token=csrf_token counts=counts|get:crew.id only %}
 </div>
 {% endwith %}
 {% endfor %}
 {% endif %}
 </div>
+{% endwith %}
 {% endfor %}
 
 {# End of flex container #}
@@ -136,6 +140,7 @@ No static crews yet.
 
                     {% with game.get_crew_assignments_by_role_group as role_group_assignments %}
                     {% for role_group in role_groups %}
+                    {% with counts=counts|get:role_group.id %}
                         <div class="crew-container">
                             {% with role_group.id as role_group_id %}
                             {% with role_group_assignments|get:role_group_id as rgca %}
@@ -170,12 +175,13 @@ No static crews yet.
                                                 </div>
                                             </form>
                                         {% endif %}
-                                {% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=rgca.effective_crew_by_role_id role_group=role_group crew=rgca.crew_overrides focus_user_id=focus_user_id csrf_token=csrf_token only %}
+                                {% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=rgca.effective_crew_by_role_id role_group=role_group crew=rgca.crew_overrides focus_user_id=focus_user_id csrf_token=csrf_token counts=counts|get:rgca.crew_overrides.id only %}
                             {% endif %}
                             {% endwith %}
                             {% endwith %}
                         </div>
                         {# end of flex item for role group #}
+                    {% endwith %}
                     {% endfor %}
                     {% endwith %}
                     </div>
