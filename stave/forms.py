@@ -5,10 +5,31 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.forms.utils import ErrorDict
-from django.utils import timezone
+from django.utils import timezone, formats
 from django.utils.translation import gettext_lazy as _
 
 from . import models
+import zoneinfo
+
+
+class GameModelChoiceField(forms.ModelMultipleChoiceField):
+    def label_from_instance(self, obj: models.Game) -> str:
+        multi_day = obj.event.start_date != obj.event.end_date
+        timezone = zoneinfo.ZoneInfo(obj.event.league.time_zone)
+        start_time = formats.localize(
+            obj.start_time.astimezone(timezone).time(), use_l10n=True
+        )
+        end_time = formats.localize(
+            obj.end_time.astimezone(timezone).time(), use_l10n=True
+        )
+        start_date = formats.localize(obj.start_time.date(), use_l10n=True)
+
+        if multi_day:
+            date = f"{start_date}, {start_time}–{end_time}"
+        else:
+            date = f"{start_time}–{end_time}"
+
+        return f"{obj} ({date})"
 
 
 class SeparatedJSONListField(forms.JSONField):
@@ -301,7 +322,7 @@ class ApplicationForm(forms.Form):
             self.availability_form = forms.Form(
                 prefix="games", initial=initial, *args, **kwargs
             )
-            self.availability_form.fields["games"] = forms.ModelMultipleChoiceField(
+            self.availability_form.fields["games"] = GameModelChoiceField(
                 app_form.games(),
                 widget=forms.CheckboxSelectMultiple,
                 required=True,
