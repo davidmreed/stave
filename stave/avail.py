@@ -143,7 +143,7 @@ class AvailabilityManager:
                     "event__games",
                     queryset=models.Game.objects.filter(
                         role_groups__in=application_form.role_groups.all()
-                    ),
+                    ).distinct(),
                 ),
                 Prefetch(
                     "event__games__role_group_crew_assignments",
