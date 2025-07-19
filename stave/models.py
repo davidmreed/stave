@@ -1473,8 +1473,11 @@ class Application(models.Model):
                 if not self.rejection_email_sent:
                     return ApplicationStatus.APPLIED
             case ApplicationStatus.CONFIRMED:
-                if not self.schedule_email_sent:
-                    return ApplicationStatus.APPLIED
+                if self.form.application_kind == ApplicationKind.CONFIRM_THEN_ASSIGN:
+                    return ApplicationStatus.CONFIRMED
+                else:
+                    if not self.schedule_email_sent:
+                        return ApplicationStatus.APPLIED
             case _:
                 pass
 

@@ -30,7 +30,7 @@ a[role=button] {
     width: 100%;
 }
 
-header a[role=button] {
+.horiz input, .horiz a[role=button], header input, header a[role=button] {
     width: auto;
     padding: 0.25rem;
     margin-left:0.25rem;

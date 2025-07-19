@@ -8,6 +8,8 @@
 
 {% block content %}
 
+{# Top element: banner, warnings, management buttons #}
+
 {% include "stave/partials/event_banner.html" with event=app_form.event only %}
 
 {% if not app_form.event.league.enabled %}
@@ -27,17 +29,18 @@
     {% endif %}
 </header>
 
+{# Status banner #}
 
 {% if application %}
 {# Show the user a CTA banner #}
 <header>
-    <h2>Status: {{ application.user_visible_status.label }}</h2>
+    <h2>Status for {{ application.user }}</h2>
 </header>
 {% if request.user == application.user %}
 <p>
 {% if application.user_visible_status == application.ApplicationStatus.INVITED %}
 
-You've been invited to this event. Please respond to your invitation below.
+You've been invited to this event. <strong>Please respond to your invitation by selecting Confirm or Decline</strong>.
 
 {% elif application.user_visible_status == application.ApplicationStatus.APPLIED %}
 
@@ -53,7 +56,7 @@ You declined to participate in this event.
 
 {% elif application.user_visible_status == application.ApplicationStatus.WITHDRAWN %}
 
-You chose to withdraw this application. You may apply again.
+You chose to withdraw this application.
 
 {% elif application.user_visible_status == application.ApplicationStatus.REJECTED %}
 
@@ -61,16 +64,23 @@ Your application to this event was not accepted.
 
 {% endif %}
 </p>
+{% else %}
+<p>
+This application's status is <strong>{{ application.get_status_display }}</strong>.
+</p>
 {% endif %}
 {% if not editable %}
+{# Application actions #}
+<div class="horiz">
 <form method="POST">
     {% csrf_token %}
     <input type="hidden" name="redirect_url" id="redirect_url" value="{{ request.path }}">
     {% include "stave/application_actions.html" with user=request.user can_manage_event=user|can_manage_event:app_form.event application=application ApplicationStatus=ApplicationStatus include_view=False only %}
-    </div>
 </form>
+</div>
 {% endif %}
 {% else %}
+{# Event metadata box #}
 <p>
 <dl>
     <div>
