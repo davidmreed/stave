@@ -29,23 +29,39 @@
 
 
 {% if application %}
+{# Show the user a CTA banner #}
 <header>
-    <h2>Status</h2>
+    <h2>Status: {{ application.user_visible_status.label }}</h2>
 </header>
-<dl>
-    <div>
-        <dt>Applicant</dt>
-        <dd>{{ application.user }} </dd>
-    </div>
-    <div>
-        <dt>Status</td>
-        <dd>{{ application.user_visible_status.label }}</dd>
-    </div>
-    <div>
-        <dt>Event</dt>
-        <dd><a href="{% url 'event-detail' app_form.event.league.slug app_form.event.slug %}">{{ app_form.event }}</a></dd>
-    </div>
-</dl>
+{% if request.user == application.user %}
+<p>
+{% if application.user_visible_status == application.ApplicationStatus.INVITED %}
+
+You've been invited to this event. Please respond to your invitation below.
+
+{% elif application.user_visible_status == application.ApplicationStatus.APPLIED %}
+
+Your application to this event is waiting for action from the event organizers.
+
+{% elif application.user_visible_status == application.ApplicationStatus.CONFIRMED %}
+
+You've been confirmed for this event.
+
+{% elif application.user_visible_status == application.ApplicationStatus.DECLINED %}
+
+You declined to participate in this event.
+
+{% elif application.user_visible_status == application.ApplicationStatus.WITHDRAWN %}
+
+You chose to withdraw this application. You may apply again.
+
+{% elif application.user_visible_status == application.ApplicationStatus.REJECTED %}
+
+Your application to this event was not accepted.
+
+{% endif %}
+</p>
+{% endif %}
 {% if not editable %}
 <form method="POST">
     {% csrf_token %}
