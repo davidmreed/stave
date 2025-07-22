@@ -112,12 +112,10 @@ class AvailabilityManager:
         klass, application_form: models.ApplicationForm
     ) -> "AvailabilityManager":
         # Filter based on our application model.
-        if application_form.application_kind == models.ApplicationKind.CONFIRM_ONLY:
+        if application_form.application_kind == models.ApplicationKind.ASSIGN_ONLY:
             application_qs = models.Application.objects.filter(
                 status__in=[
                     models.ApplicationStatus.APPLIED,
-                    models.ApplicationStatus.INVITED,
-                    models.ApplicationStatus.CONFIRMED,
                 ]
             )
         elif (
@@ -127,6 +125,9 @@ class AvailabilityManager:
             application_qs = models.Application.objects.filter(
                 status__in=[
                     models.ApplicationStatus.CONFIRMED,
+                    models.ApplicationStatus.APPLIED,
+                    models.ApplicationStatus.INVITED,
+                    models.ApplicationStatus.INVITATION_PENDING,
                 ]
             )
         application_form: models.ApplicationForm = (

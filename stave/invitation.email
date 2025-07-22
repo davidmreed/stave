@@ -1,0 +1,13 @@
+Dear {user.preferred_name},
+
+You're invited to officiate [{event.name}]({event.link}), hosted by {league.name}!
+
+{event.name} takes place {event.date_range} at
+
+{event.location}
+
+To accept or decline your invitation, [click here]({application.link}). If you confirm, you'll receive another email when your assignments are finalized.
+
+Thank you!
+
+{sender.preferred_name}

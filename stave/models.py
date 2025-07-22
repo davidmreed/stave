@@ -31,7 +31,7 @@ class UserQuerySet(models.QuerySet["User"]):
     def staffed(self, event: "Event") -> "UserQuerySet":
         return self.filter(
             id__in=Application.objects.filter(
-                form__event=event, schedule_email_sent=True
+                form__event=event, status=ApplicationStatus.ASSIGNED
             ).values("user_id")
         ).distinct()
 
@@ -539,7 +539,6 @@ class CrewAssignment(models.Model):
         Role, related_name="crew_assignments", on_delete=models.CASCADE
     )
     # TODO: validate that our Role is a member of the Role Group for our Crew
-    assignment_sent = models.BooleanField(default=False)
 
     class Meta:
         constraints = [
@@ -801,9 +800,13 @@ class Game(models.Model):
 
 class ApplicationStatus(models.IntegerChoices):
     APPLIED = 1, _("Applied")
+    INVITATION_PENDING = 7, _("Invitation Pending")
     INVITED = 2, _("Invited")
     CONFIRMED = 3, _("Confirmed")
     DECLINED = 4, _("Declined")
+    ASSIGNMENT_PENDING = 10, _("Assignment Pending")
+    ASSIGNED = 8, _("Assigned")
+    REJECTION_PENDING = 9, _("Rejection Pending")
     REJECTED = 5, _("Rejected")
     WITHDRAWN = 6, _("Withdrawn")
 
@@ -811,13 +814,13 @@ class ApplicationStatus(models.IntegerChoices):
         match self:
             case ApplicationStatus.APPLIED:
                 return _("Apply")
-            case ApplicationStatus.INVITED:
+            case ApplicationStatus.INVITED | ApplicationStatus.INVITATION_PENDING:
                 return _("Invite")
             case ApplicationStatus.CONFIRMED:
                 return _("Confirm")
             case ApplicationStatus.DECLINED:
                 return _("Decline")
-            case ApplicationStatus.REJECTED:
+            case ApplicationStatus.REJECTED | ApplicationStatus.REJECTION_PENDING:
                 return _("Reject")
             case ApplicationStatus.WITHDRAWN:
                 return _("Withdraw")
@@ -920,10 +923,10 @@ class Message(models.Model):
 
 
 class ApplicationKind(models.IntegerChoices):
-    # With CONFIRM_ONLY, Applications go from Applied
-    # to either Confirmed, Rejected, or Withdrawn
+    # With ASSIGN_ONLY, Applications go from Applied
+    # to either Assigned, Rejected, or Withdrawn
     # at the point when schedule emails are sent.
-    CONFIRM_ONLY = 1, _("Confirm Only")
+    ASSIGN_ONLY = 1, _("Assign Only")
     # With CONFIRM_THEN_ASSIGN, Applications go from
     # Applied to Invited, then to Confirmed or Declined,
     # or to Withdrawn/Rejected.
@@ -939,7 +942,7 @@ class ApplicationAvailabilityKind(models.IntegerChoices):
 # ApplicationKind and ApplicationAvailabilityKind define the available space
 # for event signup types:
 
-# CONFIRM_ONLY is valid with any availability type.
+# ASSIGN_ONLY is valid with any availability type.
 # CONFIRM_THEN_ASSIGN is valid with any availability type.
 
 # BY_GAME requires games and roles to be entered for the application form to be usable;
@@ -1140,6 +1143,7 @@ class SendEmailContextType(enum.Enum):
     INVITATION = "invitation"
     SCHEDULE = "schedule"
     REJECTION = "rejection"
+    CREW = "crew"
 
 
 class ApplicationForm(models.Model):
@@ -1266,6 +1270,22 @@ class ApplicationForm(models.Model):
                 ],
             )
 
+    def get_application_list_url(self) -> str:
+        return reverse(
+            "form-applications",
+            args=[self.event.league.slug, self.event.slug, self.slug],
+        )
+
+    def get_comms_center_url(self) -> str:
+        return reverse(
+            "form-comms", args=[self.event.league.slug, self.event.slug, self.slug]
+        )
+
+    def get_staffing_list_url(self) -> str:
+        return reverse(
+            "event-staff-list", args=[self.event.league.slug, self.event.slug]
+        )
+
     def get_crew_builder_url(self) -> str:
         return reverse(
             "crew-builder", args=[self.event.league.slug, self.event.slug, self.slug]
@@ -1283,7 +1303,8 @@ class ApplicationForm(models.Model):
         )
 
         # Filter based on our application model.
-        if self.application_kind == ApplicationKind.CONFIRM_ONLY:
+        # FIXME: update these filters
+        if self.application_kind == ApplicationKind.ASSIGN_ONLY:
             applications = applications.filter(
                 status__in=[
                     ApplicationStatus.APPLIED,
@@ -1321,31 +1342,29 @@ class ApplicationForm(models.Model):
             case SendEmailContextType.INVITATION:
                 return User.objects.filter(
                     id__in=self.applications.filter(
-                        status=ApplicationStatus.INVITED, invitation_email_sent=False
+                        status=ApplicationStatus.INVITATION_PENDING
                     ).values("user_id")
                 ).distinct()
             case SendEmailContextType.SCHEDULE:
                 # A Schedule email goes to any user who's assigned to a crew
                 # on our Event where the crew matches one of our Role Groups.
-                return (
-                    User.objects.filter(
-                        id__in=CrewAssignment.objects.filter(
-                            crew__event=self.event,
-                            crew__role_group__in=self.role_groups.all(),
-                        ).values("user_id")
-                    )
-                    .distinct()
-                    .exclude(
-                        id__in=self.applications.filter(
-                            schedule_email_sent=True
-                        ).values("user_id")
-                    )
-                )
 
+                return User.objects.filter(
+                    id__in=self.applications.filter(
+                        status=ApplicationStatus.ASSIGNMENT_PENDING
+                    ).values("user_id")
+                ).distinct()
             case SendEmailContextType.REJECTION:
                 return User.objects.filter(
                     id__in=self.applications.filter(
-                        status=ApplicationStatus.REJECTED, rejection_email_sent=False
+                        status=ApplicationStatus.REJECTION_PENDING
+                    ).values("user_id")
+                ).distinct()
+            case SendEmailContextType.CREW:
+                # Staffed users only
+                return User.objects.filter(
+                    id__in=self.applications.filter(
+                        status=ApplicationStatus.ASSIGNED
                     ).values("user_id")
                 ).distinct()
 
@@ -1459,25 +1478,19 @@ class Application(models.Model):
     )
     roles: models.ManyToManyField["Application", Role] = models.ManyToManyField(Role)
     status = models.IntegerField(choices=ApplicationStatus.choices)
-    invitation_email_sent = models.BooleanField(default=False)
-    rejection_email_sent = models.BooleanField(default=False)
-    schedule_email_sent = models.BooleanField(default=False)
 
     @property
     def user_visible_status(self) -> ApplicationStatus:
         match self.status:
-            case ApplicationStatus.INVITED:
-                if not self.invitation_email_sent:
-                    return ApplicationStatus.APPLIED
-            case ApplicationStatus.REJECTED:
-                if not self.rejection_email_sent:
-                    return ApplicationStatus.APPLIED
-            case ApplicationStatus.CONFIRMED:
+            case ApplicationStatus.INVITATION_PENDING:
+                return ApplicationStatus.APPLIED
+            case ApplicationStatus.REJECTION_PENDING:
+                return ApplicationStatus.APPLIED
+            case ApplicationStatus.ASSIGNMENT_PENDING:
                 if self.form.application_kind == ApplicationKind.CONFIRM_THEN_ASSIGN:
                     return ApplicationStatus.CONFIRMED
                 else:
-                    if not self.schedule_email_sent:
-                        return ApplicationStatus.APPLIED
+                    return ApplicationStatus.APPLIED
             case _:
                 pass
 
@@ -1530,6 +1543,9 @@ class Application(models.Model):
 
     def get_legal_state_changes(self, user: User) -> list[ApplicationStatus]:
         states = list()
+        can_manage = (
+            Event.objects.manageable(user).filter(id=self.form.event_id).exists()
+        )
 
         if self.form.application_kind == ApplicationKind.CONFIRM_THEN_ASSIGN:
             match self.status:
@@ -1538,40 +1554,75 @@ class Application(models.Model):
                         states.extend(
                             [
                                 ApplicationStatus.WITHDRAWN,
-                                ApplicationStatus.INVITED,
                             ]
                         )
-                    else:
+                    if can_manage:
                         states.extend(
                             [
+                                ApplicationStatus.INVITATION_PENDING,
                                 ApplicationStatus.INVITED,
                                 ApplicationStatus.CONFIRMED,
+                                ApplicationStatus.DECLINED,
+                                ApplicationStatus.REJECTED,
+                                ApplicationStatus.WITHDRAWN,
+                            ]
+                        )
+                case ApplicationStatus.INVITATION_PENDING:
+                    if can_manage:
+                        states.extend(
+                            [
+                                ApplicationStatus.APPLIED,
+                                ApplicationStatus.INVITED,
+                                ApplicationStatus.CONFIRMED,
+                                ApplicationStatus.DECLINED,
+                                ApplicationStatus.REJECTION_PENDING,
                                 ApplicationStatus.REJECTED,
                                 ApplicationStatus.WITHDRAWN,
                             ]
                         )
                 case ApplicationStatus.INVITED:
-                    states.extend(
-                        [
-                            ApplicationStatus.CONFIRMED,
-                            ApplicationStatus.DECLINED,
-                            ApplicationStatus.WITHDRAWN,
-                        ]
-                    )
+                    if can_manage or user == self.user:
+                        states.extend(
+                            [
+                                ApplicationStatus.CONFIRMED,
+                                ApplicationStatus.DECLINED,
+                                ApplicationStatus.WITHDRAWN,
+                            ]
+                        )
                 case ApplicationStatus.DECLINED:
                     pass
+                case ApplicationStatus.REJECTION_PENDING:
+                    if can_manage:
+                        states.extend(
+                            [ApplicationStatus.APPLIED, ApplicationStatus.REJECTED]
+                        )
                 case ApplicationStatus.REJECTED:
                     pass
-                case ApplicationStatus.CONFIRMED:
-                    states.extend(
-                        [
-                            ApplicationStatus.WITHDRAWN,
-                        ]
-                    )
+                case (
+                    ApplicationStatus.CONFIRMED
+                    | ApplicationStatus.ASSIGNED
+                    | ApplicationStatus.ASSIGNMENT_PENDING
+                ):
+                    if can_manage or user == self.user:
+                        states.extend(
+                            [
+                                ApplicationStatus.WITHDRAWN,
+                            ]
+                        )
                 case ApplicationStatus.WITHDRAWN:
                     pass
         else:
             match self.status:
+                case ApplicationStatus.APPLIED:
+                    if user == self.user or can_manage:
+                        states.extend([ApplicationStatus.WITHDRAWN])
+                    if can_manage:
+                        states.extend(
+                            [
+                                ApplicationStatus.REJECTION_PENDING,
+                                ApplicationStatus.REJECTED,
+                            ]
+                        )
                 case ApplicationStatus.WITHDRAWN:
                     pass
                 case _:
@@ -1658,6 +1709,7 @@ class MergeContext:
     event: Event
     league: League
     user: User
+    sender: User
 
     LEGAL_MERGE_FIELDS = {
         "application": [
@@ -1675,9 +1727,10 @@ class MergeContext:
             "link",
             "schedule_link",
         ],
-        "event": ["name", "start_date", "end_date", "location", "link"],
+        "event": ["name", "start_date", "end_date", "date_range", "location", "link"],
         "league": ["name", "website", "link"],
         "user": ["preferred_name"],
+        "sender": ["preferred_name"],
     }
 
     def get_merge_fields(self) -> list[MergeField]:
@@ -1714,7 +1767,10 @@ class MergeContext:
         ):
             return None
 
-        if attr == "link":
+        if attr == "date_range":
+            if self.event.end_date == self.event.start_date:
+                return ...
+        elif attr == "link":
             return domain + getattr(self, entity).get_absolute_url()
         elif attr == "schedule_link":
             return domain + reverse(

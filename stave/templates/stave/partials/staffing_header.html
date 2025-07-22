@@ -1,7 +1,40 @@
+{% load stave_tags %}
+{% inputs 'StaffingHeaderInputs' %}
+
+<header>
+    <small style="text-align: center;">Managing <a href="{{ form.event.get_absolute_url }}">{{ form }}</a></small>
+</header>
+
 <nav>
-    <a href="">Applications</a>
-    <a href="">Static Crews</a>
-    <a href="">Game Staff</a>
-    <a href="">Communication</a>
-    <a href="">Staffing List</a>
+    {% with url=form.get_application_list_url %}
+    {% if request.path == url %}
+    <strong>Applications</strong>
+    {% else %}
+    <a href="{{ url }}">Applications</a>
+    {% endif %}
+    {% endwith %}
+
+    {% with url=form.get_crew_builder_url %}
+    {% if request.path == url %}
+    <strong>Crew Builder</strong>
+    {% else %}
+    <a href="{{ url }}">Crew Builder</a>
+    {% endif %}
+    {% endwith %}
+
+    {% with url=form.get_comms_center_url %}
+    {% if request.path == url %}
+    <strong>Comm Center</strong>
+    {% else %}
+    <a href="{{ url }}">Comm Center</a>
+    {% endif %}
+    {% endwith %}
+
+    {% with url=form.get_staffing_list_url %}
+    {% if request.path == url %}
+    <strong>Staff List</strong>
+    {% else %}
+    <a href="{{ url }}">Staff List</a>
+    {% endif %}
+    {% endwith %}
 </nav>

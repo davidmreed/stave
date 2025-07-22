@@ -81,6 +81,11 @@ urlpatterns = [
         name="form-applications",
     ),
     path(
+        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:application_form_slug>/comms/",
+        views.CommCenterView.as_view(),
+        name="form-comms",
+    ),
+    path(
         "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:application_form_slug>/email/<str:email_type>/",
         views.SendEmailView.as_view(),
         name="send-email",

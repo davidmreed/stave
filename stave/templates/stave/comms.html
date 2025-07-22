@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 {% load stave_tags %}
-{% inputs 'SendEmailInputs' %}
+{% inputs 'CommCenterInputs' %}
 
 {% block content %}
+{% include 'stave/partials/staffing_header.html' with form=application_form request=request only %}
+
 <header>
     <h1>Communications Center</h1>
 </header>
@@ -10,18 +12,50 @@
 <header>
     <h2>Send Crew Email</h2>
 </header>
+<p>Sending crew emails will not update the application status.</p>
+<div class="horiz">
+    <a role="button" href="{% url 'send-email' application_form.event.league.slug application_form.event.slug application_form.slug 'crew' %}{% querystring redirect_url=request.path %}">Customize Emails</a>
+</div>
 
+{% if pending_invitation %}
 <header>
-    <h2>Pending Invitation Emails</h2>
+    <h2>Pending Invitation Emails ({{ pending_invitation|length }})</h2>
 </header>
-<form>
-    <select multiple>
-        {% for
-    </select>
-    <input type="submit" title="Send Email" />
-    <input type="submit" title="Customize Email" />
+<p>Sending invitation emails will update the application status to Invited.</p>
+<div class="horiz">
+    <form action="{{ request.path }}" method="POST">
+        <input type="hidden" id="type" name="type" value="invitation">
+        <input type="submit" value="Send Email">
+        <a role="button" href="{% url 'send-email' application_form.event.league.slug application_form.event.slug application_form.slug 'invitation' %}{% querystring redirect_url=request.path %}">Customize Emails</a>
+    </form>
+</div>
+{% endif %}
+
+{% if pending_rejection %}
+<header>
+    <h2>Pending Rejection Emails ({{ pending_rejection|length }})</h2>
+</header>
+<p>Sending rejection emails will update the application status to Rejected.</p>
+<div class="horiz">
+<form action="{{ request.path }}" method="POST">
+    <input type="hidden" id="type" name="type" value="rejection">
+    <input type="submit" value="Send Email" />
+    <a role="button" href="{% url 'send-email' application_form.event.league.slug application_form.event.slug application_form.slug 'rejection' %}{% querystring redirect_url=request.path %}">Customize Emails</a>
 </form>
+</div>
+{% endif %}
 
+{% if pending_assignment %}
 <header>
-    <h2>Pending Schedule Emails</h2>
+    <h2>Pending Assignment Emails ({{ pending_assignment|length }})</h2>
 </header>
+<p>Sending assignment emails will update the application status to Assigned.</p>
+<div class="horiz">
+<form action="{{ request.path }}" method="POST">
+    <input type="hidden" id="type" name="type" value="schedule">
+    <input type="submit" value="Send Email" />
+    <a role="button" href="{% url 'send-email' application_form.event.league.slug application_form.event.slug application_form.slug 'schedule' %}{% querystring redirect_url=request.path %}">Customize Emails</a>
+</form>
+</div>
+{% endif %}
+{% endblock %}

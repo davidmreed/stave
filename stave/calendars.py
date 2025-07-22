@@ -67,7 +67,6 @@ class MyEventsFeed(StaveEventFeed):
                     Q(application_forms__applications__user=obj)
                     & ~Q(
                         application_forms__applications__status=models.ApplicationStatus.REJECTED,
-                        application_forms__applications__rejection_email_sent=True,
                     )
                     & ~Q(
                         application_forms__applications__status=models.ApplicationStatus.WITHDRAWN

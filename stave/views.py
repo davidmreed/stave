@@ -1,4 +1,3 @@
-import dataclasses
 import itertools
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -817,8 +816,9 @@ class FormApplicationsView(
             invited_unsent_count=len(
                 [
                     a
-                    for a in applications.get(models.ApplicationStatus.INVITED, [])
-                    if not a.invitation_email_sent
+                    for a in applications.get(
+                        models.ApplicationStatus.INVITATION_PENDING, []
+                    )
                 ],
             ),
         )
@@ -1183,9 +1183,44 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             if applications:
                 assignment.user = applications[0].user
                 assignment.save()
+
+                # Update the status of the application
+                if (
+                    applications[0].form.application_kind
+                    == models.ApplicationKind.ASSIGN_ONLY
+                ):
+                    applications[0].status = models.ApplicationStatus.ASSIGNMENT_PENDING
+                else:
+                    # for CONFIRM_THEN_ASSIGN events, our status update depends on the current status as well.
+                    match applications[0].status:
+                        case models.ApplicationStatus.APPLIED:
+                            applications[
+                                0
+                            ].status = models.ApplicationStatus.INVITATION_PENDING
+                        case models.ApplicationStatus.CONFIRMED:
+                            applications[
+                                0
+                            ].status = models.ApplicationStatus.ASSIGNMENT_PENDING
+                        case _:
+                            # All other cases do not update. (FIXME: correct?)
+                            pass
+
+                applications[0].save()
             else:
                 # We want to remove this assignment.
                 assignment.delete()
+                # And update the status of the application, if needed. FIXME
+                if (
+                    applications[0].status
+                    == models.ApplicationStatus.ASSIGNMENT_PENDING
+                ):
+                    applications[0].status = models.ApplicationStatus.CONFIRMED
+                elif (
+                    applications[0].status
+                    == models.ApplicationStatus.INVITATION_PENDING
+                ):
+                    applications[0].status = models.ApplicationStatus.APPLIED
+                applications[0].save()
         else:
             _ = models.CrewAssignment.objects.create(
                 role=role, crew=crew, user=applications[0].user
@@ -1328,6 +1363,56 @@ class ApplicationFormView(views.View):
         return render(request, "stave/view_application.html", contexts.to_dict(context))
 
 
+class CommCenterView(LoginRequiredMixin, views.View):
+    def get(
+        self,
+        request: HttpRequest,
+        league_slug: str,
+        event_slug: str,
+        application_form_slug: str,
+    ) -> HttpResponse:
+        application_form: models.ApplicationForm = get_object_or_404(
+            models.ApplicationForm.objects.manageable(request.user),
+            event__league__slug=league_slug,
+            event__slug=event_slug,
+            slug=application_form_slug,
+        )
+
+        pending_invitation = application_form.applications.filter(
+            status=models.ApplicationStatus.INVITATION_PENDING
+        )
+        pending_rejection = application_form.applications.filter(
+            status=models.ApplicationStatus.REJECTION_PENDING
+        )
+        pending_assignment = application_form.applications.filter(
+            status=models.ApplicationStatus.ASSIGNMENT_PENDING
+        )
+
+        return render(
+            request,
+            "stave/comms.html",
+            contexts.to_dict(
+                contexts.CommCenterInputs(
+                    pending_invitation=pending_invitation,
+                    pending_rejection=pending_rejection,
+                    pending_assignment=pending_assignment,
+                    application_form=application_form,
+                    redirect_url=request.GET.get("redirect_url"),
+                )
+            ),
+        )
+
+    def post(
+        self,
+        request: HttpRequest,
+        league_slug: str,
+        event_slug: str,
+        application_form_slug: str,
+    ) -> HttpResponse:
+        """Send templated emails"""
+        ...
+
+
 class SendEmailView(LoginRequiredMixin, views.View):
     # TODO: do nothing if there are no recipients.
     def get(
@@ -1357,13 +1442,22 @@ class SendEmailView(LoginRequiredMixin, views.View):
             initial["content"] = message_template.content
 
         email_form = forms.SendEmailForm()
+        member_queryset = application_form.get_user_queryset_for_context_type(
+            email_type
+        )
+        email_recipients_form = forms.SendEmailRecipientsForm(
+            member_queryset, initial={"recipients": member_queryset}
+        )
 
         merge_context = models.MergeContext(
             league=application_form.event.league,
             event=application_form.event,
             app_form=application_form,
             application=models.Application(),
+            # We don't have an actual user yet;
+            # this context is just to get the merge field names.
             user=request.user,
+            sender=request.user,
         )
         return render(
             request,
@@ -1371,11 +1465,9 @@ class SendEmailView(LoginRequiredMixin, views.View):
             contexts.to_dict(
                 contexts.SendEmailInputs(
                     email_form=email_form,
+                    email_recipients_form=email_recipients_form,
                     kind=models.SendEmailContextType(email_type),
                     application_form=application_form,
-                    members=application_form.get_user_queryset_for_context_type(
-                        email_type
-                    ),
                     merge_fields=merge_context.get_merge_fields(),
                     redirect_url=request.GET.get("redirect_url"),
                 )
@@ -1405,16 +1497,19 @@ class SendEmailView(LoginRequiredMixin, views.View):
             return HttpResponseBadRequest(f"invalid email_type {email_type}")
 
         email_form = forms.SendEmailForm(data=request.POST)
+        email_recipients_form = forms.SendEmailRecipientsForm(
+            application_form.get_user_queryset_for_context_type(email_type),
+            data=request.POST,
+        )
 
-        if email_form.is_valid():
+        # FIXME failure path
+        if email_form.is_valid() and email_recipients_form.is_valid():
             # Construct and render the template and persist a Message for each user.
             content: str = email_form.cleaned_data["content"]
             subject: str = email_form.cleaned_data["subject"]
 
             with transaction.atomic():
-                for user in application_form.get_user_queryset_for_context_type(
-                    email_type
-                ):
+                for user in email_recipients_form.cleaned_data["recipients"]:
                     application = (
                         application_form.applications.filter(user=user)
                         .exclude(status=models.ApplicationStatus.WITHDRAWN)
@@ -1426,6 +1521,7 @@ class SendEmailView(LoginRequiredMixin, views.View):
                         app_form=application_form,
                         application=application,
                         user=user,
+                        sender=request.user,
                     )
 
                     message = models.Message.from_template(
@@ -1435,16 +1531,11 @@ class SendEmailView(LoginRequiredMixin, views.View):
 
                     match email_type:
                         case models.SendEmailContextType.INVITATION:
-                            application.invitation_email_sent = True
+                            application.status = models.ApplicationStatus.INVITED
                         case models.SendEmailContextType.REJECTION:
-                            application.rejection_email_sent = True
+                            application.status = models.ApplicationStatus.REJECTED
                         case models.SendEmailContextType.SCHEDULE:
-                            application.schedule_email_sent = True
-                            if (
-                                application_form.application_kind
-                                == models.ApplicationKind.CONFIRM_ONLY
-                            ):
-                                application.status = models.ApplicationStatus.CONFIRMED
+                            application.status = models.ApplicationStatus.ASSIGNED
 
                     application.save()
 

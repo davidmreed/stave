@@ -321,7 +321,7 @@ class Command(BaseCommand):
         app_form_tho = models.ApplicationForm.objects.create(
             event=tournament,
             slug="apply-tho",
-            application_kind=models.ApplicationKind.CONFIRM_ONLY,
+            application_kind=models.ApplicationKind.ASSIGN_ONLY,
             application_availability_kind=models.ApplicationAvailabilityKind.WHOLE_EVENT,
             hidden=False,
             intro_text="Join the best teams in the Belt as a tournament leader. **For beltalowda!**",
@@ -417,7 +417,7 @@ class Command(BaseCommand):
         singleheader_app_form = models.ApplicationForm.objects.create(
             event=singleheader,
             slug="apply",
-            application_kind=models.ApplicationKind.CONFIRM_ONLY,
+            application_kind=models.ApplicationKind.ASSIGN_ONLY,
             application_availability_kind=models.ApplicationAvailabilityKind.WHOLE_EVENT,
             hidden=False,
             intro_text="Join the best teams in the Belt! **For beltalowda!**",
@@ -428,7 +428,7 @@ class Command(BaseCommand):
         doubleheader_app_form = models.ApplicationForm.objects.create(
             event=doubleheader,
             slug="apply",
-            application_kind=models.ApplicationKind.CONFIRM_ONLY,
+            application_kind=models.ApplicationKind.ASSIGN_ONLY,
             application_availability_kind=models.ApplicationAvailabilityKind.BY_GAME,
             hidden=False,
             intro_text="Join the best teams in the Belt! **For beltalowda!**",
@@ -515,7 +515,7 @@ class Command(BaseCommand):
             app = models.Application.objects.create(
                 form=app_form,
                 user=user,
-                status=models.ApplicationStatus.INVITED,
+                status=models.ApplicationStatus.APPLIED,
                 availability_by_day=avail,
             )
             app.roles.set(roles)

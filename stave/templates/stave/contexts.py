@@ -4,6 +4,7 @@ from uuid import UUID
 
 from django.contrib.auth.models import AnonymousUser
 from django.db.models import QuerySet
+from django.http import HttpRequest
 
 from stave import forms, models
 
@@ -94,7 +95,7 @@ class SendEmailInputs:
     kind: models.SendEmailContextType
     application_form: models.ApplicationForm
     email_form: forms.SendEmailForm
-    members: QuerySet[models.User]
+    email_recipients_form: forms.SendEmailRecipientsForm
     redirect_url: str | None
     merge_fields: list[models.MergeField]
 
@@ -143,3 +144,18 @@ class StaffListInputs:
 @dataclass
 class CalendarInputs:
     url: str
+
+
+@dataclass
+class CommCenterInputs:
+    pending_invitation: QuerySet[models.Application]
+    pending_rejection: QuerySet[models.Application]
+    pending_assignment: QuerySet[models.Application]
+    application_form: models.ApplicationForm
+    redirect_url: str
+
+
+@dataclass
+class StaffingHeaderInputs:
+    form: models.ApplicationForm
+    request: HttpRequest

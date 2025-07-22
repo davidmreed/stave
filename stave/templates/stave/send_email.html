@@ -8,18 +8,18 @@
 </header>
 
 <div style="display: flex; flex-wrap: wrap;">
+<form style="flex: 1 1 65%; box-sizing: border-box;" action="{{ request.path }}" method="POST">
 
-<details style="flex: 1 1 45%; box-sizing: border-box;">
-    <summary>Recipients ({{ members|length }})</summary>
-<ul>
-    {% for member in members %}
-    <li>{{ member }}</li>
-    {% empty %}
-    <li>There aren't any recipients.</li>
-    {% endfor %}
-</ul>
-</details>
-<details style="flex: 1 1 45%; box-sizing: border-box;">
+    {% csrf_token %}
+    {% if redirect_url %}
+    <input type="hidden" name="redirect_url" value="{{ redirect_url }}">
+    {% endif %}
+    {{ email_recipients_form }}
+    {{ email_form }}
+
+    <input type="submit" value="Send">
+</form>
+<details style="flex: 1 1 25%; box-sizing: border-box;">
     <summary>Merge Fields</summary>
 You can include the following merge fields in your message:
 <ul>
@@ -29,16 +29,6 @@ You can include the following merge fields in your message:
 </ul>
 </details>
 </div>
-
-<form action="{{ request.path }}" method="POST">
-    {% csrf_token %}
-    {% if redirect_url %}
-    <input type="hidden" name="redirect_url" value="{{ redirect_url }}">
-    {% endif %}
-    {{ email_form }}
-
-    <input type="submit" value="Send">
-</form>
 
 
 {% endblock %}

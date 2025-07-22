@@ -4,6 +4,7 @@ import json
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import QuerySet
 from django.forms.utils import ErrorDict
 from django.utils import timezone, formats
 from django.utils.translation import gettext_lazy as _
@@ -826,6 +827,20 @@ class ProfileForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
+
+
+class SendEmailRecipientsForm(forms.Form):
+    recipients = forms.ModelMultipleChoiceField(
+        None,  # choices
+        widget=forms.CheckboxSelectMultiple,
+        label=_("Recipients"),
+        required=False,
+    )
+
+    def __init__(self, queryset: QuerySet[models.User], *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+        self.fields["recipients"].queryset = queryset
 
 
 class SendEmailForm(forms.Form):

@@ -1,0 +1,7 @@
+Dear {user.preferred_name},
+
+{league.name} wasn't able to accept your application to officiate [{event.name}]({event.link}).
+
+Thank you for your application. Watch [{league.name}]({league.link}) on Stave for more upcoming events.
+
+{sender.preferred_name}

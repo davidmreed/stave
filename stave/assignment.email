@@ -1,0 +1,13 @@
+Dear {user.preferred_name},
+
+You're confirmed to officiate [{event.name}]({event.link}), hosted by {league.name}!
+
+{event.name} takes place {event.date_range} at
+
+{event.location}
+
+Find your [assignments and personalized schedule]({app_form.schedule_link}) on Stave.
+
+Thank you!
+
+{sender.preferred_name}

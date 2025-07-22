@@ -3,14 +3,7 @@
 {% load partials %}
 
 {% block breadcrumbs %}
-<nav aria-label="breadcrumb">
-    <ul>
-        <li><a href="{% url 'league-detail' form.event.league.slug %}">{{ form.event.league }}</a></li>
-        <li><a href="{% url 'event-detail' form.event.league.slug form.event.slug %}">{{ form.event }}</a></li>
-        <li>{{ form.role_groups.all|commalist }}</li>
-        <li><a href="{{ request.path }}">Applications</a></li>
-    </ul>
-</nav>
+{% include "stave/partials/staffing_header.html" with form=form request=request only %}
 {% endblock %}
 
 {% block content %}
@@ -37,7 +30,6 @@
 
 <header>
 <h2>Applications</h2>
-<a role="button" href="{% url 'crew-builder' form.event.league.slug form.event.slug form.slug %}">Crew Builder</a>
 </header>
 
 {% if not applications %}
