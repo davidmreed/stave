@@ -9,11 +9,60 @@
     {% if user == application.user and application.status != application.ApplicationStatus.WITHDRAWN %}
         <a role="button" href="{% url 'update-application' application.id %}">Edit Application</a>
     {% endif %}
-    {% for state in application|get_legal_state_changes:user %}
-    {# FIXME: improve UX here - actions (verbs), state changes hidden #}
+    {% with states=application|get_legal_state_changes:user %}
+    {% if application.ApplicationStatus.APPLIED in states %}
     <input type="submit"
-           formaction="{% url 'application-status' application.id state %}"
-           value="{% if user == application.user %}{{ state.get_action_verb }}{% else %}Mark {{ state.label|title }}{% endif %}"
+           formaction="{% url 'application-status' application.id application.ApplicationStatus.APPLIED %}"
+           value="Send Back to Applied"
     >
-    {% endfor %}
+    {% endif %}
+    {% if application.ApplicationStatus.INVITATION_PENDING in states %}
+    <input type="submit"
+           formaction="{% url 'application-status' application.id application.ApplicationStatus.INVITATION_PENDING %}"
+           value="Mark for Invitation"
+    >
+    {% endif %}
+    {% if application.ApplicationStatus.INVITED in states and application.status == application.ApplicationStatus.INVITATION_PENDING %}
+    <input type="submit"
+           formaction="FIXME"
+           value="Send Invitation Now"
+    >
+    {% endif %}
+    {% if application.ApplicationStatus.REJECTION_PENDING in states %}
+    <input type="submit"
+           formaction="{% url 'application-status' application.id application.ApplicationStatus.REJECTION_PENDING %}"
+           value="Mark for Rejection"
+    >
+    {% endif %}
+    {% if application.ApplicationStatus.REJECTED in states and application.status == application.ApplicationStatus.REJECTION_PENDING %}
+    <input type="submit"
+           formaction="FIXME"
+           value="Send Rejection Now"
+    >
+    {% endif %}
+    {% if application.ApplicationStatus.CONFIRMED in states %}
+    <input type="submit"
+           formaction="{% url 'application-status' application.id application.ApplicationStatus.CONFIRMED %}"
+           value="Confirm"
+    >
+    {% endif %}
+    {% if application.ApplicationStatus.DECLINED in states %}
+    <input type="submit"
+           formaction="{% url 'application-status' application.id application.ApplicationStatus.DECLINED %}"
+           value="Decline"
+    >
+    {% endif %}
+    {% if application.ApplicationStatus.WITHDRAWN in states %}
+    <input type="submit"
+           formaction="{% url 'application-status' application.id application.ApplicationStatus.WITHDRAWN %}"
+           value="Withdraw"
+    >
+    {% endif %}
+    {% if application.ApplicationStatus.ASSIGNED in states and application.status == application.ApplicationStatus.ASSIGNMENT_PENDING %}
+    <input type="submit"
+           formaction="FIXME"
+           value="Send Schedule Now"
+    >
+    {% endif %}
+    {% endwith %}
 </div>

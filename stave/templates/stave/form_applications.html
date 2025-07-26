@@ -70,7 +70,7 @@ This form has not received any applications yet.
 
 {% with applications|get:ApplicationStatus.APPLIED as applications %}
 {% if applications %}
-<h3>Open ({{ applications|length }})</h3>
+<h3>Applied ({{ applications|length }})</h3>
 {% partial application-table %}
 {% endif %}
 {% endwith %}

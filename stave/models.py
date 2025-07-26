@@ -13,7 +13,6 @@ from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
-from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -81,7 +80,6 @@ class User(AbstractBaseUser):
         verbose_name=_("SO certification level"),
     )
 
-    # TODO: references.
     league_permissions: models.Manager["LeagueUserPermission"]
 
     objects = UserQuerySet.as_manager()
@@ -370,6 +368,8 @@ class EventTemplate(models.Model):
         for game_template in self.game_templates.all():
             _ = game_template.clone_as_template(new_object, role_group_map)
 
+        # Application Form Templates are copied at the League Template level.
+
         return new_object
 
     def clone(self, **kwargs) -> "Event":
@@ -388,7 +388,8 @@ class EventTemplate(models.Model):
         for i, game_template in enumerate(self.game_templates.all()):
             _ = game_template.clone(event=new_object, order_key=i + 1)
 
-        # TODO: clone ApplicationFormTemplates to ApplicationForms
+        for application_form_template in self.application_form_templates.all():
+            _ = application_form_template.clone(self)
 
         return new_object
 
@@ -842,6 +843,7 @@ class MessageTemplate(models.Model):
         null=True,
         blank=True,
     )
+    subject = models.TextField()
     content = models.TextField()
 
     def clone_as_template(self, league: League) -> "MessageTemplate":
@@ -864,8 +866,6 @@ class MessageTemplate(models.Model):
 
 
 class Message(models.Model):
-    MERGE_FIELD_PATTERN = re.compile(r"\{([a-zA-Z\._]+?)\}")
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     subject = models.CharField(max_length=256)
     content_plain_text = models.TextField()
@@ -874,49 +874,6 @@ class Message(models.Model):
     sent = models.BooleanField(default=False)
     sent_date = models.DateTimeField(null=True)
     tries = models.IntegerField(default=0)
-
-    @staticmethod
-    def from_template(
-        template_name: str,
-        context: "MergeContext",
-        subject: str,
-        content: str,
-    ) -> "Message":
-        # Substitute values for any of the user's tags.
-        this_message_subject = Message.MERGE_FIELD_PATTERN.sub(
-            lambda match: (
-                context.get_merge_field_value(match.group(1)) or match.group()
-            ),
-            subject,
-        )
-        this_message_content = Message.MERGE_FIELD_PATTERN.sub(
-            lambda match: (
-                context.get_merge_field_value(match.group(1)) or match.group()
-            ),
-            content,
-        )
-
-        content_html = render_to_string(
-            f"stave/email/{template_name}.html",
-            {
-                "content": this_message_content,
-                "domain": "https://stave.app",
-            },
-        )
-        content_plain_text = render_to_string(
-            f"stave/email/{template_name}.txt",
-            {
-                "content": this_message_content,
-                "domain": "https://stave.app",
-            },
-        )
-
-        return Message(
-            user=context.user,
-            subject=this_message_subject,
-            content_plain_text=content_plain_text,
-            content_html=content_html,
-        )
 
 
 # Application models
@@ -967,18 +924,22 @@ class ApplicationFormTemplate(models.Model):
     )
     name = models.CharField(max_length=256)
 
-    application_kind = models.IntegerField(choices=ApplicationKind.choices)
+    application_kind = models.IntegerField(
+        choices=ApplicationKind.choices, null=False, blank=False
+    )
+    application_availability_kind = models.IntegerField(
+        choices=ApplicationAvailabilityKind.choices, null=False, blank=False
+    )
     role_groups: models.ManyToManyField["ApplicationFormTemplate", RoleGroup] = (
         models.ManyToManyField(RoleGroup)
     )
-    hidden = True
     intro_text = models.TextField()
     requires_profile_fields: models.JSONField[list[str]] = models.JSONField(
         default=list, blank=True
     )
-    confirmed_email_template = models.ForeignKey(
+    invitation_email_template = models.ForeignKey(
         MessageTemplate,
-        related_name="application_form_templates_confirmed",
+        related_name="application_form_templates_invitation",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -1007,11 +968,12 @@ class ApplicationFormTemplate(models.Model):
     def clone(self, event: Event, **kwargs) -> "ApplicationForm":
         values = {
             "league": self.league,
-            "application_kind": self.application_kind,  # TODO: app availability kind?
-            "hidden": self.hidden,
+            "application_kind": self.application_kind,
+            "application_availability_kind": self.application_availability_kind,
+            "hidden": False,
             "intro_text": self.intro_text,
             "requires_profile_fields": self.requires_profile_fields,
-            "confirmed_email_template": self.confirmed_email_template,
+            "invitation_email_template": self.invitation_email_template,
             "assigned_email_template": self.assigned_email_template,
             "rejected_email_template": self.rejected_email_template,
             "event": event,
@@ -1021,6 +983,14 @@ class ApplicationFormTemplate(models.Model):
 
         # Assign Role Groups
         new_object.role_groups.set(self.role_groups.all())
+
+        # Questions
+        for question in self.form_questions.all():
+            new_question = copy.copy(question)
+            new_question.id = new_question.pk = None
+            new_question._state.adding = True
+            new_question.application_form = new_object
+            new_question.save()
 
         return new_object
 
@@ -1036,8 +1006,8 @@ class ApplicationFormTemplate(models.Model):
         new_object.league = league
         new_object.league_template = None
 
-        new_object.confirmed_email_template_id = email_template_map[
-            new_object.confirmed_email_template_id
+        new_object.invitation_email_template_id = email_template_map[
+            new_object.invitation_email_template_id
         ]
         new_object.assigned_email_template_id = email_template_map[
             new_object.assigned_email_template_id
@@ -1048,7 +1018,7 @@ class ApplicationFormTemplate(models.Model):
 
         for question in self.form_questions.all():
             new_question = copy.copy(question)
-            new_question.id = new_object.pk = None
+            new_question.id = new_question.pk = None
             new_question._state.adding = True
             new_question.application_form_template = new_object
             new_question.save()
@@ -1561,8 +1531,7 @@ class Application(models.Model):
                             [
                                 ApplicationStatus.INVITATION_PENDING,
                                 ApplicationStatus.INVITED,
-                                ApplicationStatus.CONFIRMED,
-                                ApplicationStatus.DECLINED,
+                                ApplicationStatus.REJECTION_PENDING,
                                 ApplicationStatus.REJECTED,
                                 ApplicationStatus.WITHDRAWN,
                             ]
@@ -1575,8 +1544,6 @@ class Application(models.Model):
                                 ApplicationStatus.INVITED,
                                 ApplicationStatus.CONFIRMED,
                                 ApplicationStatus.DECLINED,
-                                ApplicationStatus.REJECTION_PENDING,
-                                ApplicationStatus.REJECTED,
                                 ApplicationStatus.WITHDRAWN,
                             ]
                         )
@@ -1623,6 +1590,9 @@ class Application(models.Model):
                                 ApplicationStatus.REJECTED,
                             ]
                         )
+                case ApplicationStatus.REJECTION_PENDING:
+                    if can_manage:
+                        states.extend([ApplicationStatus.APPLIED])
                 case ApplicationStatus.WITHDRAWN:
                     pass
                 case _:
@@ -1709,7 +1679,7 @@ class MergeContext:
     event: Event
     league: League
     user: User
-    sender: User
+    sender: User | None
 
     LEGAL_MERGE_FIELDS = {
         "application": [
@@ -1769,7 +1739,7 @@ class MergeContext:
 
         if attr == "date_range":
             if self.event.end_date == self.event.start_date:
-                return ...
+                return ...  # FIXME
         elif attr == "link":
             return domain + getattr(self, entity).get_absolute_url()
         elif attr == "schedule_link":
@@ -1783,4 +1753,6 @@ class MergeContext:
                 ],
             )
         else:
-            return str(getattr(getattr(self, entity), attr))
+            entity_obj = getattr(self, entity)
+            if entity_obj:
+                return str(getattr(entity_obj), attr)

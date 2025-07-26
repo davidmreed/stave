@@ -7,22 +7,22 @@ def convert_statuses(apps, schema_editor):
     Application = apps.get_model("stave", "Application")
     for application in Application.objects.all():
         if (
-            application.status == Application.ApplicationStatus.INVITED
+            application.status == 2  # ApplicationStatus.INVITED
             and not application.invitation_email_sent
         ):
-            application.status = Application.ApplicationStatus.INVITATION_PENDING
+            application.status = 7  # ApplicationStatus.INVITATION_PENDING
             application.save()
         elif (
-            application.status == Application.ApplicationStatus.REJECTED
+            application.status == 5  # ApplicationStatus.REJECTED
             and not application.rejection_email_sent
         ):
-            application.status = Application.ApplicationStatus.REJECTION_PENDING
+            application.status = 9  # ApplicationStatus.REJECTION_PENDING
             application.save()
-        elif application.status == Application.ApplicationStatus.CONFIRMED:
+        elif application.status == 3:  # ApplicationStatus.CONFIRMED:
             if application.schedule_email_sent:
-                application.status = Application.ApplicationStatus.ASSIGNED
+                application.status = 8  # ApplicationStatus.ASSIGNED
             else:
-                application.status = Application.ApplicationStatus.ASSIGNMENT_PENDING
+                application.status = 10  # ApplicationStatus.ASSIGNMENT_PENDING
 
             application.save()
 

@@ -813,11 +813,6 @@ class EventCreateUpdateForm(ParentChildForm):
         ):
             game_form.instance.order_key = index + 1
 
-        # If we're cloning a template, finish by cloning ApplicationFormTemplates
-        # FIXME/TODO
-        if template := self.parent_form.cleaned_data["template"]:
-            pass
-
 
 class ProfileForm(forms.ModelForm):
     class Meta:

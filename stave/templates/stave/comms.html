@@ -10,9 +10,9 @@
 </header>
 
 <header>
-    <h2>Send Crew Email</h2>
+    <h2>Send Staff Email</h2>
 </header>
-<p>Sending crew emails will not update the application status.</p>
+<p>Sending staff emails will not update the application status.</p>
 <div class="horiz">
     <a role="button" href="{% url 'send-email' application_form.event.league.slug application_form.event.slug application_form.slug 'crew' %}{% querystring redirect_url=request.path %}">Customize Emails</a>
 </div>
@@ -21,7 +21,7 @@
 <header>
     <h2>Pending Invitation Emails ({{ pending_invitation|length }})</h2>
 </header>
-<p>Sending invitation emails will update the application status to Invited.</p>
+<p>Sending invitation emails will update the application status to Invited and allow users to Confirm or Decline their invitations.</p>
 <div class="horiz">
     <form action="{{ request.path }}" method="POST">
         <input type="hidden" id="type" name="type" value="invitation">

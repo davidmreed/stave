@@ -1327,14 +1327,17 @@ class ApplicationFormView(views.View):
         )
 
         if form.is_valid():
+            from . import emails  # avoid circular import
+
             app = form.save()
             # Send the user an acknowledgement email.
             context = models.MergeContext(
                 app, app_form, app_form.event, app_form.event.league, request.user
             )
-            message = models.Message.from_template(
-                "application",
-                context,
+            emails.send_message(
+                app,
+                None,
+                None,
                 gettext("Your application to {event.name}"),
                 gettext(
                     "We received your application to [{event.name}]({event.link}). "
@@ -1345,7 +1348,6 @@ class ApplicationFormView(views.View):
                     "Thank you for your application!"
                 ),
             )
-            message.save()
 
             return HttpResponseRedirect(reverse("view-application", args=[app.id]))
 
@@ -1409,8 +1411,44 @@ class CommCenterView(LoginRequiredMixin, views.View):
         event_slug: str,
         application_form_slug: str,
     ) -> HttpResponse:
-        """Send templated emails"""
-        ...
+        """Send templated emails to the whole relevant population,
+        using the configured template."""
+        application_form: models.ApplicationForm = get_object_or_404(
+            models.ApplicationForm.objects.manageable(request.user),
+            event__league__slug=league_slug,
+            event__slug=event_slug,
+            slug=application_form_slug,
+        )
+
+        try:
+            email_type = models.SendEmailContextType(request.POST.get("type"))
+        except ValueError:
+            return HttpResponseBadRequest(f"invalid email_type {email_type}")
+
+        member_queryset = application_form.get_user_queryset_for_context_type(
+            email_type
+        )
+        from . import emails
+
+        for member in member_queryset:
+            # TODO: bulkify
+            application = (
+                application_form.applications.filter(user=member)
+                .exclude(status=models.ApplicationStatus.WITHDRAWN)
+                .first()
+            )
+            emails.send_message_from_messagetemplate(
+                application, request.user, email_type
+            )
+
+        messages.info(request, gettext_lazy("Your emails are being sent"))
+        redirect_url = request.POST.get("redirect_url")
+        if redirect_url and url_has_allowed_host_and_scheme(
+            redirect_url, settings.ALLOWED_HOSTS
+        ):
+            return HttpResponseRedirect(redirect_url)
+
+        return HttpResponseRedirect(application_form.event.get_absolute_url())
 
 
 class SendEmailView(LoginRequiredMixin, views.View):
@@ -1489,7 +1527,6 @@ class SendEmailView(LoginRequiredMixin, views.View):
             slug=application_form_slug,
         )
         event = application_form.event
-        league = event.league
 
         try:
             email_type = models.SendEmailContextType(email_type)
@@ -1509,35 +1546,17 @@ class SendEmailView(LoginRequiredMixin, views.View):
             subject: str = email_form.cleaned_data["subject"]
 
             with transaction.atomic():
+                from . import emails  # avoid circular import
+
                 for user in email_recipients_form.cleaned_data["recipients"]:
                     application = (
                         application_form.applications.filter(user=user)
                         .exclude(status=models.ApplicationStatus.WITHDRAWN)
                         .first()
                     )
-                    context = models.MergeContext(
-                        league=league,
-                        event=event,
-                        app_form=application_form,
-                        application=application,
-                        user=user,
-                        sender=request.user,
+                    emails.send_message(
+                        application, request.user, email_type, subject, content
                     )
-
-                    message = models.Message.from_template(
-                        email_type.value.lower(), context, subject, content
-                    )
-                    message.save()
-
-                    match email_type:
-                        case models.SendEmailContextType.INVITATION:
-                            application.status = models.ApplicationStatus.INVITED
-                        case models.SendEmailContextType.REJECTION:
-                            application.status = models.ApplicationStatus.REJECTED
-                        case models.SendEmailContextType.SCHEDULE:
-                            application.status = models.ApplicationStatus.ASSIGNED
-
-                    application.save()
 
         messages.info(request, gettext_lazy("Your emails are being sent"))
         redirect_url = request.POST.get("redirect_url")

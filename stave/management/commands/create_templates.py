@@ -86,6 +86,54 @@ def create_templates() -> models.LeagueTemplate:
         role_group=role_group_tho, name="GTO", order_key=3
     )[0]
 
+    # Message templates
+    invitation_template = models.MessageTemplate(
+        league_template=league_template,
+        subject=_("Invitation to officiate {event.name}"),
+        content=_("""Dear {user.preferred_name},
+
+You're invited to officiate [{event.name}]({event.link}), hosted by {league.name}!
+
+{event.name} takes place {event.date_range} at
+
+{event.location}
+
+To accept or decline your invitation, [click here]({application.link}). If you confirm, you'll receive another email when your assignments are finalized.
+
+Thank you!
+
+{sender.preferred_name} and {event.name} organizers"""),
+    )
+    rejection_template = models.MessageTemplate(
+        league_template=league_template,
+        subject=_("Your application to {event.name}"),
+        content=_("""Dear {user.preferred_name},
+
+{league.name} wasn't able to accept your application to officiate [{event.name}]({event.link}).
+
+Thank you for your application. Watch [{league.name}]({league.link}) on Stave for more upcoming events.
+
+{sender.preferred_name} and {event.name} organizers"""),
+    )
+    assignment_template = models.MessageTemplate(
+        league_template=league_template,
+        subject=_("Confirmation to officiate {event.name}"),
+        content=_("""Dear {user.preferred_name},
+
+You're confirmed to officiate [{event.name}]({event.link}), hosted by {league.name}!
+
+{event.name} takes place {event.date_range} at
+
+{event.location}
+
+Find your [assignments and personalized schedule]({app_form.schedule_link}) on Stave.
+
+Thank you!
+
+{sender.preferred_name} and {event.name} organizers"""),
+    )
+
+    # Event templates
     event_template_single_game = models.EventTemplate.objects.get_or_create(
         league_template=league_template,
         name="Singleheader",
@@ -126,6 +174,89 @@ def create_templates() -> models.LeagueTemplate:
     event_template_tournament.role_groups.set(
         [role_group_so, role_group_nso, role_group_tho]
     )
+
+    # Application form templates
+    application_form_template_games, created = (
+        models.ApplicationFormTemplate.objects.get_or_create(
+            league_template=league_template,
+            name="SO and NSO",
+            application_kind=models.ApplicationKind.ASSIGN_ONLY,
+            application_availability_kind=models.ApplicationAvailabilityKind.WHOLE_EVENT,
+            intro_text="",
+            requires_profile_fields=models.User.ALLOWED_PROFILE_FIELDS,
+            assigned_email_template=assignment_template,
+            rejected_email_template=rejection_template,
+        )
+    )
+    if created:
+        application_form_template_games.role_groups.set([role_group_nso, role_group_so])
+        application_form_template_games.event_templates.set(
+            [event_template_single_game, event_template_doubleheader]
+        )
+        application_form_template_games.save()
+
+    application_form_template_doubleheader, created = (
+        models.ApplicationFormTemplate.objects.get_or_create(
+            league_template=league_template,
+            name="SO and NSO",
+            application_kind=models.ApplicationKind.ASSIGN_ONLY,
+            application_availability_kind=models.ApplicationAvailabilityKind.BY_GAME,
+            intro_text="",
+            requires_profile_fields=models.User.ALLOWED_PROFILE_FIELDS,
+            assigned_email_template=assignment_template,
+            rejected_email_template=rejection_template,
+        )
+    )
+    if created:
+        application_form_template_doubleheader.role_groups.set(
+            [role_group_nso, role_group_so]
+        )
+        application_form_template_doubleheader.event_templates.set(
+            [event_template_doubleheader]
+        )
+        application_form_template_doubleheader.save()
+
+    application_form_template_tournament, created = (
+        models.ApplicationFormTemplate.objects.get_or_create(
+            league_template=league_template,
+            name="SO and NSO",
+            application_kind=models.ApplicationKind.CONFIRM_THEN_ASSIGN,
+            application_availability_kind=models.ApplicationAvailabilityKind.BY_DAY,
+            intro_text="",
+            requires_profile_fields=models.User.ALLOWED_PROFILE_FIELDS,
+            assigned_email_template=assignment_template,
+            invitation_email_template=invitation_template,
+            rejected_email_template=rejection_template,
+        )
+    )
+    if created:
+        application_form_template_tournament.role_groups.set(
+            [role_group_nso, role_group_so]
+        )
+        application_form_template_tournament.event_templates.set(
+            [event_template_tournament]
+        )
+        application_form_template_tournament.save()
+
+    application_form_template_tournament_tho, created = (
+        models.ApplicationFormTemplate.objects.get_or_create(
+            league_template=league_template,
+            name="THO",
+            application_kind=models.ApplicationKind.ASSIGN_ONLY,
+            application_availability_kind=models.ApplicationAvailabilityKind.WHOLE_EVENT,
+            intro_text="",
+            requires_profile_fields=models.User.ALLOWED_PROFILE_FIELDS,
+            assigned_email_template=assignment_template,
+            invitation_email_template=invitation_template,
+            rejected_email_template=rejection_template,
+        )
+    )
+    if created:
+        application_form_template_tournament_tho.role_groups.set([role_group_tho])
+        application_form_template_tournament_tho.event_templates.set(
+            [event_template_tournament]
+        )
+        application_form_template_tournament_tho.save()
 
     return league_template
 
