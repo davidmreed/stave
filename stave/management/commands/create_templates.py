@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.utils.translation import gettext_lazy as _
 
 from stave import models
 
@@ -87,7 +88,7 @@ def create_templates() -> models.LeagueTemplate:
     )[0]
 
     # Message templates
-    invitation_template = models.MessageTemplate(
+    invitation_template = models.MessageTemplate.objects.get_or_create(
         league_template=league_template,
         subject=_("Invitation to officiate {event.name}"),
         content=_("""Dear {user.preferred_name},
@@ -103,8 +104,8 @@ To accept or decline your invitation, [click here]({application.link}). If you c
 Thank you!
 
 {sender.preferred_name} and {event.name} organizers"""),
-    )
-    rejection_template = models.MessageTemplate(
+    )[0]
+    rejection_template = models.MessageTemplate.objects.get_or_create(
         league_template=league_template,
         subject=_("Your application to {event.name}"),
         content=_("""Dear {user.preferred_name},
@@ -114,8 +115,8 @@ Thank you!
 Thank you for your application. Watch [{league.name}]({league.link}) on Stave for more upcoming events.
 
 {sender.preferred_name} and {event.name} organizers"""),
-    )
-    assignment_template = models.MessageTemplate(
+    )[0]
+    assignment_template = models.MessageTemplate.objects.get_or_create(
         league_template=league_template,
         subject=_("Confirmation to officiate {event.name}"),
         content=_("""Dear {user.preferred_name},
@@ -131,7 +132,7 @@ Find your [assignments and personalized schedule]({app_form.schedule_link}) on S
 Thank you!
 
 {sender.preferred_name} and {event.name} organizers"""),
-    )
+    )[0]
 
     # Event templates
     event_template_single_game = models.EventTemplate.objects.get_or_create(
@@ -184,6 +185,7 @@ Thank you!
             application_availability_kind=models.ApplicationAvailabilityKind.WHOLE_EVENT,
             intro_text="",
             requires_profile_fields=models.User.ALLOWED_PROFILE_FIELDS,
+            invitation_email_template=invitation_template,
             assigned_email_template=assignment_template,
             rejected_email_template=rejection_template,
         )
@@ -191,7 +193,7 @@ Thank you!
     if created:
         application_form_template_games.role_groups.set([role_group_nso, role_group_so])
         application_form_template_games.event_templates.set(
-            [event_template_single_game, event_template_doubleheader]
+            [event_template_single_game]
         )
         application_form_template_games.save()
 
@@ -203,6 +205,7 @@ Thank you!
             application_availability_kind=models.ApplicationAvailabilityKind.BY_GAME,
             intro_text="",
             requires_profile_fields=models.User.ALLOWED_PROFILE_FIELDS,
+            invitation_email_template=invitation_template,
             assigned_email_template=assignment_template,
             rejected_email_template=rejection_template,
         )

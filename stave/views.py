@@ -1428,6 +1428,11 @@ class CommCenterView(LoginRequiredMixin, views.View):
         member_queryset = application_form.get_user_queryset_for_context_type(
             email_type
         )
+
+        # A specific user was intended as the target
+        if recipient := request.POST.get("recipient"):
+            member_queryset = member_queryset.filter(id=recipient)
+
         from . import emails
 
         for member in member_queryset:
@@ -1452,7 +1457,6 @@ class CommCenterView(LoginRequiredMixin, views.View):
 
 
 class SendEmailView(LoginRequiredMixin, views.View):
-    # TODO: do nothing if there are no recipients.
     def get(
         self,
         request: HttpRequest,
@@ -1483,8 +1487,20 @@ class SendEmailView(LoginRequiredMixin, views.View):
         member_queryset = application_form.get_user_queryset_for_context_type(
             email_type
         )
+        # If we have a GET param with a user id in it, filter down to that.
+        # (Supplying the applicant query if we do not have a member_queryset or email_type)
+        if target_member := request.GET.get("recipient"):
+            if member_queryset is None:
+                member_queryset = models.User.objects.filter(
+                    id__in=application_form.applications.all().values("user_id")
+                ).distinct()
+
+            member_queryset = member_queryset.filter(id=target_member)
+
+        # FIXME: disable unselect if there's only one
         email_recipients_form = forms.SendEmailRecipientsForm(
-            member_queryset, initial={"recipients": member_queryset}
+            member_queryset,
+            initial={"recipients": member_queryset},
         )
 
         merge_context = models.MergeContext(
@@ -1497,6 +1513,7 @@ class SendEmailView(LoginRequiredMixin, views.View):
             user=request.user,
             sender=request.user,
         )
+        # FIXME: disable button if no recipients
         return render(
             request,
             "stave/send_email.html",
@@ -1538,6 +1555,7 @@ class SendEmailView(LoginRequiredMixin, views.View):
             application_form.get_user_queryset_for_context_type(email_type),
             data=request.POST,
         )
+        # FIXME: validate selection
 
         # FIXME failure path
         if email_form.is_valid() and email_recipients_form.is_valid():

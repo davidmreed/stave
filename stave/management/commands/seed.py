@@ -5,133 +5,7 @@ from allauth.account.models import EmailAddress
 from django.core.management.base import BaseCommand
 
 from stave import models
-
-
-def create_templates() -> models.LeagueTemplate:
-    league_template = models.LeagueTemplate.objects.create(
-        name="Roller Derby League",
-        description="Basic setup for a roller derby league, including templates for single and doubleheaders and a multi-day tournament",
-    )
-    role_group_nso = models.RoleGroup.objects.create(
-        name="NSO", league_template=league_template
-    )
-    role_hnso = models.Role.objects.create(
-        role_group=role_group_nso, name="HNSO", nonexclusive=True, order_key=1
-    )
-    role_jt = models.Role.objects.create(
-        role_group=role_group_nso, name="JT", order_key=2
-    )
-    role_plt = models.Role.objects.create(
-        role_group=role_group_nso, name="PLT", order_key=3
-    )
-    role_plt2 = models.Role.objects.create(
-        role_group=role_group_nso, name="PLT", order_key=4
-    )
-    role_sbo = models.Role.objects.create(
-        role_group=role_group_nso, name="SBO", order_key=5
-    )
-    role_sk = models.Role.objects.create(
-        role_group=role_group_nso, name="SK", order_key=6
-    )
-    role_sk2 = models.Role.objects.create(
-        role_group=role_group_nso, name="SK", order_key=7
-    )
-    role_pbm = models.Role.objects.create(
-        role_group=role_group_nso, name="PBM", order_key=8
-    )
-    role_pbt = models.Role.objects.create(
-        role_group=role_group_nso, name="PBT", order_key=9
-    )
-    role_pbt2 = models.Role.objects.create(
-        role_group=role_group_nso, name="PBT", order_key=10
-    )
-    role_alt = models.Role.objects.create(
-        role_group=role_group_nso, name="ALT", order_key=11
-    )
-
-    role_group_so = models.RoleGroup.objects.create(
-        name="SO", league_template=league_template
-    )
-    role_hr = models.Role.objects.create(
-        role_group=role_group_so, name="HR", order_key=1
-    )
-    role_ipr = models.Role.objects.create(
-        role_group=role_group_so, name="IPR", order_key=2
-    )
-    role_jr = models.Role.objects.create(
-        role_group=role_group_so, name="JR", order_key=3
-    )
-    role_jr2 = models.Role.objects.create(
-        role_group=role_group_so, name="JR", order_key=4
-    )
-    role_opr = models.Role.objects.create(
-        role_group=role_group_so, name="OPR", order_key=5
-    )
-    role_opr2 = models.Role.objects.create(
-        role_group=role_group_so, name="OPR", order_key=6
-    )
-    role_opr3 = models.Role.objects.create(
-        role_group=role_group_so, name="OPR", order_key=7
-    )
-    role_altref = models.Role.objects.create(
-        role_group=role_group_so, name="ALT", order_key=8
-    )
-
-    role_group_tho = models.RoleGroup.objects.create(
-        name="THO", league_template=league_template, event_only=True
-    )
-    role_thr = models.Role.objects.create(
-        role_group=role_group_tho, name="THR", order_key=1
-    )
-    role_thnso = models.Role.objects.create(
-        role_group=role_group_tho, name="THNSO", order_key=2
-    )
-    role_gto = models.Role.objects.create(
-        role_group=role_group_tho, name="GTO", order_key=3
-    )
-
-    event_template_single_game = models.EventTemplate.objects.create(
-        league_template=league_template,
-        name="Singleheader",
-        description="A single-game event with SO and NSO roles.",
-        days=1,
-    )
-    event_template_single_game.role_groups.set([role_group_so, role_group_nso])
-    game_template_single_game = models.GameTemplate.objects.create(
-        event_template=event_template_single_game,
-        day=1,
-    )
-    game_template_single_game.role_groups.set([role_group_so, role_group_nso])
-
-    event_template_doubleheader = models.EventTemplate.objects.create(
-        league_template=league_template,
-        name="Doubleheader",
-        description="A single-day, two-game event with SO and NSO roles.",
-        days=1,
-    )
-    event_template_doubleheader.role_groups.set([role_group_so, role_group_nso])
-    game_template_doubleheader_1 = models.GameTemplate.objects.create(
-        event_template=event_template_doubleheader,
-        day=1,
-    )
-    game_template_doubleheader_1.role_groups.set([role_group_so, role_group_nso])
-    game_template_doubleheader_2 = models.GameTemplate.objects.create(
-        event_template=event_template_doubleheader,
-        day=1,
-    )
-    game_template_doubleheader_2.role_groups.set([role_group_so, role_group_nso])
-
-    event_template_tournament = models.EventTemplate.objects.create(
-        league_template=league_template,
-        name="Tournament",
-        description="A two-day event with THO, SO, and NSO roles.",
-        days=2,
-    )
-    event_template_tournament.role_groups.set(
-        [role_group_so, role_group_nso, role_group_tho]
-    )
-
-    return league_template
+from .create_templates import create_templates
 
 
 class Command(BaseCommand):
@@ -180,9 +54,11 @@ class Command(BaseCommand):
         role_gto = role_group_tho.roles.get(name="GTO")
 
         # Create a 2-day, 5-game tournament event.
-        tournament = models.Event.objects.create(
+        tournament_template = models.EventTemplate.objects.get(
+            league=league, name="Tournament"
+        )
+        tournament = tournament_template.clone(
             name="Outer Planets Throwdown",
-            league=league,
             status=models.EventStatus.OPEN,
             slug="outer-planets-throwdown",
             start_date=date(2218, 5, 25),
@@ -202,7 +78,6 @@ class Command(BaseCommand):
             end_time=datetime.combine(tournament.start_date, time(12, 00), timezone),
             order_key=1,
         )
-
         tournament_game_2 = models.Game.objects.create(
             event=tournament,
             name="Game 2",
@@ -229,7 +104,6 @@ class Command(BaseCommand):
             end_time=datetime.combine(tournament.start_date, time(18, 00), timezone),
             order_key=3,
         )
-
         tournament_game_4 = models.Game.objects.create(
             event=tournament,
             name="Game 4",
@@ -257,9 +131,6 @@ class Command(BaseCommand):
             order_key=5,
         )
 
-        ## Add Role Groups to the tournament
-        tournament.role_groups.set([role_group_tho, role_group_so, role_group_nso])
-
         for game in [
             tournament_game_1,
             tournament_game_2,
@@ -272,22 +143,15 @@ class Command(BaseCommand):
                     game=game, role_group=role_group
                 )
 
-        _ = models.EventRoleGroupCrewAssignment.objects.create(
-            event=tournament,
-            role_group=role_group_tho,
-        )
-
         ## Create application forms for the tournament
-        app_form = models.ApplicationForm.objects.create(
-            event=tournament,
-            slug="apply",
-            application_kind=models.ApplicationKind.CONFIRM_THEN_ASSIGN,
-            application_availability_kind=models.ApplicationAvailabilityKind.BY_DAY,
-            hidden=False,
-            intro_text="Join the best teams in the Belt! **For beltalowda!**",
-            requires_profile_fields=["preferred_name"],
+        breakpoint()
+        app_form = models.ApplicationForm.objects.get(
+            event=tournament, slug="apply-nso-so"
         )
-        app_form.role_groups.set([role_group_so, role_group_nso])
+        app_form.intro_text = "Join the best teams in the Belt! **For beltalowda!**"
+        app_form.requires_profile_fields = ["preferred_name"]
+        app_form.save()
+
         app_form_question_faction = models.Question.objects.create(
             application_form=app_form,
             content="What is your affiliated faction?",
@@ -318,16 +182,14 @@ class Command(BaseCommand):
             order_key=4,
         )
 
-        app_form_tho = models.ApplicationForm.objects.create(
+        app_form_tho = models.ApplicationForm.objects.get(
             event=tournament,
             slug="apply-tho",
-            application_kind=models.ApplicationKind.ASSIGN_ONLY,
-            application_availability_kind=models.ApplicationAvailabilityKind.WHOLE_EVENT,
-            hidden=False,
-            intro_text="Join the best teams in the Belt as a tournament leader. **For beltalowda!**",
-            requires_profile_fields=["preferred_name"],
         )
-        app_form_tho.role_groups.set([role_group_tho])
+        app_form_tho.intro_text = "Join the best teams in the Belt as a tournament leader. **For beltalowda!**"
+        app_form_tho.requires_profile_fields = ["preferred_name"]
+        app_form_tho.save()
+
         app_form_tho_question = models.Question.objects.create(
             application_form=app_form_tho,
             content="What do you want to do?",
@@ -337,16 +199,17 @@ class Command(BaseCommand):
         )
 
         # Create a doubleheader event
-        doubleheader = models.Event.objects.create(
+        doubleheader_template = models.EventTemplate.objects.get(
+            league=league, name="Doubleheader"
+        )
+        doubleheader = doubleheader_template.clone(
             name="2218-02-28 Doubleheader",
             slug="2218-02-28-doubleheader",
             location="Ceres Arena",
-            league=league,
             status=models.EventStatus.OPEN,
             start_date=date(2218, 2, 28),
             end_date=date(2218, 2, 28),
         )
-        doubleheader.role_groups.set([role_group_so, role_group_nso])
 
         doubleheader_game_1 = models.Game.objects.create(
             event=doubleheader,
@@ -385,16 +248,17 @@ class Command(BaseCommand):
                     game=game, role_group=role_group
                 )
         # Create a single-game event.
-        singleheader = models.Event.objects.create(
+        singleheader_template = models.EventTemplate.objects.get(
+            league=league, name="Singleheader"
+        )
+        singleheader = singleheader_template.clone(
             name="2218-01-19 Game",
             slug="2218-01-19-game",
             location="Ceres Arena",
             status=models.EventStatus.OPEN,
-            league=league,
             start_date=date(2218, 3, 20),
             end_date=date(2218, 3, 20),
         )
-        singleheader.role_groups.set([role_group_so, role_group_nso])
         singleheader_game = models.Game.objects.create(
             event=singleheader,
             name="Game",
@@ -414,27 +278,25 @@ class Command(BaseCommand):
             _ = models.RoleGroupCrewAssignment.objects.create(
                 game=singleheader_game, role_group=role_group
             )
-        singleheader_app_form = models.ApplicationForm.objects.create(
+        singleheader_app_form = models.ApplicationForm.objects.get(
             event=singleheader,
-            slug="apply",
-            application_kind=models.ApplicationKind.ASSIGN_ONLY,
-            application_availability_kind=models.ApplicationAvailabilityKind.WHOLE_EVENT,
-            hidden=False,
-            intro_text="Join the best teams in the Belt! **For beltalowda!**",
-            requires_profile_fields=["preferred_name"],
+            slug="apply-nso-so",
         )
-        singleheader_app_form.role_groups.set([role_group_so, role_group_nso])
+        singleheader_app_form.intro_text = (
+            "Join the best teams in the Belt! **For beltalowda!**"
+        )
+        singleheader_app_form.requires_profile_fields = ["preferred_name"]
+        singleheader_app_form.save()
 
-        doubleheader_app_form = models.ApplicationForm.objects.create(
+        doubleheader_app_form = models.ApplicationForm.objects.get(
             event=doubleheader,
-            slug="apply",
-            application_kind=models.ApplicationKind.ASSIGN_ONLY,
-            application_availability_kind=models.ApplicationAvailabilityKind.BY_GAME,
-            hidden=False,
-            intro_text="Join the best teams in the Belt! **For beltalowda!**",
-            requires_profile_fields=["preferred_name"],
+            slug="apply-nso-so",
         )
-        doubleheader_app_form.role_groups.set([role_group_so, role_group_nso])
+        doubleheader_app_form.intro_text = (
+            "Join the best teams in the Belt! **For beltalowda!**"
+        )
+        doubleheader_app_form.requires_profile_fields = ["preferred_name"]
+        doubleheader_app_form.save()
 
         # Create some users
         def create_user(

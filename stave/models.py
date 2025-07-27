@@ -13,8 +13,10 @@ from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
+from django.utils import formats
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
+from django.template.defaultfilters import slugify
 
 TIMEZONES_CHOICES = [(tz, tz) for tz in sorted(zoneinfo.available_timezones())]
 
@@ -304,7 +306,7 @@ class LeagueTemplate(models.Model):
         # Copy Application Form Templates
         for application_form_template in self.application_form_templates.all():
             _ = application_form_template.clone_as_template(
-                league, event_template_map, message_template_map
+                league, message_template_map, event_template_map, role_group_map
             )
 
         return league
@@ -386,10 +388,12 @@ class EventTemplate(models.Model):
         )
         new_object.role_groups.set(self.role_groups.all())
         for i, game_template in enumerate(self.game_templates.all()):
+            # GameTemplates do not have required start and end times, but Games do.
+            # This is only an issue when we clone non-interactively.
             _ = game_template.clone(event=new_object, order_key=i + 1)
 
         for application_form_template in self.application_form_templates.all():
-            _ = application_form_template.clone(self)
+            _ = application_form_template.clone(event=new_object)
 
         return new_object
 
@@ -933,7 +937,7 @@ class ApplicationFormTemplate(models.Model):
     role_groups: models.ManyToManyField["ApplicationFormTemplate", RoleGroup] = (
         models.ManyToManyField(RoleGroup)
     )
-    intro_text = models.TextField()
+    intro_text = models.TextField(null=True, blank=True)
     requires_profile_fields: models.JSONField[list[str]] = models.JSONField(
         default=list, blank=True
     )
@@ -965,27 +969,34 @@ class ApplicationFormTemplate(models.Model):
         EventTemplate, blank=True, related_name="application_form_templates"
     )
 
+    def __str__(self):
+        return f"{self.name} ({self.league.name if self.league else self.league_template.name})"
+
     def clone(self, event: Event, **kwargs) -> "ApplicationForm":
         values = {
-            "league": self.league,
             "application_kind": self.application_kind,
             "application_availability_kind": self.application_availability_kind,
             "hidden": False,
             "intro_text": self.intro_text,
             "requires_profile_fields": self.requires_profile_fields,
             "invitation_email_template": self.invitation_email_template,
-            "assigned_email_template": self.assigned_email_template,
-            "rejected_email_template": self.rejected_email_template,
+            "schedule_email_template": self.assigned_email_template,
+            "rejection_email_template": self.rejected_email_template,
             "event": event,
+            "slug": slugify(
+                "apply-" + "-".join(rg.name for rg in self.role_groups.all())
+            ),
         }
         values.update(kwargs)
+        print(f"Creating ApplicationForm with {values}")
+        breakpoint()
         new_object = ApplicationForm.objects.create(**values)
 
         # Assign Role Groups
         new_object.role_groups.set(self.role_groups.all())
 
         # Questions
-        for question in self.form_questions.all():
+        for question in self.template_questions.all():
             new_question = copy.copy(question)
             new_question.id = new_question.pk = None
             new_question._state.adding = True
@@ -999,6 +1010,7 @@ class ApplicationFormTemplate(models.Model):
         league: League,
         email_template_map: dict[uuid.UUID, uuid.UUID],
         event_template_map: dict[uuid.UUID, uuid.UUID],
+        role_group_map: dict[uuid.UUID, uuid.UUID],
     ) -> "ApplicationFormTemplate":
         new_object = copy.copy(self)
         new_object.id = new_object.pk = None
@@ -1016,7 +1028,7 @@ class ApplicationFormTemplate(models.Model):
             new_object.rejected_email_template_id
         ]
 
-        for question in self.form_questions.all():
+        for question in self.template_questions.all():
             new_question = copy.copy(question)
             new_question.id = new_question.pk = None
             new_question._state.adding = True
@@ -1029,6 +1041,9 @@ class ApplicationFormTemplate(models.Model):
             for event_template in self.event_templates.all()
         }
         new_object.event_templates.set(new_event_template_ids)
+        new_object.role_groups.set(
+            [role_group_map.get(rg.id) for rg in self.role_groups.all()]
+        )
 
         return new_object
 
@@ -1738,8 +1753,17 @@ class MergeContext:
             return None
 
         if attr == "date_range":
+            timezone = zoneinfo.ZoneInfo(self.event.league.time_zone)
+            start_date = formats.localize(
+                self.event.start_date.astimezone(timezone), use_l10n=True
+            )
             if self.event.end_date == self.event.start_date:
-                return ...  # FIXME
+                end_date = formats.localize(
+                    self.event.start_date.astimezone(timezone), use_l10n=True
+                )
+                return f"{start_date}–{end_date}"
+            else:
+                return f"{start_date}"
         elif attr == "link":
             return domain + getattr(self, entity).get_absolute_url()
         elif attr == "schedule_link":

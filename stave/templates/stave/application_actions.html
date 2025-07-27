@@ -23,10 +23,17 @@
     >
     {% endif %}
     {% if application.ApplicationStatus.INVITED in states and application.status == application.ApplicationStatus.INVITATION_PENDING %}
+    {% if application.form.invitation_email_template %}
+    <input type="hidden" value="{{ application.user_id }}" name="recipient">
+    <input type="hidden" value="invitation" name="type">
+    <input type="hidden" value="{{ request.path }}" name="redirect_url">
     <input type="submit"
-           formaction="FIXME"
+           formaction="{% url 'comm-center' application.form.event.league.slug application.form.event.slug application.form.slug %}"
            value="Send Invitation Now"
     >
+    {% endif %}
+    {# FIXME: do the other actions #}
+    <a role="button" href="{% url 'send-email' application.form.event.league.slug application.form.event.slug application.form.slug 'invitation'%}{% querystring recipient=application.user_id %}">Customize Invitation Now</a>
     {% endif %}
     {% if application.ApplicationStatus.REJECTION_PENDING in states %}
     <input type="submit"
