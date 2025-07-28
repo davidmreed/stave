@@ -16,9 +16,11 @@ class CrewAdmin(admin.ModelAdmin):
     inlines = [CrewAssignmentInline]
     list_display = ("event", "role_group", "name", "kind")
 
+
 @admin.register(models.User)
 class UserAdmin(admin.ModelAdmin):
     list_display = ("preferred_name", "email")
+
 
 for model in [
     models.League,

@@ -1,11 +1,13 @@
-from typing import Iterable
-from datetime import datetime
-from collections import defaultdict
-from uuid import UUID
-from . import models
-from dataclasses import dataclass
 import functools
+from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Iterable
+from uuid import UUID
+
 from django.db.models import Prefetch, QuerySet
+
+from . import models
 
 
 @dataclass

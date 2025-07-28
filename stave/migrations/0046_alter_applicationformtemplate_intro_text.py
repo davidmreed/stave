@@ -4,15 +4,17 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0045_remove_applicationformtemplate_confirmed_email_template_and_more'),
+        (
+            "stave",
+            "0045_remove_applicationformtemplate_confirmed_email_template_and_more",
+        ),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='applicationformtemplate',
-            name='intro_text',
+            model_name="applicationformtemplate",
+            name="intro_text",
             field=models.TextField(blank=True, null=True),
         ),
     ]

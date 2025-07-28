@@ -4,20 +4,25 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0043_remove_application_invitation_email_sent_and_more'),
+        ("stave", "0043_remove_application_invitation_email_sent_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='applicationform',
-            name='application_kind',
-            field=models.IntegerField(choices=[(1, 'Assign Only'), (2, 'Confirm then Assign')], help_text='Choose Confirm Only to contact applicants only once, when the schedule is finalized. Choose Confirm then Assign to send acceptance messages first, then follow with a schedule.', verbose_name='application process'),
+            model_name="applicationform",
+            name="application_kind",
+            field=models.IntegerField(
+                choices=[(1, "Assign Only"), (2, "Confirm then Assign")],
+                help_text="Choose Confirm Only to contact applicants only once, when the schedule is finalized. Choose Confirm then Assign to send acceptance messages first, then follow with a schedule.",
+                verbose_name="application process",
+            ),
         ),
         migrations.AlterField(
-            model_name='applicationformtemplate',
-            name='application_kind',
-            field=models.IntegerField(choices=[(1, 'Assign Only'), (2, 'Confirm then Assign')]),
+            model_name="applicationformtemplate",
+            name="application_kind",
+            field=models.IntegerField(
+                choices=[(1, "Assign Only"), (2, "Confirm then Assign")]
+            ),
         ),
     ]

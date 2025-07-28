@@ -5,6 +5,7 @@ from allauth.account.models import EmailAddress
 from django.core.management.base import BaseCommand
 
 from stave import models
+
 from .create_templates import create_templates
 
 

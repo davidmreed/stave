@@ -1,7 +1,7 @@
+import copy
 from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Any
-import copy
 
 from django import forms, template
 from django.db.models import QuerySet

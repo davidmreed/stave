@@ -13,10 +13,10 @@ from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
-from django.utils import formats
-from django.urls import reverse
-from django.utils.translation import gettext_lazy as _
 from django.template.defaultfilters import slugify
+from django.urls import reverse
+from django.utils import formats
+from django.utils.translation import gettext_lazy as _
 
 TIMEZONES_CHOICES = [(tz, tz) for tz in sorted(zoneinfo.available_timezones())]
 

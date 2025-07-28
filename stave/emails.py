@@ -1,7 +1,9 @@
-from . import models
-from django.urls import reverse_lazy
 import re
+
+from django.urls import reverse_lazy
 from markdownify.templatetags.markdownify import markdownify
+
+from . import models
 
 FOOTER_MD = f"""
 

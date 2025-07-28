@@ -1,16 +1,16 @@
 import copy
 import json
+import zoneinfo
 
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import QuerySet
 from django.forms.utils import ErrorDict
-from django.utils import timezone, formats
+from django.utils import formats, timezone
 from django.utils.translation import gettext_lazy as _
 
 from . import models
-import zoneinfo
 
 
 class GameModelChoiceField(forms.ModelMultipleChoiceField):
