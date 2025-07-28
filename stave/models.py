@@ -842,6 +842,7 @@ class MessageTemplate(models.Model):
     )
     subject = models.TextField()
     content = models.TextField()
+    name = models.CharField(max_length=256)
 
     def clone_as_template(self, league: League) -> "MessageTemplate":
         new_object = copy.copy(self)

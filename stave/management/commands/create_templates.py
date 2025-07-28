@@ -91,6 +91,7 @@ def create_templates() -> models.LeagueTemplate:
     # NOTE: changing the text will result in duplication.
     invitation_template = models.MessageTemplate.objects.get_or_create(
         league_template=league_template,
+        name=_("Default Invitation Template"),
         subject=_("Invitation to officiate {event.name}"),
         content=_("""Dear {user.preferred_name},
 
@@ -108,6 +109,7 @@ Thank you!
     )[0]
     rejection_template = models.MessageTemplate.objects.get_or_create(
         league_template=league_template,
+        name=_("Default Rejection Template"),
         subject=_("Your application to {event.name}"),
         content=_("""Dear {user.preferred_name},
 
@@ -119,6 +121,7 @@ Thank you for your application. Watch [{league.name}]({league.link}) on Stave fo
     )[0]
     assignment_template = models.MessageTemplate.objects.get_or_create(
         league_template=league_template,
+        name=_("Default Assignment Template"),
         subject=_("Confirmation to officiate {event.name}"),
         content=_("""Dear {user.preferred_name},
 
