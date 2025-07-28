@@ -88,6 +88,7 @@ def create_templates() -> models.LeagueTemplate:
     )[0]
 
     # Message templates
+    # NOTE: changing the text will result in duplication.
     invitation_template = models.MessageTemplate.objects.get_or_create(
         league_template=league_template,
         subject=_("Invitation to officiate {event.name}"),

@@ -823,21 +823,6 @@ class ApplicationStatus(models.IntegerChoices):
     REJECTED = 5, _("Rejected")
     WITHDRAWN = 6, _("Withdrawn")
 
-    def get_action_verb(self) -> str:
-        match self:
-            case ApplicationStatus.APPLIED:
-                return _("Apply")
-            case ApplicationStatus.INVITED | ApplicationStatus.INVITATION_PENDING:
-                return _("Invite")
-            case ApplicationStatus.CONFIRMED:
-                return _("Confirm")
-            case ApplicationStatus.DECLINED:
-                return _("Decline")
-            case ApplicationStatus.REJECTED | ApplicationStatus.REJECTION_PENDING:
-                return _("Reject")
-            case ApplicationStatus.WITHDRAWN:
-                return _("Withdraw")
-
 
 class MessageTemplate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
