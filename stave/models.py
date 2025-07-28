@@ -374,7 +374,7 @@ class EventTemplate(models.Model):
 
         return new_object
 
-    def clone(self, **kwargs) -> "Event":
+    def clone(self, game_kwargs: list[dict] = None, **kwargs) -> "Event":
         values = {
             "league": self.league,
             "location": self.location,
@@ -387,10 +387,15 @@ class EventTemplate(models.Model):
             **values,
         )
         new_object.role_groups.set(self.role_groups.all())
+
+        game_kwargs = game_kwargs or []
         for i, game_template in enumerate(self.game_templates.all()):
             # GameTemplates do not have required start and end times, but Games do.
             # This is only an issue when we clone non-interactively.
-            _ = game_template.clone(event=new_object, order_key=i + 1)
+            values = {"event": new_object, "order_key": i + 1}
+            if this_game_kwargs := game_kwargs.get(i):
+                values.update(this_game_kwargs)
+            _ = game_template.clone(**values)
 
         for application_form_template in self.application_form_templates.all():
             _ = application_form_template.clone(event=new_object)
@@ -988,8 +993,6 @@ class ApplicationFormTemplate(models.Model):
             ),
         }
         values.update(kwargs)
-        print(f"Creating ApplicationForm with {values}")
-        breakpoint()
         new_object = ApplicationForm.objects.create(**values)
 
         # Assign Role Groups

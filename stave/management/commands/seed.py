@@ -12,7 +12,7 @@ class Command(BaseCommand):
     help = "seed database for testing and development."
 
     def handle(self, *_args, **_kwargs):  # type: ignore
-        self.stdout.write("seeding data...")
+        self.stdout.write("Seeding data...")
 
         league_template = create_templates()
 
@@ -144,7 +144,6 @@ class Command(BaseCommand):
                 )
 
         ## Create application forms for the tournament
-        breakpoint()
         app_form = models.ApplicationForm.objects.get(
             event=tournament, slug="apply-nso-so"
         )
@@ -209,44 +208,25 @@ class Command(BaseCommand):
             status=models.EventStatus.OPEN,
             start_date=date(2218, 2, 28),
             end_date=date(2218, 2, 28),
+            game_kwargs=[
+                {
+                    "name": "Game 1",
+                    "home_league": "Ceres Roller Derby",
+                    "home_team": "Miners",
+                    "visiting_league": "Loca Griega",
+                    "visiting_team": "All Stars",
+                    "association": models.GameAssociation.WFTDA,
+                    "kind": models.GameKind.SANC,
+                    "start_time": datetime.combine(
+                        date(2218, 2, 28), time(10, 00), timezone
+                    ),
+                    "end_time": datetime.combine(
+                        date(2218, 2, 28), time(12, 00), timezone
+                    ),
+                }
+            ],
         )
 
-        doubleheader_game_1 = models.Game.objects.create(
-            event=doubleheader,
-            name="Game 1",
-            home_league="Ceres Roller Derby",
-            home_team="Miners",
-            visiting_league="Loca Griega",
-            visiting_team="All Stars",
-            association=models.GameAssociation.WFTDA,
-            kind=models.GameKind.SANC,
-            start_time=datetime.combine(
-                doubleheader.start_date, time(10, 00), timezone
-            ),
-            end_time=datetime.combine(doubleheader.start_date, time(12, 00), timezone),
-            order_key=1,
-        )
-
-        doubleheader_game_2 = models.Game.objects.create(
-            event=doubleheader,
-            name="Game 2",
-            home_league="Ceres Roller Derby",
-            home_team="Nuggets",
-            visiting_league="Ganymede",
-            visiting_team="Seedlings",
-            association=models.GameAssociation.JRDA,
-            kind=models.GameKind.SANC,
-            start_time=datetime.combine(
-                doubleheader.start_date, time(14, 00), timezone
-            ),
-            end_time=datetime.combine(doubleheader.start_date, time(16, 00), timezone),
-            order_key=2,
-        )
-        for role_group in [role_group_so, role_group_nso]:
-            for game in [doubleheader_game_1, doubleheader_game_2]:
-                _ = models.RoleGroupCrewAssignment.objects.create(
-                    game=game, role_group=role_group
-                )
         # Create a single-game event.
         singleheader_template = models.EventTemplate.objects.get(
             league=league, name="Singleheader"
@@ -258,26 +238,24 @@ class Command(BaseCommand):
             status=models.EventStatus.OPEN,
             start_date=date(2218, 3, 20),
             end_date=date(2218, 3, 20),
+            game_kwargs=[
+                {
+                    "name": "Game",
+                    "home_league": "Ceres Roller Derby",
+                    "home_team": "Miners",
+                    "visiting_league": "Tycho Station",
+                    "visiting_team": "Gearheads",
+                    "association": models.GameAssociation.WFTDA,
+                    "kind": models.GameKind.REG,
+                    "start_time": datetime.combine(
+                        date(2218, 3, 20), time(10, 00), timezone
+                    ),
+                    "end_time": datetime.combine(
+                        date(2218, 3, 20), time(12, 00), timezone
+                    ),
+                }
+            ],
         )
-        singleheader_game = models.Game.objects.create(
-            event=singleheader,
-            name="Game",
-            home_league="Ceres Roller Derby",
-            home_team="Miners",
-            visiting_league="Tycho Station",
-            visiting_team="Gearheads",
-            association=models.GameAssociation.WFTDA,
-            kind=models.GameKind.REG,
-            start_time=datetime.combine(
-                singleheader.start_date, time(10, 00), timezone
-            ),
-            end_time=datetime.combine(singleheader.start_date, time(12, 00), timezone),
-            order_key=1,
-        )
-        for role_group in [role_group_so, role_group_nso]:
-            _ = models.RoleGroupCrewAssignment.objects.create(
-                game=singleheader_game, role_group=role_group
-            )
         singleheader_app_form = models.ApplicationForm.objects.get(
             event=singleheader,
             slug="apply-nso-so",
