@@ -1,6 +1,6 @@
 {% load stave_tags %}
 {% inputs 'ApplicationTableRowInputs' %}
-
+    <td>{{ application.get_status_display }}</td>
 {# Profile fields #}
 {% for field in application.form.requires_profile_fields %}
     <td>{{ application.get_user_data|get:field }}</td>

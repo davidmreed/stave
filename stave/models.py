@@ -1250,6 +1250,12 @@ class ApplicationForm(models.Model):
             args=[self.event.league.slug, self.event.slug, self.slug],
         )
 
+    def get_edit_url(self) -> str:
+        return reverse(
+            "form-update",
+            args=[self.event.league.slug, self.event.slug, self.slug],
+        )
+
     def get_schedule_url(self) -> str | None:
         if self.role_groups.all():
             return reverse(
@@ -1281,39 +1287,6 @@ class ApplicationForm(models.Model):
         return reverse(
             "crew-builder", args=[self.event.league.slug, self.event.slug, self.slug]
         )
-
-    def get_applications_for_roles(
-        self,
-        role_group: RoleGroup,
-        roles: Iterable[Role],
-    ) -> dict[str, Iterable["Application"]]:
-        # If our input roles and role_group are not sensical, this query will be empty.
-        # No risk of incoherent output data.
-        applications = self.applications.filter(
-            roles__in=roles, roles__role_group_id=role_group.id
-        )
-
-        # Filter based on our application model.
-        # FIXME: update these filters
-        if self.application_kind == ApplicationKind.ASSIGN_ONLY:
-            applications = applications.filter(
-                status__in=[
-                    ApplicationStatus.APPLIED,
-                    ApplicationStatus.INVITED,
-                    ApplicationStatus.CONFIRMED,
-                ]
-            )
-        elif self.application_kind == ApplicationKind.CONFIRM_THEN_ASSIGN:
-            applications = applications.filter(status=ApplicationStatus.CONFIRMED)
-
-        result = defaultdict(set)
-        for application in applications:
-            app_roles = application.roles.all()
-            for role in roles:
-                if role in app_roles:
-                    result[role.name].add(application)
-
-        return result
 
     def get_template_for_context_type(
         self, context: SendEmailContextType
@@ -1586,11 +1559,18 @@ class Application(models.Model):
                         )
                 case ApplicationStatus.REJECTED:
                     pass
-                case (
-                    ApplicationStatus.CONFIRMED
-                    | ApplicationStatus.ASSIGNED
-                    | ApplicationStatus.ASSIGNMENT_PENDING
-                ):
+                case ApplicationStatus.ASSIGNMENT_PENDING:
+                    if can_manage:
+                        states.extend(
+                            [ApplicationStatus.WITHDRAWN, ApplicationStatus.ASSIGNED]
+                        )
+                    if user == self.user:
+                        states.extend(
+                            [
+                                ApplicationStatus.WITHDRAWN,
+                            ]
+                        )
+                case ApplicationStatus.CONFIRMED | ApplicationStatus.ASSIGNED:
                     if can_manage or user == self.user:
                         states.extend(
                             [
@@ -1759,14 +1739,9 @@ class MergeContext:
             return None
 
         if attr == "date_range":
-            timezone = zoneinfo.ZoneInfo(self.event.league.time_zone)
-            start_date = formats.localize(
-                self.event.start_date.astimezone(timezone), use_l10n=True
-            )
-            if self.event.end_date == self.event.start_date:
-                end_date = formats.localize(
-                    self.event.start_date.astimezone(timezone), use_l10n=True
-                )
+            start_date = formats.localize(self.event.start_date, use_l10n=True)
+            if self.event.end_date != self.event.start_date:
+                end_date = formats.localize(self.event.end_date, use_l10n=True)
                 return f"{start_date}–{end_date}"
             else:
                 return f"{start_date}"
@@ -1785,4 +1760,4 @@ class MergeContext:
         else:
             entity_obj = getattr(self, entity)
             if entity_obj:
-                return str(getattr(entity_obj), attr)
+                return str(getattr(entity_obj, attr))

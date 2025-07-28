@@ -6,10 +6,10 @@ from markdownify.templatetags.markdownify import markdownify
 FOOTER_MD = f"""
 
 --<br>
-Sent by [Stave]({reverse_lazy("home")}) in response to your application | [Manage Your Account]({reverse_lazy("profile")})
+Sent by [Stave](https://stave.app{reverse_lazy("home")}) in response to your application | [Manage Your Account](https://stave.app{reverse_lazy("profile")})
 """
 MERGE_FIELD_PATTERN = re.compile(r"\{([a-zA-Z\._]+?)\}")
-MD_LINK_PATTERN = re.compile(r"\[([^\]])+?\]\(([^)]+?)\)")
+MD_LINK_PATTERN = re.compile(r"\[([^\]]+?)\]\(([^)]+?)\)")
 LINE_BREAK_PATTERN = re.compile(r"<br( /)?>")
 
 
@@ -31,7 +31,7 @@ def render_html(content: str) -> str:
 def render_txt(content: str) -> str:
     # Just return the Markdown source, but make the links and line-breaks more usable.
     return MD_LINK_PATTERN.sub(
-        lambda match: f"{match.group(1)} ({match.group(2)}",
+        lambda match: f"{match.group(1)} ({match.group(2)})",
         LINE_BREAK_PATTERN.sub(
             lambda match: "\n",
             content,
@@ -76,11 +76,18 @@ def send_message(
     )
     message.save()
 
+    # TODO: this logic probably belongs elsewhere.
     match kind:
         case models.SendEmailContextType.INVITATION:
             application.status = models.ApplicationStatus.INVITED
         case models.SendEmailContextType.REJECTION:
             application.status = models.ApplicationStatus.REJECTED
+            # Remove any assignments for this user.
+            models.CrewAssignment.objects.filter(
+                user=application.user,
+                crew__event=application.form.event,
+                role__in=application.roles.all(),
+            ).delete()
         case models.SendEmailContextType.SCHEDULE:
             application.status = models.ApplicationStatus.ASSIGNED
 

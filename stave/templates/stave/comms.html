@@ -6,13 +6,9 @@
 {% include 'stave/partials/staffing_header.html' with form=application_form request=request only %}
 
 <header>
-    <h1>Communications Center</h1>
-</header>
-
-<header>
     <h2>Send Staff Email</h2>
 </header>
-<p>Sending staff emails will not update the application status.</p>
+<p>Staff emails go to crew members who have already received assignment emails. Sending staff emails will not update the application status.</p>
 <div class="horiz">
     <a role="button" href="{% url 'send-email' application_form.event.league.slug application_form.event.slug application_form.slug 'crew' %}{% querystring redirect_url=request.path %}">Customize Emails</a>
 </div>
@@ -24,7 +20,9 @@
 <p>Sending invitation emails will update the application status to Invited and allow users to Confirm or Decline their invitations.</p>
 <div class="horiz">
     <form action="{{ request.path }}" method="POST">
+        {% csrf_token %}
         <input type="hidden" id="type" name="type" value="invitation">
+        <input type="hidden" name="redirect_url" value="{{ request.path }}">
         <input type="submit" value="Send Email">
         <a role="button" href="{% url 'send-email' application_form.event.league.slug application_form.event.slug application_form.slug 'invitation' %}{% querystring redirect_url=request.path %}">Customize Emails</a>
     </form>
@@ -38,7 +36,9 @@
 <p>Sending rejection emails will update the application status to Rejected.</p>
 <div class="horiz">
 <form action="{{ request.path }}" method="POST">
+    {% csrf_token %}
     <input type="hidden" id="type" name="type" value="rejection">
+    <input type="hidden" name="redirect_url" value="{{ request.path }}">
     <input type="submit" value="Send Email" />
     <a role="button" href="{% url 'send-email' application_form.event.league.slug application_form.event.slug application_form.slug 'rejection' %}{% querystring redirect_url=request.path %}">Customize Emails</a>
 </form>
@@ -52,7 +52,9 @@
 <p>Sending assignment emails will update the application status to Assigned.</p>
 <div class="horiz">
 <form action="{{ request.path }}" method="POST">
+    {% csrf_token %}
     <input type="hidden" id="type" name="type" value="schedule">
+    <input type="hidden" name="redirect_url" value="{{ request.path }}">
     <input type="submit" value="Send Email" />
     <a role="button" href="{% url 'send-email' application_form.event.league.slug application_form.event.slug application_form.slug 'schedule' %}{% querystring redirect_url=request.path %}">Customize Emails</a>
 </form>

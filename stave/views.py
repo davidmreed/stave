@@ -802,25 +802,10 @@ class FormApplicationsView(
         if not form:
             raise Http404()
 
-        applications = {
-            key: list(group)
-            for key, group in itertools.groupby(
-                sorted(form.applications.all(), key=lambda a: a.status),
-                lambda a: a.status,
-            )
-        }
         return contexts.FormApplicationsInputs(
             form=form,
-            applications=applications,
+            applications=form.applications.all(),
             ApplicationStatus=models.ApplicationStatus,
-            invited_unsent_count=len(
-                [
-                    a
-                    for a in applications.get(
-                        models.ApplicationStatus.INVITATION_PENDING, []
-                    )
-                ],
-            ),
         )
 
 
@@ -839,7 +824,31 @@ class ApplicationStatusView(LoginRequiredMixin, views.View):
 
         if status in legal_changes:
             application.status = status
+
+            # If the application status changed to Confirmed,
+            # and the user is already staffed, move it to Assignment Pending.
+            # TODO: move this logic into the Application
+            if (
+                status == models.ApplicationStatus.CONFIRMED
+                and application.form.application_kind
+                == models.ApplicationKind.CONFIRM_THEN_ASSIGN
+                and models.CrewAssignment.objects.filter(
+                    user=application.user,
+                    crew__event=application.form.event,
+                    role__in=application.roles.all(),
+                ).exists()
+            ):
+                application.status = models.ApplicationStatus.ASSIGNMENT_PENDING
+            elif status == models.ApplicationStatus.DECLINED:
+                # Delete any assignments that were already made
+                models.CrewAssignment.objects.filter(
+                    user=application.user,
+                    crew__event=application.form.event,
+                    role__in=application.roles.all(),
+                ).delete()
+
             application.save()
+
             redirect_url = request.POST.get("redirect_url")
             if redirect_url and url_has_allowed_host_and_scheme(
                 redirect_url, settings.ALLOWED_HOSTS
@@ -1174,57 +1183,67 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         else:
             applications = []
 
-        assignment = models.CrewAssignment.objects.filter(
+        # Delete existing assignment, if present
+        if assignment := models.CrewAssignment.objects.filter(
             role=role,
             crew=crew,
-        ).first()
-
-        if assignment:
-            if applications:
-                assignment.user = applications[0].user
-                assignment.save()
-
-                # Update the status of the application
+        ).first():
+            # Find the application corresponding to the existing assignment.
+            existing_application = (
+                application_form.applications.filter(
+                    user=assignment.user, roles__name=role.name
+                )
+                .exclude(status=models.ApplicationStatus.WITHDRAWN)
+                .first()
+            )
+            # There should be exactly one.
+            if existing_application:
+                # Reset its status appropriately.
                 if (
-                    applications[0].form.application_kind
-                    == models.ApplicationKind.ASSIGN_ONLY
-                ):
-                    applications[0].status = models.ApplicationStatus.ASSIGNMENT_PENDING
-                else:
-                    # for CONFIRM_THEN_ASSIGN events, our status update depends on the current status as well.
-                    match applications[0].status:
-                        case models.ApplicationStatus.APPLIED:
-                            applications[
-                                0
-                            ].status = models.ApplicationStatus.INVITATION_PENDING
-                        case models.ApplicationStatus.CONFIRMED:
-                            applications[
-                                0
-                            ].status = models.ApplicationStatus.ASSIGNMENT_PENDING
-                        case _:
-                            # All other cases do not update. (FIXME: correct?)
-                            pass
-
-                applications[0].save()
-            else:
-                # We want to remove this assignment.
-                assignment.delete()
-                # And update the status of the application, if needed. FIXME
-                if (
-                    applications[0].status
+                    existing_application.status
                     == models.ApplicationStatus.ASSIGNMENT_PENDING
                 ):
-                    applications[0].status = models.ApplicationStatus.CONFIRMED
+                    existing_application.status = models.ApplicationStatus.CONFIRMED
                 elif (
-                    applications[0].status
+                    existing_application.status
                     == models.ApplicationStatus.INVITATION_PENDING
                 ):
-                    applications[0].status = models.ApplicationStatus.APPLIED
-                applications[0].save()
-        else:
+                    existing_application.status = models.ApplicationStatus.APPLIED
+                existing_application.save()
+
+            # Delete the assignment
+            assignment.delete()
+
+        # Add a new assignment, if requested
+        if applications:
             _ = models.CrewAssignment.objects.create(
                 role=role, crew=crew, user=applications[0].user
             )
+
+            # Update the status of the application
+            if (
+                applications[0].form.application_kind
+                == models.ApplicationKind.ASSIGN_ONLY
+            ):
+                # Note that this sends apps in ASSIGNED status backwards,
+                # so they'll get an update email.
+                applications[0].status = models.ApplicationStatus.ASSIGNMENT_PENDING
+            else:
+                # for CONFIRM_THEN_ASSIGN events, our status update depends on the current status as well.
+                match applications[0].status:
+                    case models.ApplicationStatus.APPLIED:
+                        applications[
+                            0
+                        ].status = models.ApplicationStatus.INVITATION_PENDING
+                    case models.ApplicationStatus.CONFIRMED:
+                        applications[
+                            0
+                        ].status = models.ApplicationStatus.ASSIGNMENT_PENDING
+                    case _:
+                        # All other cases do not update.
+                        pass
+
+            applications[0].save()
 
         # Redirect the user to the base Crew Builder for this crew
         return HttpResponseRedirect(
@@ -1477,30 +1496,8 @@ class SendEmailView(LoginRequiredMixin, views.View):
         except ValueError:
             return HttpResponseBadRequest(f"invalid email_type {email_type}")
 
-        initial = {}
-        if message_template := application_form.get_template_for_context_type(
-            email_type
-        ):
-            initial["content"] = message_template.content
-
-        email_form = forms.SendEmailForm()
         member_queryset = application_form.get_user_queryset_for_context_type(
             email_type
-        )
-        # If we have a GET param with a user id in it, filter down to that.
-        # (Supplying the applicant query if we do not have a member_queryset or email_type)
-        if target_member := request.GET.get("recipient"):
-            if member_queryset is None:
-                member_queryset = models.User.objects.filter(
-                    id__in=application_form.applications.all().values("user_id")
-                ).distinct()
-
-            member_queryset = member_queryset.filter(id=target_member)
-
-        # FIXME: disable unselect if there's only one
-        email_recipients_form = forms.SendEmailRecipientsForm(
-            member_queryset,
-            initial={"recipients": member_queryset},
         )
 
         merge_context = models.MergeContext(
@@ -1513,7 +1510,46 @@ class SendEmailView(LoginRequiredMixin, views.View):
             user=request.user,
             sender=request.user,
         )
-        # FIXME: disable button if no recipients
+
+        # If we have a GET param with a user id in it, filter down to that.
+        # (Supplying the applicant query if we do not have a member_queryset or email_type)
+        if target_member := request.GET.get("recipient"):
+            if member_queryset is None:
+                member_queryset = models.User.objects.filter(
+                    id__in=application_form.applications.all().values("user_id")
+                ).distinct()
+
+            member_queryset = member_queryset.filter(id=target_member)
+
+        initial = {}
+        if member_queryset.count() == 1:
+            # Set the `user` value on the merge_context
+            merge_context.user = member_queryset.first()
+
+        if message_template := application_form.get_template_for_context_type(
+            email_type
+        ):
+            from . import emails
+
+            if member_queryset.count() == 1:
+                initial["subject"] = emails.substitute(
+                    merge_context, message_template.subject
+                )
+                initial["content"] = emails.substitute(
+                    merge_context, message_template.content
+                )
+            else:
+                initial["subject"] = message_template.subject
+                initial["content"] = message_template.content
+
+        email_form = forms.SendEmailForm(initial=initial)
+        email_recipients_form = forms.SendEmailRecipientsForm(
+            member_queryset,
+            initial={"recipients": member_queryset},
+        )
+        if member_queryset.count() == 1:
+            email_recipients_form.fields["recipients"].disabled = True
+
         return render(
             request,
             "stave/send_email.html",
@@ -1525,6 +1561,7 @@ class SendEmailView(LoginRequiredMixin, views.View):
                     application_form=application_form,
                     merge_fields=merge_context.get_merge_fields(),
                     redirect_url=request.GET.get("redirect_url"),
+                    recipient_count=member_queryset.count(),
                 )
             ),
         )
@@ -1555,9 +1592,7 @@ class SendEmailView(LoginRequiredMixin, views.View):
             application_form.get_user_queryset_for_context_type(email_type),
             data=request.POST,
         )
-        # FIXME: validate selection
 
-        # FIXME failure path
         if email_form.is_valid() and email_recipients_form.is_valid():
             # Construct and render the template and persist a Message for each user.
             content: str = email_form.cleaned_data["content"]
@@ -1576,11 +1611,13 @@ class SendEmailView(LoginRequiredMixin, views.View):
                         application, request.user, email_type, subject, content
                     )
 
-        messages.info(request, gettext_lazy("Your emails are being sent"))
-        redirect_url = request.POST.get("redirect_url")
-        if redirect_url and url_has_allowed_host_and_scheme(
-            redirect_url, settings.ALLOWED_HOSTS
-        ):
-            return HttpResponseRedirect(redirect_url)
+            messages.info(request, gettext_lazy("Your emails are being sent"))
+            redirect_url = request.POST.get("redirect_url")
+            if redirect_url and url_has_allowed_host_and_scheme(
+                redirect_url, settings.ALLOWED_HOSTS
+            ):
+                return HttpResponseRedirect(redirect_url)
 
-        return HttpResponseRedirect(event.get_absolute_url())
+        # Reconstructing the original context to allow us to render the form
+        # with errors is kind of gnarly - just redirect back to Send Email.
+        return HttpResponseRedirect(request.path)

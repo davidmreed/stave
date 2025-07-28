@@ -5,7 +5,15 @@
     <small style="text-align: center;">Managing <a href="{{ form.event.get_absolute_url }}">{{ form }}</a></small>
 </header>
 
-<nav>
+<nav style="font-size: 120%;">
+    {% with url=form.get_edit_url %}
+    {% if request.path == url %}
+    <strong>Form</strong>
+    {% else %}
+    <a href="{{ url }}">Form</a>
+    {% endif %}
+    {% endwith %}
+
     {% with url=form.get_application_list_url %}
     {% if request.path == url %}
     <strong>Applications</strong>
@@ -27,14 +35,6 @@
     <strong>Comm Center</strong>
     {% else %}
     <a href="{{ url }}">Comm Center</a>
-    {% endif %}
-    {% endwith %}
-
-    {% with url=form.get_staffing_list_url %}
-    {% if request.path == url %}
-    <strong>Staff List</strong>
-    {% else %}
-    <a href="{{ url }}">Staff List</a>
     {% endif %}
     {% endwith %}
 </nav>

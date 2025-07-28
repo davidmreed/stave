@@ -1,10 +1,10 @@
 {% extends "base.html" %}
+{% load stave_tags %}
+{% inputs 'StaffListInputs' %}
 
 {% block content %}
 <header>
-    <h1>Staff for <a href="{{ event.get_absolute_url }}">{{ event }}</a></h1>
-</header>
-
+    <h1>Staff List for <a href="{{ event.get_absolute_url }}">{{ event.name }}</a></h1>
 <table>
     <thead>
         <tr>

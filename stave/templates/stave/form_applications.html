@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% load stave_tags %}
-{% load partials %}
 
 {% block breadcrumbs %}
 {% include "stave/partials/staffing_header.html" with form=form request=request only %}
@@ -12,7 +11,32 @@
 {% csrf_token %}
 <input type="hidden" name="redirect_url" id="redirect_url" value="{{ request.path }}">
 
-{% partialdef application-table %}
+<details>
+    <summary>How to use this page</summary>
+{% if form.application_kind == form.ApplicationKind.CONFIRM_THEN_ASSIGN %}
+<p>This application form is using the Confirm, then Assign model.
+
+<ol>
+    <li>Mark applications for Invitation or Rejection here as you make decisions.</li>
+    <li>Draft your crews in Crew Builder. As you add users to crews, they'll automatically be marked for invitation.</li>
+    <li>Send invitations and rejections from Comm Center.</li>
+    <li>Users confirm or decline their invitations via email. You'll see their status here as they update.</li>
+    <li>Once you finish your crews in Crew Builder, send assignments from Comm Center.</li>
+</ol>
+</p>
+{% else %}
+<p>This application form is using the Confirm Only model.
+
+<ol>
+    <li>Browse available applications here. You can choose to mark applications Rejected to hide them in Crew Builder. This won't send any emails yet.</li>
+    <li>Use Crew Builder to make assignments.</li>
+    <li>Once you finish your crews in Crew Builder, send assignments and rejections from Comm Center.</li>
+</ol>
+</p>
+{% endif %}
+</details>
+
+
 <table>
     {% include 'stave/partials/application_table_header.html' with form=form only %}
     <tbody>
@@ -23,92 +47,10 @@
             </td>
             {% include 'stave/partials/application_table_row.html' with form=form application=application only %}
         </tr>
+        {% empty %}
+        <caption>This form has not received any applications yet.</caption>
         {% endfor %}
     </tbody>
 </table>
-{% endpartialdef application-table %}
-
-<header>
-<h2>Applications</h2>
-</header>
-
-{% if not applications %}
-This form has not received any applications yet.
-{% endif %}
-
-<details>
-    <summary>How to use this page</summary>
-{% if form.application_kind == form.ApplicationKind.CONFIRM_THEN_ASSIGN %}
-<p>This application form is using the Confirm, then Assign model.
-
-<ol>
-    <li>Mark the application Invited here.</li>
-    <li>When you're ready to send invitations, click Send Emails here.</li>
-    <li>Users confirm or decline their invitations via email. You'll see their status here as they update.</li>
-    <li>Use Crew Builder to make assignments. You can select users who've confirmed their invitations.</li>
-    <li>When you're ready to send out a schedule, click Send Schedule Emails in Crew Builder.</li>
-</ol>
-</p>
-{% else %}
-<p>This application form is using the Confirm Only model.
-
-<ol>
-    <li>Browse available applications here. You can choose to mark applications Rejected to hide them in Crew Builder. This won't send any emails yet.</li>
-    <li>Use Crew Builder to make assignments. You can select users whose applications are in Applied status.</li>
-    <li>When you're ready to send out a schedule, click Send Schedule Emails in Crew Builder.</li>
-</ol>
-</p>
-{% endif %}
-</details>
-
-{% if invited_unsent_count and form.application_kind == form.ApplicationKind.CONFIRM_THEN_ASSIGN %}
-<div style="text-align: center; width: 100%">
-{{ invited_unsent_count }} need email invitations sent.
-<a role="button" href="{% url 'send-email' form.event.league.slug form.event.slug form.slug 'invitation' %}{% querystring redirect_url=request.path %}">Send Emails</a>
-</div>
-{% endif %}
-
-{% with applications|get:ApplicationStatus.APPLIED as applications %}
-{% if applications %}
-<h3>Applied ({{ applications|length }})</h3>
-{% partial application-table %}
-{% endif %}
-{% endwith %}
-
-{% with applications|get:ApplicationStatus.INVITED as applications %}
-{% if applications %}
-<h3>Invited ({{ applications|length }})</h3>
-{% partial application-table %}
-{% endif %}
-{% endwith %}
-
-{% with applications|get:ApplicationStatus.CONFIRMED as applications %}
-{% if applications %}
-<h3>Confirmed ({{ applications|length }})</h3>
-{% partial application-table %}
-{% endif %}
-{% endwith %}
-
-{% with applications|get:ApplicationStatus.DECLINED as applications %}
-{% if applications %}
-<h3>Declined ({{ applications|length }})</h3>
-{% partial application-table %}
-{% endif %}
-{% endwith %}
-
-{% with applications|get:ApplicationStatus.REJECTED as applications %}
-{% if applications %}
-<h3>Rejected ({{ applications|length }})</h3>
-{% partial application-table %}
-{% endif %}
-{% endwith %}
-
-{% with applications|get:ApplicationStatus.WITHDRAWN as applications %}
-{% if applications %}
-<h3>Withdrawn ({{ applications|length }})</h3>
-{% partial application-table %}
-{% endif %}
-{% endwith %}
-</form>
 {% endwith %}
 {% endblock %}

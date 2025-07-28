@@ -17,7 +17,7 @@
     {{ email_recipients_form }}
     {{ email_form }}
 
-    <input type="submit" value="Send">
+    <input type="submit" value="Send" {% if recipient_count == 0 %} disabled {% endif %}>
 </form>
 <details style="flex: 1 1 25%; box-sizing: border-box;">
     <summary>Merge Fields</summary>

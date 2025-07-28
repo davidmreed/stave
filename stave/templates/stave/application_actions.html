@@ -26,14 +26,12 @@
     {% if application.form.invitation_email_template %}
     <input type="hidden" value="{{ application.user_id }}" name="recipient">
     <input type="hidden" value="invitation" name="type">
-    <input type="hidden" value="{{ request.path }}" name="redirect_url">
     <input type="submit"
-           formaction="{% url 'comm-center' application.form.event.league.slug application.form.event.slug application.form.slug %}"
+           formaction="{% url 'form-comms' application.form.event.league.slug application.form.event.slug application.form.slug %}{% querystring redirect_url=request.path %}"
            value="Send Invitation Now"
     >
     {% endif %}
-    {# FIXME: do the other actions #}
-    <a role="button" href="{% url 'send-email' application.form.event.league.slug application.form.event.slug application.form.slug 'invitation'%}{% querystring recipient=application.user_id %}">Customize Invitation Now</a>
+    <a role="button" href="{% url 'send-email' application.form.event.league.slug application.form.event.slug application.form.slug 'invitation'%}{% querystring recipient=application.user_id redirect_url=request.path %}">Customize Invitation Now</a>
     {% endif %}
     {% if application.ApplicationStatus.REJECTION_PENDING in states %}
     <input type="submit"
@@ -42,10 +40,15 @@
     >
     {% endif %}
     {% if application.ApplicationStatus.REJECTED in states and application.status == application.ApplicationStatus.REJECTION_PENDING %}
+    {% if application.form.rejection_email_template %}
+    <input type="hidden" value="{{ application.user_id }}" name="recipient">
+    <input type="hidden" value="rejection" name="type">
     <input type="submit"
-           formaction="FIXME"
+           formaction="{% url 'form-comms' application.form.event.league.slug application.form.event.slug application.form.slug %}{% querystring redirect_url=request.path %}"
            value="Send Rejection Now"
     >
+    {% endif %}
+    <a role="button" href="{% url 'send-email' application.form.event.league.slug application.form.event.slug application.form.slug 'rejection'%}{% querystring recipient=application.user_id redirect_url=request.path %}">Customize Rejection Now</a>
     {% endif %}
     {% if application.ApplicationStatus.CONFIRMED in states %}
     <input type="submit"
@@ -66,10 +69,15 @@
     >
     {% endif %}
     {% if application.ApplicationStatus.ASSIGNED in states and application.status == application.ApplicationStatus.ASSIGNMENT_PENDING %}
+    {% if application.form.schedule_email_template %}
+    <input type="hidden" value="{{ application.user_id }}" name="recipient">
+    <input type="hidden" value="schedule" name="type">
     <input type="submit"
-           formaction="FIXME"
-           value="Send Schedule Now"
+           formaction="{% url 'form-comms' application.form.event.league.slug application.form.event.slug application.form.slug %}{% querystring redirect_url=request.path %}"
+           value="Send Assignments Now"
     >
+    {% endif %}
+    <a role="button" href="{% url 'send-email' application.form.event.league.slug application.form.event.slug application.form.slug 'schedule'%}{% querystring recipient=application.user_id redirect_url=request.path %}">Customize Assignments Now</a>
     {% endif %}
     {% endwith %}
 </div>

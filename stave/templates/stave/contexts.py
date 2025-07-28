@@ -85,9 +85,8 @@ class ViewApplicationContext:
 @dataclass
 class FormApplicationsInputs:
     form: models.ApplicationForm
-    applications: dict[models.ApplicationStatus, list[models.Application]]
+    applications: QuerySet[models.Application]
     ApplicationStatus: type
-    invited_unsent_count: int
 
 
 @dataclass
@@ -98,6 +97,7 @@ class SendEmailInputs:
     email_recipients_form: forms.SendEmailRecipientsForm
     redirect_url: str | None
     merge_fields: list[models.MergeField]
+    recipient_count: int
 
 
 @dataclass

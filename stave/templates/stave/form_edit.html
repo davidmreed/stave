@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% if form.instance %}
+{% include 'stave/partials/staffing_header.html' with form=form.instance request=request only %}
+{% endif %}
 <header>
     <h1>Application Form for {{ event }}</h1>
 </header>
