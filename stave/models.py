@@ -393,8 +393,8 @@ class EventTemplate(models.Model):
             # GameTemplates do not have required start and end times, but Games do.
             # This is only an issue when we clone non-interactively.
             values = {"event": new_object, "order_key": i + 1}
-            if this_game_kwargs := game_kwargs.get(i):
-                values.update(this_game_kwargs)
+            if i < len(game_kwargs):
+                values.update(game_kwargs[i])
             _ = game_template.clone(**values)
 
         for application_form_template in self.application_form_templates.all():
@@ -463,20 +463,23 @@ class GameTemplate(models.Model):
 
     def clone(self, event: "Event", **kwargs) -> "Game":
         timezone = ZoneInfo(event.league.time_zone)
-        new_object = Game.objects.create(
-            event=event,
-            start_time=datetime.combine(
+        values = {
+            "event": event,
+        }
+        if self.start_time:
+            values["start_time"] = datetime.combine(
                 event.start_date + timedelta(days=self.day - 1),
                 self.start_time,
                 tzinfo=timezone,
-            ),
-            end_time=datetime.combine(
+            )
+        if self.end_time:
+            values["end_time"] = datetime.combine(
                 event.start_date + timedelta(days=self.day - 1),
                 self.end_time,
                 tzinfo=timezone,
-            ),
-            **kwargs,
-        )
+            )
+        values.update(kwargs)
+        new_object = Game.objects.create(**values)
 
         # Copy Role Group assignments
         for role_group in self.role_groups.filter(event_only=False):
