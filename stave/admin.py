@@ -24,17 +24,17 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(models.EventTemplate)
 class EventTemplateAdmin(admin.ModelAdmin):
-    list_display = ("league", "league_template", "name")
+    list_display = ("name", "league", "league_template")
 
 
 @admin.register(models.ApplicationFormTemplate)
 class ApplicationFormTemplateAdmin(admin.ModelAdmin):
-    list_display = ("league", "league_template", "name")
+    list_display = ("name", "league", "league_template")
 
 
 @admin.register(models.MessageTemplate)
 class MessageTemplateAdmin(admin.ModelAdmin):
-    list_display = ("league", "league_template", "name", "subject")
+    list_display = ("name", "league", "league_template", "subject")
 
 
 for model in [
