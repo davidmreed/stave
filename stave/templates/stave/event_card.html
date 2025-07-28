@@ -87,6 +87,7 @@
     {% if can_manage_this_event %}
     <a href="{% url 'form-applications' event.league.slug event.slug form.slug %}">Applications</a>
     <a href="{% url 'crew-builder' event.league.slug event.slug form.slug %}">Crew Builder</a>
+    <a href="{% url 'form-comms' event.league.slug event.slug form.slug %}">Comm Center</a>
     {% if can_manage_this_event or is_staffed_on_event %}
     <a href="{{ form.get_schedule_url }}">Staffing Schedule</a>
     {% endif %}
