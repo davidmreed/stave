@@ -22,9 +22,15 @@ class UserAdmin(admin.ModelAdmin):
     list_display = ("preferred_name", "email")
 
 
+class ApplicationFormTemplateInline(admin.TabularInline):
+    model = models.EventTemplate.application_form_templates.through
+    list_display = ("name",)
+
+
 @admin.register(models.EventTemplate)
 class EventTemplateAdmin(admin.ModelAdmin):
     list_display = ("name", "league", "league_template")
+    inlines = [ApplicationFormTemplateInline]
 
 
 @admin.register(models.ApplicationFormTemplate)
