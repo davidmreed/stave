@@ -22,12 +22,26 @@ class UserAdmin(admin.ModelAdmin):
     list_display = ("preferred_name", "email")
 
 
+@admin.register(models.EventTemplate)
+class EventTemplateAdmin(admin.ModelAdmin):
+    list_display = ("league", "league_template", "name")
+
+
+@admin.register(models.ApplicationFormTemplate)
+class ApplicationFormTemplateAdmin(admin.ModelAdmin):
+    list_display = ("league", "league_template", "name")
+
+
+@admin.register(models.MessageTemplate)
+class MessageTemplateAdmin(admin.ModelAdmin):
+    list_display = ("league", "league_template", "name", "subject")
+
+
 for model in [
     models.League,
     models.Event,
     models.Game,
     models.ApplicationForm,
-    models.ApplicationFormTemplate,
     models.Role,
     models.Question,
     models.RoleGroup,
@@ -35,9 +49,7 @@ for model in [
     models.ApplicationResponse,
     models.CrewAssignment,
     models.Message,
-    models.MessageTemplate,
     models.LeagueTemplate,
-    models.EventTemplate,
     models.LeagueUserPermission,
 ]:
     admin.site.register(model)
