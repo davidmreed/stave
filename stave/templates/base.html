@@ -4,7 +4,7 @@
     <head>
         <link
             rel="stylesheet"
-            href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.amber.min.css"
+            href="{% static 'pico.amber.min.css' %}"
         >
         <link rel="stylesheet" href="{% static 'stave.css' %}">
         <meta charset="utf-8">
@@ -14,7 +14,7 @@
         {% block resources %}{% endblock %}
     </head>
     <body>
-    <header>
+    <header class="container">
         <nav>
             <div>
             <ul>
@@ -38,7 +38,7 @@
             </div>
         </nav>
     </header>
-    <main>
+    <main class="container">
         {% if messages %}
         <ul class="messages">
         {% for message in messages %}
@@ -49,6 +49,6 @@
         {% block breadcrumbs %}{% endblock %}
         {% block content %}{% endblock %}
     </main>
-    <footer><small>Stave &copy; 2025 <a href="https://ktema.org">David "Stacktrace" Reed</a>. <a href="https://github.com/davidmreed/stave">Free and open source</a> for the roller derby community. <a href="{% url 'about' %}">About</a> <a href="{% url 'privacy-policy' %}">Privacy</a></small></footer>
+    <footer class="container"><small>Stave &copy; 2025 <a href="https://ktema.org">David "Stacktrace" Reed</a>. <a href="https://github.com/davidmreed/stave">Free and open source</a> for the roller derby community. <a href="{% url 'about' %}">About</a> <a href="{% url 'privacy-policy' %}">Privacy</a></small></footer>
     </body>
 </html>

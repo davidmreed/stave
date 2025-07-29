@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load stave_tags %}
-
+{% load partials %}
 {% block breadcrumbs %}
 {% include "stave/partials/staffing_header.html" with form=form request=request only %}
 {% endblock %}
@@ -19,8 +19,8 @@
 <ol>
     <li>Mark applications for Invitation or Rejection here as you make decisions.</li>
     <li>Draft your crews in Crew Builder. As you add users to crews, they'll automatically be marked for invitation.</li>
-    <li>Send invitations and rejections from Comm Center.</li>
-    <li>Users confirm or decline their invitations via email. You'll see their status here as they update.</li>
+    <li>Send invitation and rejection emails from Comm Center.</li>
+    <li>Users confirm or decline their invitations. You'll see their status here as they update. Stave will automatically remove users who decline their invitations from Crew Builder.</li>
     <li>Once you finish your crews in Crew Builder, send assignments from Comm Center.</li>
 </ol>
 </p>
@@ -36,20 +36,60 @@
 {% endif %}
 </details>
 
-
-<table>
-    {% include 'stave/partials/application_table_header.html' with form=form only %}
-    <tbody>
+{% partialdef application-table %}
         {% for application in applications %}
         <tr>
-            <td>
-                {% include "stave/application_actions.html" with user=request.user can_manage_event=can_manage_event application=application ApplicationStatus=ApplicationStatus include_view=True only %}
+            <td class="horiz">
+                {% include "stave/application_actions.html" with user=request.user can_manage_event=can_manage_event application=application ApplicationStatus=ApplicationStatus include_view=True minimal=True only %}
             </td>
             {% include 'stave/partials/application_table_row.html' with form=form application=application only %}
         </tr>
         {% empty %}
-        <caption>This form has not received any applications yet.</caption>
+        <caption>No applications in this category.</caption>
         {% endfor %}
+{% endpartialdef %}
+
+<table>
+    {% include "stave/partials/application_table_header.html" with form=form only %}
+    <thead>
+        <tr>
+            <th scope="rowgroup" colspan="999" style="text-align: center;"><strong>Open</strong></th>
+        </tr>
+    <thead>
+    <tbody>
+        {% with applications_action as applications %}
+        {% partial application-table %}
+        {% endwith %}
+    </tbody>
+    <thead>
+        <tr>
+            <th scope="rowgroup" colspan="999" style="text-align: center;"><strong>In Progress</strong></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% with applications_inprogress as applications %}
+        {% partial application-table %}
+        {% endwith %}
+    </tbody>
+    <thead>
+        <tr>
+            <th scope="rowgroup" colspan="999" style="text-align: center;"><strong>Staffed</strong></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% with applications_staffed as applications %}
+        {% partial application-table %}
+        {% endwith %}
+    </tbody>
+    <thead>
+        <tr>
+            <th scope="rowgroup" colspan="999" style="text-align: center;"><strong>Closed</strong></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% with applications_closed as applications %}
+        {% partial application-table %}
+        {% endwith %}
     </tbody>
 </table>
 {% endwith %}

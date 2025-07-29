@@ -48,10 +48,6 @@ a[role=button] {
     font-weight: bold;
 }
 
-main a:not([role])::after {
-    content: ' ⇨';
-}
-
 body header nav {
     border-bottom: 0.25rem solid var(--pico-primary);
 }

@@ -10,7 +10,7 @@
         <a role="button" href="{% url 'update-application' application.id %}">Edit Application</a>
     {% endif %}
     {% with states=application|get_legal_state_changes:user %}
-    {% if application.ApplicationStatus.APPLIED in states %}
+    {% if application.ApplicationStatus.APPLIED in states and not minimal %}
     <input type="submit"
            formaction="{% url 'application-status' application.id application.ApplicationStatus.APPLIED %}"
            value="Send Back to Applied"
@@ -19,10 +19,14 @@
     {% if application.ApplicationStatus.INVITATION_PENDING in states %}
     <input type="submit"
            formaction="{% url 'application-status' application.id application.ApplicationStatus.INVITATION_PENDING %}"
+           {% if minimal %}
+           value="✉️" title="Mark for Invitation"
+           {% else %}
            value="Mark for Invitation"
+           {% endif %}
     >
     {% endif %}
-    {% if application.ApplicationStatus.INVITED in states and application.status == application.ApplicationStatus.INVITATION_PENDING %}
+    {% if application.ApplicationStatus.INVITED in states and application.status == application.ApplicationStatus.INVITATION_PENDING and not minimal %}
     {% if application.form.invitation_email_template %}
     <input type="hidden" value="{{ application.user_id }}" name="recipient">
     <input type="hidden" value="invitation" name="type">
@@ -36,10 +40,14 @@
     {% if application.ApplicationStatus.REJECTION_PENDING in states %}
     <input type="submit"
            formaction="{% url 'application-status' application.id application.ApplicationStatus.REJECTION_PENDING %}"
+           {% if minimal %}
+           value="❌" title="Mark for Rejection"
+           {% else %}
            value="Mark for Rejection"
+           {% endif %}
     >
     {% endif %}
-    {% if application.ApplicationStatus.REJECTED in states and application.status == application.ApplicationStatus.REJECTION_PENDING %}
+    {% if application.ApplicationStatus.REJECTED in states and application.status == application.ApplicationStatus.REJECTION_PENDING and not minimal %}
     {% if application.form.rejection_email_template %}
     <input type="hidden" value="{{ application.user_id }}" name="recipient">
     <input type="hidden" value="rejection" name="type">
@@ -50,25 +58,25 @@
     {% endif %}
     <a role="button" href="{% url 'send-email' application.form.event.league.slug application.form.event.slug application.form.slug 'rejection'%}{% querystring recipient=application.user_id redirect_url=request.path %}">Customize Rejection Now</a>
     {% endif %}
-    {% if application.ApplicationStatus.CONFIRMED in states %}
+    {% if application.ApplicationStatus.CONFIRMED in states and not minimal %}
     <input type="submit"
            formaction="{% url 'application-status' application.id application.ApplicationStatus.CONFIRMED %}"
            value="Confirm"
     >
     {% endif %}
-    {% if application.ApplicationStatus.DECLINED in states %}
+    {% if application.ApplicationStatus.DECLINED in states and not minimal %}
     <input type="submit"
            formaction="{% url 'application-status' application.id application.ApplicationStatus.DECLINED %}"
            value="Decline"
     >
     {% endif %}
-    {% if application.ApplicationStatus.WITHDRAWN in states %}
+    {% if application.ApplicationStatus.WITHDRAWN in states and not minimal %}
     <input type="submit"
            formaction="{% url 'application-status' application.id application.ApplicationStatus.WITHDRAWN %}"
            value="Withdraw"
     >
     {% endif %}
-    {% if application.ApplicationStatus.ASSIGNED in states and application.status == application.ApplicationStatus.ASSIGNMENT_PENDING %}
+    {% if application.ApplicationStatus.ASSIGNED in states and application.status == application.ApplicationStatus.ASSIGNMENT_PENDING and not minimal %}
     {% if application.form.schedule_email_template %}
     <input type="hidden" value="{{ application.user_id }}" name="recipient">
     <input type="hidden" value="schedule" name="type">

@@ -1,9 +1,18 @@
 {% load stave_tags %}
 {% inputs 'CrewEditorInputs' %}
 
+<style type="text/css">
+td input, td a[role="button"] {
+    margin: 0 !important;
+    padding-left: 0.1rem !important;
+    padding-right: 0.1rem !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+</style>
 <table>
 <thead>
-    <th>Role Name</th>
+    <th>Role</th>
     <th>Assignment</th>
     {% if editable %}
     <th>Actions</th>
@@ -30,23 +39,29 @@
     </td>
     {% endwith %}
     {% if editable %}
-    <td>
+    <td class="horiz">
+        <small>
         {% with assignment=crew_assignments|get:role.id %}
-        <a href="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug crew.id role.id %}">
-            {% if assignment %}{% if assignment.crew.id == crew.id %}Reassign{% else %}Override{% endif %}{% else %}Assign{% endif %}
-        </a>
         {# You cannot clear an assignment if it's provided by an assigned crew #}
         {% if assignment and assignment.crew.id == crew.id %}
         <form class="inline"
               action="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug crew.id role.id %}"
               method="POST">
+        <a role="button" class="outline" href="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug crew.id role.id %}">
+            {% if assignment %}{% if assignment.crew.id == crew.id %}<abbr title="Reassign">🔄</abbr>{% else %}Override{% endif %}{% else %}<abbr title="Assign">🔍</abbr>{% endif %}
+        </a>
             <input type="hidden" value="{{ crew.id }}" id="crew_id" name="crew_id">
             <input type="hidden" value="" id="application_id" name="application_id">
-            <input type="submit" value="Clear">
+            <input type="submit" class="outline" value="❌" title="Clear">
             {% csrf_token %}
         </form>
+        {% else %}
+        <a role="button" class="outline" href="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug crew.id role.id %}">
+            {% if assignment %}{% if assignment.crew.id == crew.id %}<abbr title="Reassign">🔄</abbr>{% else %}<abbr title="Override">⬇️</abbr>{% endif %}{% else %}<abbr title="Assign">🔍</abbr>{% endif %}
+        </a>
         {% endif %}
         {% endwith %}
+        </small>
     </td>
     {% endif %}
 </tr>

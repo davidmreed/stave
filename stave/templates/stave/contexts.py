@@ -20,6 +20,7 @@ class ApplicationActionsInputs:
     application: models.Application
     ApplicationStatus: type
     include_view: bool
+    minimal: bool = False
 
 
 @dataclass
@@ -85,7 +86,10 @@ class ViewApplicationContext:
 @dataclass
 class FormApplicationsInputs:
     form: models.ApplicationForm
-    applications: QuerySet[models.Application]
+    applications_action: QuerySet[models.Application]
+    applications_inprogress: QuerySet[models.Application]
+    applications_staffed: QuerySet[models.Application]
+    applications_closed: QuerySet[models.Application]
     ApplicationStatus: type
 
 
