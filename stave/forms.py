@@ -23,7 +23,9 @@ class GameModelChoiceField(forms.ModelMultipleChoiceField):
         end_time = formats.localize(
             obj.end_time.astimezone(timezone).time(), use_l10n=True
         )
-        start_date = formats.localize(obj.start_time.date(), use_l10n=True)
+        start_date = formats.localize(
+            obj.start_time.astimezone(timezone).date(), use_l10n=True
+        )
 
         if multi_day:
             date = f"{start_date}, {start_time}–{end_time}"
