@@ -1372,7 +1372,7 @@ class ApplicationFormView(views.View):
             app = form.save()
             # Send the user an acknowledgement email.
             context = models.MergeContext(
-                app, app_form, app_form.event, app_form.event.league, request.user
+                app, app_form, app_form.event, app_form.event.league, request.user, None
             )
             emails.send_message(
                 app,
