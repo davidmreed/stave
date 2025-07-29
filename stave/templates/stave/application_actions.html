@@ -20,7 +20,7 @@
     <input type="submit"
            formaction="{% url 'application-status' application.id application.ApplicationStatus.INVITATION_PENDING %}"
            {% if minimal %}
-           value="✉️" title="Mark for Invitation"
+           value="✉️" title="Mark for Invitation" class="icon-button"
            {% else %}
            value="Mark for Invitation"
            {% endif %}
@@ -41,7 +41,7 @@
     <input type="submit"
            formaction="{% url 'application-status' application.id application.ApplicationStatus.REJECTION_PENDING %}"
            {% if minimal %}
-           value="❌" title="Mark for Rejection"
+           value="❌" title="Mark for Rejection" class="icon-button"
            {% else %}
            value="Mark for Rejection"
            {% endif %}

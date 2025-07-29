@@ -30,22 +30,22 @@ a[role=button] {
     width: 100%;
 }
 
-.horiz input, .horiz a[role=button], header input, header a[role=button] {
+.inline input, .inline a[role=button], header input, header a[role=button] {
     width: auto;
-    padding: 0.25rem;
-    margin-left:0.25rem;
-    align-content: center;
-    height: 80%;
+    margin: 0.25rem;
+    padding: 0.125rem;
     vertical-align: middle;
     font-weight: bold;
+    display: inline-block !important;
+    text-decoration: none;
+    height: 80%;
 }
 
-.inline input, .inline a[role=button] {
-    padding: 0.25rem;
-    align-content: center;
-    height: 80%;
-    vertical-align: middle;
-    font-weight: bold;
+.icon-button {
+    height: 1.5rem !important;
+    width: 1.5rem !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 body header nav {

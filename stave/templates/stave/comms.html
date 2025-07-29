@@ -9,7 +9,7 @@
     <h2>Send Staff Email</h2>
 </header>
 <p>Staff emails go to crew members who have already received assignment emails. Sending staff emails will not update the application status.</p>
-<div class="horiz">
+<div class="inline">
     <a role="button" href="{% url 'send-email' application_form.event.league.slug application_form.event.slug application_form.slug 'crew' %}{% querystring redirect_url=request.path %}">Customize Emails</a>
 </div>
 
@@ -18,7 +18,7 @@
     <h2>Pending Invitation Emails ({{ pending_invitation|length }})</h2>
 </header>
 <p>Sending invitation emails will update the application status to Invited and allow users to Confirm or Decline their invitations.</p>
-<div class="horiz">
+<div class="inline">
     <form action="{{ request.path }}" method="POST">
         {% csrf_token %}
         <input type="hidden" id="type" name="type" value="invitation">
@@ -34,7 +34,7 @@
     <h2>Pending Rejection Emails ({{ pending_rejection|length }})</h2>
 </header>
 <p>Sending rejection emails will update the application status to Rejected.</p>
-<div class="horiz">
+<div class="inline">
 <form action="{{ request.path }}" method="POST">
     {% csrf_token %}
     <input type="hidden" id="type" name="type" value="rejection">
@@ -50,7 +50,7 @@
     <h2>Pending Assignment Emails ({{ pending_assignment|length }})</h2>
 </header>
 <p>Sending assignment emails will update the application status to Assigned.</p>
-<div class="horiz">
+<div class="inline">
 <form action="{{ request.path }}" method="POST">
     {% csrf_token %}
     <input type="hidden" id="type" name="type" value="schedule">

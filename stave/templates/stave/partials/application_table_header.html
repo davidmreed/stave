@@ -3,7 +3,7 @@
 {% inputs 'ApplicationTableInputs' %}
 
 <thead>
-    <th style="width: 25%;">Action</th>
+    <th>Action</th>
     <th>Status</th>
     {# Profile fields #}
     {% for field in form.requires_profile_fields %}
@@ -16,6 +16,6 @@
     {# Availability #}
     {# Application questions #}
     {% for question in form.form_questions.all %}
-    <th>{{ question.content }}</th>
+    <th><small>{{ question.content }}</small></th>
     {% endfor %}
 </thead>
