@@ -1,18 +1,20 @@
 {% load stave_tags %}
 {% inputs 'ApplicationTableRowInputs' %}
-    <td>{{ application.get_status_display }}</td>
+<td><small>{{ application.get_status_display }}</small></td>
 {# Profile fields #}
 {% for field in application.form.requires_profile_fields %}
-    <td>{{ application.get_user_data|get:field }}</td>
+<td><small>{{ application.get_user_data|get:field }}</small></td>
 {% endfor %}
 {# Roles #}
 {% for role_group in application.form.role_groups.all %}
     <td>
+        <small>
         {% for role in application.roles.all %}
             {% if role.role_group_id == role_group.id %}
                 {{ role }}
             {% endif %}
             {% endfor %}
+        </small>
     </td>
 {% endfor %}
 {# Availability TODO #}
@@ -20,7 +22,9 @@
 {% for question in form.form_questions.all %}
     {% with application.responses_by_question|get:question.id as response %}
         <td>
+            <small>
             {{ response }}
+            </small>
         </td>
     {% endwith %}
 {% endfor %}

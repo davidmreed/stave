@@ -1,6 +1,7 @@
 {% load stave_tags %}
 {% inputs 'StaffingHeaderInputs' %}
 
+{% if form.event %}
 <header>
     <small style="text-align: center;">Managing <a href="{{ form.event.get_absolute_url }}">{{ form }}</a></small>
 </header>
@@ -38,3 +39,4 @@
     {% endif %}
     {% endwith %}
 </nav>
+{% endif %}

@@ -802,7 +802,30 @@ class FormApplicationsView(
 
         return contexts.FormApplicationsInputs(
             form=form,
-            applications=form.applications.all(),
+            applications_action=form.applications.filter(
+                status__in=[
+                    models.ApplicationStatus.APPLIED,
+                ]
+            ),
+            applications_inprogress=form.applications.filter(
+                status__in=[
+                    models.ApplicationStatus.ASSIGNMENT_PENDING,
+                    models.ApplicationStatus.INVITATION_PENDING,
+                    models.ApplicationStatus.INVITED,
+                    models.ApplicationStatus.CONFIRMED,
+                ]
+            ),
+            applications_staffed=form.applications.filter(
+                status=models.ApplicationStatus.ASSIGNED
+            ),
+            applications_closed=form.applications.filter(
+                status__in=[
+                    models.ApplicationStatus.REJECTED,
+                    models.ApplicationStatus.REJECTION_PENDING,
+                    models.ApplicationStatus.DECLINED,
+                    models.ApplicationStatus.WITHDRAWN,
+                ]
+            ),
             ApplicationStatus=models.ApplicationStatus,
         )
 

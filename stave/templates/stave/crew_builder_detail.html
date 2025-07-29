@@ -10,6 +10,7 @@
     </h1>
 </header>
 
+<div style="overflow-x: auto;">
 <table>
     {% include 'stave/partials/application_table_header.html' with form=form only %}
     <tbody>
@@ -33,5 +34,6 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 
 {% endblock %}
