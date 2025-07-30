@@ -49,7 +49,7 @@ class ScheduleManager:
                 Prefetch(
                     "games",
                     queryset=models.Game.objects.filter(role_groups__in=role_groups),
-                ),
+                ).distinct(),
                 Prefetch(
                     "games__role_group_crew_assignments",
                     queryset=models.RoleGroupCrewAssignment.objects.filter(
