@@ -23,7 +23,9 @@
         {% csrf_token %}
         <input type="hidden" id="type" name="type" value="invitation">
         <input type="hidden" name="redirect_url" value="{{ request.path }}">
+        {% if application_form.invitation_email_template %}
         <input type="submit" value="Send Email">
+        {% endif %}
         <a role="button" href="{% url 'send-email' application_form.event.league.slug application_form.event.slug application_form.slug 'invitation' %}{% querystring redirect_url=request.path %}">Customize Emails</a>
     </form>
 </div>
@@ -39,7 +41,9 @@
     {% csrf_token %}
     <input type="hidden" id="type" name="type" value="rejection">
     <input type="hidden" name="redirect_url" value="{{ request.path }}">
+    {% if application_form.rejection_email_template %}
     <input type="submit" value="Send Email" />
+    {% endif %}
     <a role="button" href="{% url 'send-email' application_form.event.league.slug application_form.event.slug application_form.slug 'rejection' %}{% querystring redirect_url=request.path %}">Customize Emails</a>
 </form>
 </div>
@@ -55,7 +59,9 @@
     {% csrf_token %}
     <input type="hidden" id="type" name="type" value="schedule">
     <input type="hidden" name="redirect_url" value="{{ request.path }}">
+    {% if application_form.schedule_email_template %}
     <input type="submit" value="Send Email" />
+    {% endif %}
     <a role="button" href="{% url 'send-email' application_form.event.league.slug application_form.event.slug application_form.slug 'schedule' %}{% querystring redirect_url=request.path %}">Customize Emails</a>
 </form>
 </div>

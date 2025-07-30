@@ -47,9 +47,14 @@ def send_message_from_messagetemplate(
     kind: models.SendEmailContextType,
 ):
     message_template = application.form.get_template_for_context_type(kind)
-    send_message(
-        application, sender, kind, message_template.subject, message_template.content
-    )
+    if message_template:
+        send_message(
+            application,
+            sender,
+            kind,
+            message_template.subject,
+            message_template.content,
+        )
 
 
 def send_message(
