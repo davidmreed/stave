@@ -370,7 +370,8 @@ class EventTemplate(models.Model):
         for game_template in self.game_templates.all():
             _ = game_template.clone_as_template(new_object, role_group_map)
 
-        # Application Form Templates are copied at the League Template level.
+        # Application Form Templates are copied at the League Template level
+        # and associated to EventTemplates.
 
         return new_object
 
@@ -978,7 +979,7 @@ class ApplicationFormTemplate(models.Model):
             "rejection_email_template": self.rejected_email_template,
             "event": event,
             "slug": slugify(
-                "apply-" + "-".join(rg.name for rg in self.role_groups.all())
+                "apply-" + "-".join(sorted(rg.name for rg in self.role_groups.all()))
             ),
         }
         values.update(kwargs)

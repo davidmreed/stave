@@ -145,9 +145,7 @@ class Command(BaseCommand):
                 )
 
         ## Create application forms for the tournament
-        app_form = models.ApplicationForm.objects.get(
-            event=tournament, slug="apply-nso-so"
-        )
+        app_form = tournament.application_forms.filter(slug="apply-nso-so").first()
         app_form.intro_text = "Join the best teams in the Belt! **For beltalowda!**"
         app_form.requires_profile_fields = ["preferred_name"]
         app_form.save()
@@ -257,20 +255,18 @@ class Command(BaseCommand):
                 }
             ],
         )
-        singleheader_app_form = models.ApplicationForm.objects.get(
-            event=singleheader,
+        singleheader_app_form = singleheader.application_forms.filter(
             slug="apply-nso-so",
-        )
+        ).first()
         singleheader_app_form.intro_text = (
             "Join the best teams in the Belt! **For beltalowda!**"
         )
         singleheader_app_form.requires_profile_fields = ["preferred_name"]
         singleheader_app_form.save()
 
-        doubleheader_app_form = models.ApplicationForm.objects.get(
-            event=doubleheader,
+        doubleheader_app_form = doubleheader.application_forms.filter(
             slug="apply-nso-so",
-        )
+        ).first()
         doubleheader_app_form.intro_text = (
             "Join the best teams in the Belt! **For beltalowda!**"
         )
