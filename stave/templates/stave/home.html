@@ -45,7 +45,23 @@ You don't have any open applications right now.
     </header>
 <ul>
 {% for event in events %}
-<li><a href="{% url 'event-detail' event.league.slug event.slug %}">{{ event }}</a></li>
+<li>
+    <a href="{% url 'event-detail' event.league.slug event.slug %}">
+        {{ event }}
+    </a>
+    <ul>
+    {% for application_form in event.application_forms.all %}
+    <li style="display: inline; margin-right: 1rem;"><strong>{{ application_form.role_group_names }}</strong>
+    {% if application_form.applications.open|length %}
+    <span class="cta">{{ application_form.applications.open|length }} open</span>
+    {% endif %}
+    {% if application_form.applications.pending|length %}
+    <span class="cta">{{ application_form.applications.pending|length }} pending</span>
+    {% endif %}
+    </li>
+    {% endfor %}
+    </ul>
+</li>
 {% empty %}
 You aren't managing any events.
 {% endfor %}

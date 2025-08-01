@@ -92,6 +92,13 @@ a {
     /* TODO: update template to just use <small> */
 }
 
+.cta {
+    border: 2px solid var(--pico-color);
+    padding: 0.25rem;
+    margin-right: 0.25rem;
+    border-radius: 6px;
+}
+
 .disabled-warning {
     border: 1px solid var(--pico-primary);
     border-radius: 4px;

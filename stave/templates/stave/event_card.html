@@ -77,7 +77,21 @@
     </header>
     {% for form in application_forms %}
     <header>
-        <h6>{{ form.role_groups.all|commalist }}</h6>
+        <h6>
+            {{ form.role_groups.all|commalist }}
+            {% if can_manage_this_event %}
+            {% if form.applications.open|length %}
+            <span class="cta">
+                <strong>{{ form.applications.open|length }}</strong> open
+            </span>
+            {% endif %}
+            {% if form.applications.pending %}
+            <span class="cta">
+                <strong> {{ form.applications.pending|length }}</strong> pending
+            </span>
+            {% endif %}
+            {% endif %}
+        </h6>
         {% if can_manage_this_event %}
         <a role="button" href="{% url 'form-update' event.league.slug event.slug form.slug %}">Edit</a>
         <a role="button" href="{% url 'form-delete' event.league.slug event.slug form.slug %}">Delete</a>

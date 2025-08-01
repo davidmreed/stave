@@ -1227,9 +1227,12 @@ class ApplicationForm(models.Model):
             role_groups__in=self.role_groups.all()
         ).distinct()
 
+    @property
+    def role_group_names(self) -> str:
+        return ", ".join([rg.name for rg in self.role_groups.all()])
+
     def __str__(self) -> str:
-        role_group_names = [rg.name for rg in self.role_groups.all()]
-        return f"{self.event.name} ({', '.join(role_group_names)})"
+        return f"{self.event.name} ({self.role_group_names})"
 
     def get_absolute_url(self) -> str:
         return reverse(
@@ -1409,6 +1412,45 @@ class ApplicationQuerySet(models.QuerySet["Application"]):
             # "availability_by_game",
             "roles",
             "roles__role_group",
+        )
+
+    def open(self):
+        return self.filter(
+            status__in=[
+                ApplicationStatus.APPLIED,
+            ]
+        )
+
+    def in_progress(self):
+        return self.filter(
+            status__in=[
+                ApplicationStatus.ASSIGNMENT_PENDING,
+                ApplicationStatus.INVITATION_PENDING,
+                ApplicationStatus.INVITED,
+                ApplicationStatus.CONFIRMED,
+            ]
+        )
+
+    def staffed(self):
+        return self.filter(status=ApplicationStatus.ASSIGNED)
+
+    def closed(self):
+        return self.filter(
+            status__in=[
+                ApplicationStatus.REJECTED,
+                ApplicationStatus.REJECTION_PENDING,
+                ApplicationStatus.DECLINED,
+                ApplicationStatus.WITHDRAWN,
+            ]
+        )
+
+    def pending(self):
+        return self.filter(
+            status__in=[
+                ApplicationStatus.INVITATION_PENDING,
+                ApplicationStatus.REJECTION_PENDING,
+                ApplicationStatus.ASSIGNMENT_PENDING,
+            ]
         )
 
 
