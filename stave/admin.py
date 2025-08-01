@@ -27,10 +27,15 @@ class ApplicationFormTemplateInline(admin.TabularInline):
     list_display = ("name",)
 
 
+class GameTemplateInline(admin.TabularInline):
+    model = models.GameTemplate
+    list_display = ("name",)
+
+
 @admin.register(models.EventTemplate)
 class EventTemplateAdmin(admin.ModelAdmin):
     list_display = ("name", "league", "league_template")
-    inlines = [ApplicationFormTemplateInline]
+    inlines = [GameTemplateInline, ApplicationFormTemplateInline]
 
 
 @admin.register(models.ApplicationFormTemplate)
@@ -55,6 +60,7 @@ for model in [
     models.ApplicationResponse,
     models.CrewAssignment,
     models.Message,
+    models.GameTemplate,
     models.LeagueTemplate,
     models.LeagueUserPermission,
 ]:

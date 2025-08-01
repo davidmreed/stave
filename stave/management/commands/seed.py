@@ -222,7 +222,22 @@ class Command(BaseCommand):
                     "end_time": datetime.combine(
                         date(2218, 2, 28), time(12, 00), timezone
                     ),
-                }
+                },
+                {
+                    "name": "Game 2",
+                    "home_league": "Ceres Roller Derby",
+                    "home_team": "Nuggets",
+                    "visiting_league": "Ganymede",
+                    "visiting_team": "Sprouts",
+                    "association": models.GameAssociation.JRDA,
+                    "kind": models.GameKind.SANC,
+                    "start_time": datetime.combine(
+                        date(2218, 2, 28), time(14, 00), timezone
+                    ),
+                    "end_time": datetime.combine(
+                        date(2218, 2, 28), time(16, 00), timezone
+                    ),
+                },
             ],
         )
 
@@ -487,6 +502,42 @@ class Command(BaseCommand):
             ["red", "blue"],
             "navigation",
             "evil",
+        )
+
+        # Add some doubleheader applications
+        app = models.Application.objects.create(
+            form=doubleheader_app_form,
+            user=oksana,
+            status=models.ApplicationStatus.APPLIED,
+        )
+        app.availability_by_game.set(doubleheader.games.all())
+        app.roles.set([role_jt, role_sk, role_pbt])
+
+        app = models.Application.objects.create(
+            form=doubleheader_app_form,
+            user=josep,
+            status=models.ApplicationStatus.APPLIED,
+        )
+        app.availability_by_game.set(doubleheader.games.all())
+
+        app.roles.set([role_hnso, role_jt, role_plt, role_pbm])
+        app = models.Application.objects.create(
+            form=doubleheader_app_form,
+            user=drummer,
+            status=models.ApplicationStatus.APPLIED,
+        )
+        app.availability_by_game.set(doubleheader.games.all())
+        app.roles.set(
+            [
+                role_hnso,
+                role_jt,
+                role_plt,
+                role_alt,
+                role_sk,
+                role_sbo,
+                role_pbm,
+                role_pbt,
+            ]
         )
 
         self.stdout.write("done.")
