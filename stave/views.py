@@ -1247,8 +1247,15 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             applications[0].save()
 
         # Redirect the user to the base Crew Builder for this crew
+        context = crew.get_context()
+        if isinstance(context, models.Game):
+            fragment = context.id
+        else:
+            fragment = crew.id
+
         return HttpResponseRedirect(
             reverse("crew-builder", args=[league, event_slug, application_form_slug])
+            + f"#ctx-{fragment}"
         )
 
 

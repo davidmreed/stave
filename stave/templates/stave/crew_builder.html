@@ -85,7 +85,7 @@
 
 {% for crew in static_crews|get:role_group.id %}
 <div class="crew-container">
-    <h6>{{ crew }}</h6>
+    <h6 id="ctx-{{ crew.id }}">{{ crew }}</h6>
 {% include 'stave/partials/crew_editor.html' with editable=editable form=form crew=crew crew_assignments=crew.get_assignments_by_role_id role_group=crew.role_group focus_user_id=None counts=counts|get:crew.id csrf_token=csrf_token only %}
 </div>
 {% empty %}
@@ -107,7 +107,7 @@ No static crews yet.
 {% if role_group.id in event_crews %}
 {% for crew in event_crews|get:role_group.id %}
 <div class="crew-container">
-<h4>{{ crew }}</h4>
+    <h4 id="ctx-{{ crew.id }}">{{ crew }}</h4>
 {% include 'stave/partials/crew_editor.html' with editable=editable form=form crew_assignments=crew.get_assignments_by_role_id role_group=role_group crew=crew focus_user_id=None csrf_token=csrf_token counts=counts|get:crew.id only %}
 </div>
 {% endfor %}
@@ -130,9 +130,10 @@ No static crews yet.
             {% if start_time.date|date:"Y-m-d" == day %}
                 <div class="game-container">
                     {% if games|length > 1 %}
-                        <h3>
+                    <h3 id="ctx-{{ game.id }}">
                             Game {{ game.order_key }} ({{ start_time.time }}&ndash;{{ end_time.time }} {{ start_time|tzname }})
                         </h3>
+                        <small><span style="font-variant: small-caps;">{{ game.association }} {{ game.kind }}</span> | {% if game.home_league != game.home_team %}{{ game.home_league }}{% endif %} {{ game.home_team }} versus {% if game.visiting_league != game.visiting_team %}{{ game.visiting_league }}{% endif %} {{ game.visiting_team }}</small>
                     {% endif %}
                     <div class="crews-container">
 
