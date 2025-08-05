@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "anymail",
     "django_apscheduler",
     "debug_toolbar",
+    "meta",
     "stave",
 ]
 

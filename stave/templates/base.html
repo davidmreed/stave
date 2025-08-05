@@ -1,7 +1,8 @@
 {% load static %}
+{% load meta %}
 <!doctype html>
 <html lang="en">
-    <head>
+    <head {% meta_namespaces %}>
         <link
             rel="stylesheet"
             href="{% static 'pico.amber.min.css' %}"
@@ -11,6 +12,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="color-scheme" content="light dark">
         <title>{% block title %}Stave{% endblock %}</title>
+        {% include 'meta/meta.html' %}
         {% block resources %}{% endblock %}
     </head>
     <body>

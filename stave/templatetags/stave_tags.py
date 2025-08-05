@@ -35,6 +35,8 @@ def inputs(context: template.Context, model_name: str) -> str:
     input_values = copy.copy(context.dicts[-1])
     if "csrf_token" in input_values:
         del input_values["csrf_token"]
+    if "meta" in input_values:
+        del input_values["meta"]
 
     try:
         _ = type_(**input_values)
