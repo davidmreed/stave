@@ -22,6 +22,21 @@ urlpatterns = [
         "_/<slug:slug>/edit/", view=views.LeagueUpdateView.as_view(), name="league-edit"
     ),
     path(
+        "_/<slug:league_slug>/role-groups/",
+        view=views.RoleGroupListView.as_view(),
+        name="role-group-list",
+    ),
+    path(
+        "_/<slug:league_slug>/create-role-group/",
+        view=views.RoleGroupCreateUpdateView.as_view(),
+        name="role-group-create",
+    ),
+    path(
+        "_/<slug:league_slug>/role-groups/<uuid:role_group_id>/edit/",
+        view=views.RoleGroupCreateUpdateView.as_view(),
+        name="role-group-edit",
+    ),
+    path(
         "_/<slug:league_slug>/create-event-with-template/",
         view=views.EventCreateView.as_view(),
         name="event-create",

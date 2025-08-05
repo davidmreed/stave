@@ -265,7 +265,7 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
             case _:
                 if form.is_valid():
                     object_ = form.save()
-                    return HttpResponseRedirect(object_.get_absolute_url())
+                    return HttpResponseRedirect(form.get_redirect_url())
 
         return render(
             request,
@@ -279,6 +279,63 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
                 "time_zone": self.get_time_zone(),
             },
         )
+
+
+class RoleGroupListView(LoginRequiredMixin, generic.ListView):
+    template_name = "stave/role_group_list.html"
+    model = models.RoleGroup
+    league: models.League
+
+    def setup(self, request: HttpRequest, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        self.league = get_object_or_404(
+            models.League.objects.manageable(self.request.user),
+            slug=self.kwargs.get("league_slug"),
+        )
+
+    def get_context_data(self, *args, **kwargs) -> dict:
+        base = super().get_context_data(*args, **kwargs)
+
+        base["league"] = self.league
+
+        return base
+
+    def get_queryset(self) -> QuerySet[models.RoleGroup]:
+        return self.league.role_groups.all()
+
+
+class RoleGroupCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView):
+    form_class = forms.RoleGroupCreateUpdateForm
+
+    def get_view_url(self) -> str:
+        league_slug = self.kwargs.get("league_slug")
+        role_group_id = self.kwargs.get("role_group_id")
+
+        if role_group_id:
+            return reverse("role-group-edit", args=[league_slug, role_group_id])
+        else:
+            return reverse("role-group-create", args=[league_slug])
+
+    def get_form(self, **kwargs) -> forms.RoleGroupCreateUpdateForm:
+        league = get_object_or_404(
+            models.League.objects.manageable(self.request.user),
+            slug=self.kwargs.get("league_slug"),
+        )
+        return forms.RoleGroupCreateUpdateForm(league=league, **kwargs)
+
+    def get_object(
+        self,
+        request: HttpRequest,
+        league_slug: str,
+        role_group_id: UUID | None = None,
+        **kwargs,
+    ) -> models.RoleGroup | None:
+        league = get_object_or_404(
+            models.League.objects.manageable(self.request.user),
+            slug=league_slug,
+        )
+        if role_group_id:
+            return get_object_or_404(league.role_groups.all(), id=role_group_id)
 
 
 class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView):

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <h1>{{ league }}: Role Groups</h1>
+    <a role="button" href="{% url 'role-group-create' league.slug %}">Create</a>
+</header>
+{% for role_group in rolegroup_list %}
+<article>
+    <header>
+        <h2>{{ role_group.name }}</h2>
+        <a role="button" href="{% url 'role-group-edit' league.slug role_group.id %}">Edit</a>
+    </header>
+    {{ role_group.roles.all|length }} roles
+</article>
+{% endfor %}
+
+{% endblock %}
