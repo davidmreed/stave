@@ -8,6 +8,7 @@ from django.db.models import QuerySet
 from django.forms.utils import ErrorDict
 from django.utils import formats, timezone
 from django.utils.translation import gettext_lazy as _
+from django.urls import reverse
 
 from . import models
 
@@ -239,6 +240,9 @@ class ParentChildForm(forms.Form):
             self.child_formset.save_new_objects()
 
             return parent
+
+    def get_redirect_url(self) -> str:
+        return self.parent_form.instance.get_absolute_url()
 
 
 class ApplicationForm(forms.Form):
@@ -655,6 +659,26 @@ class LeagueForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
 
+class RoleGroupForm(forms.ModelForm):
+    class Meta:
+        model = models.RoleGroup
+        fields = ["name", "event_only"]
+
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
+
+class RoleForm(forms.ModelForm):
+    class Meta:
+        model = models.Role
+        fields = ["name", "nonexclusive"]
+
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
+
 class CrewForm(forms.ModelForm):
     class Meta:
         model = models.Crew
@@ -745,6 +769,39 @@ class GameForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
+
+
+class RoleGroupCreateUpdateForm(ParentChildForm):
+    parent_form_class = RoleGroupForm
+    child_form_class = RoleForm
+    relation_name = "role_group"
+    reverse_name = "roles"
+    league: models.League
+
+    def __init__(
+        self,
+        league: models.League,
+        *args,
+        **kwargs,
+    ):
+        self.league = league
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        self.parent_form.instance.league = self.league
+
+        for index, child_form in enumerate(
+            [
+                child_form
+                for child_form in self.child_formset.forms
+                if child_form.cleaned_data.get("DELETE") != "on"
+            ]
+        ):
+            child_form.instance.order_key = index + 1
+
+    def get_redirect_url(self) -> str:
+        return reverse("role-group-list", args=[self.league.slug])
 
 
 class EventCreateUpdateForm(ParentChildForm):
