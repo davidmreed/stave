@@ -85,7 +85,7 @@
            value="Send Assignments Now"
     >
     {% endif %}
-    <a role="button" href="{% url 'send-email' application.form.event.league.slug application.form.event.slug application.form.slug 'schedule'%}{% querystring recipient=application.user_id redirect_url=request.path %}">Customize Assignments Now</a>
+    <a role="button" href="{% url 'send-email' application.form.event.league.slug application.form.event.slug application.form.slug 'schedule' %}{% querystring recipient=application.user_id redirect_url=request.path %}">Customize Assignments Now</a>
     {% endif %}
     {% endwith %}
 </div>

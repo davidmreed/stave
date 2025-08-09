@@ -1466,6 +1466,10 @@ class CommCenterView(LoginRequiredMixin, views.View):
         if recipient := request.POST.get("recipient"):
             member_queryset = member_queryset.filter(id=recipient)
 
+        if not member_queryset.exists():
+            messages.error(request, gettext_lazy("No recipients were selected"))
+            return HttpResponseRedirect(request.path)
+
         from . import emails
 
         for member in member_queryset:
@@ -1561,8 +1565,6 @@ class SendEmailView(LoginRequiredMixin, views.View):
             member_queryset,
             initial={"recipients": member_queryset},
         )
-        if member_queryset.count() == 1:
-            email_recipients_form.fields["recipients"].disabled = True
 
         return render(
             request,
@@ -1594,7 +1596,6 @@ class SendEmailView(LoginRequiredMixin, views.View):
             event__slug=event_slug,
             slug=application_form_slug,
         )
-        event = application_form.event
 
         try:
             email_type = models.SendEmailContextType(email_type)
@@ -1615,7 +1616,10 @@ class SendEmailView(LoginRequiredMixin, views.View):
             with transaction.atomic():
                 from . import emails  # avoid circular import
 
-                for user in email_recipients_form.cleaned_data["recipients"]:
+                recipients = email_recipients_form.cleaned_data["recipients"]
+                if not recipients:
+                    messages.error(request, gettext_lazy("No recipients were selected"))
+                for user in recipients:
                     application = (
                         application_form.applications.filter(user=user)
                         .exclude(status=models.ApplicationStatus.WITHDRAWN)
@@ -1625,7 +1629,8 @@ class SendEmailView(LoginRequiredMixin, views.View):
                         application, request.user, email_type, subject, content
                     )
 
-            messages.info(request, gettext_lazy("Your emails are being sent"))
+                if recipients:
+                    messages.info(request, gettext_lazy("Your emails are being sent"))
             redirect_url = request.POST.get("redirect_url")
             if redirect_url and url_has_allowed_host_and_scheme(
                 redirect_url, settings.ALLOWED_HOSTS
