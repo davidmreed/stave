@@ -53,6 +53,17 @@ class MessageAdmin(admin.ModelAdmin):
     list_display = ("sent_date", "sent", "user", "subject")
 
 
+class ApplicationResponseInline(admin.TabularInline):
+    model = models.ApplicationResponse
+    list_display = ("question", "content")
+
+
+@admin.register(models.Application)
+class ApplicationAdmin(admin.ModelAdmin):
+    list_display = ("user", "form", "form__event", "status")
+    inlines = [ApplicationResponseInline]
+
+
 for model in [
     models.League,
     models.Event,
@@ -61,7 +72,6 @@ for model in [
     models.Role,
     models.Question,
     models.RoleGroup,
-    models.Application,
     models.ApplicationResponse,
     models.CrewAssignment,
     models.GameTemplate,
