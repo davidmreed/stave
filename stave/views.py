@@ -1189,6 +1189,9 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             role=role,
             crew=crew,
         ).first():
+            # Delete the assignment
+            assignment.delete()
+
             # Find the application corresponding to the existing assignment.
             existing_application = (
                 application_form.applications.filter(
@@ -1198,22 +1201,25 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                 .first()
             )
             # There should be exactly one.
-            if existing_application:
+            if existing_application and not existing_application.has_assignments():
                 # Reset its status appropriately.
                 if (
                     existing_application.status
                     == models.ApplicationStatus.ASSIGNMENT_PENDING
                 ):
-                    existing_application.status = models.ApplicationStatus.CONFIRMED
+                    if (
+                        application_form.application_kind
+                        == models.ApplicationKind.CONFIRM_THEN_ASSIGN
+                    ):
+                        existing_application.status = models.ApplicationStatus.CONFIRMED
+                    else:
+                        existing_application.status = models.ApplicationStatus.APPLIED
                 elif (
                     existing_application.status
                     == models.ApplicationStatus.INVITATION_PENDING
                 ):
                     existing_application.status = models.ApplicationStatus.APPLIED
                 existing_application.save()
-
-            # Delete the assignment
-            assignment.delete()
 
         # Add a new assignment, if requested
         if applications:

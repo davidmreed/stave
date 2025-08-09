@@ -1518,6 +1518,11 @@ class Application(models.Model):
 
         return names
 
+    def has_assignments(self) -> bool:
+        return CrewAssignment.objects.filter(
+            user=self.user, crew__event=self.form.event, role__in=self.roles.all()
+        ).exists()
+
     def save(self, *args, **kwargs):
         if self.status in [
             ApplicationStatus.WITHDRAWN,
