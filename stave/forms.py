@@ -9,6 +9,7 @@ from django.forms.utils import ErrorDict
 from django.utils import formats, timezone
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
+from django.forms.formsets import DELETION_FIELD_NAME
 
 from . import models
 
@@ -235,7 +236,6 @@ class ParentChildForm(forms.Form):
 
             for child_form in self.child_formset.forms:
                 setattr(child_form.instance, self.relation_name, parent)
-
             self.child_formset.save_existing_objects()
             self.child_formset.save_new_objects()
 
@@ -628,6 +628,9 @@ class ApplicationFormForm(forms.ModelForm):
             "application_availability_kind",
             "hidden",
             "intro_text",
+            "invitation_email_template",
+            "rejection_email_template",
+            "schedule_email_template",
             "requires_profile_fields",
         ]
         widgets = {"role_groups": forms.CheckboxSelectMultiple}
@@ -637,9 +640,19 @@ class ApplicationFormForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if event:
             self.fields["role_groups"].queryset = event.role_groups.all()
+            self.fields["invitation_email_template"].queryset = self.fields[
+                "rejection_email_template"
+            ].queryset = self.fields["schedule_email_template"].queryset = (
+                event.league.message_templates.all()
+            )
         elif self.instance:
             self.fields["role_groups"].queryset = self.instance.event.role_groups.all()
 
+            self.fields["invitation_email_template"].queryset = self.fields[
+                "rejection_email_template"
+            ].queryset = self.fields["schedule_email_template"].queryset = (
+                self.instance.event.league.message_templates.all()
+            )
         if self.instance and not self.instance.editable:
             # Our instance might not be editable due to receiving applications.
             # Block edits to fields that would cause issues.
@@ -673,6 +686,16 @@ class RoleForm(forms.ModelForm):
     class Meta:
         model = models.Role
         fields = ["name", "nonexclusive"]
+
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
+
+class MessageTemplateForm(forms.ModelForm):
+    class Meta:
+        model = models.MessageTemplate
+        fields = ["name", "subject", "content"]
 
     def __init__(self, *args, **kwargs):
         kwargs["label_suffix"] = ""
@@ -795,7 +818,7 @@ class RoleGroupCreateUpdateForm(ParentChildForm):
             [
                 child_form
                 for child_form in self.child_formset.forms
-                if child_form.cleaned_data.get("DELETE") != "on"
+                if child_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
             ]
         ):
             child_form.instance.order_key = index + 1
@@ -878,7 +901,7 @@ class EventCreateUpdateForm(ParentChildForm):
             [
                 game_form
                 for game_form in self.child_formset.forms
-                if not game_form.cleaned_data.get("DELETE", False)
+                if game_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
             ]
         ):
             new_order_key = index + 1
