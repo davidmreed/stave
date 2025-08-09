@@ -29,6 +29,7 @@ from django.utils.dateparse import parse_date
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.utils.translation import gettext, gettext_lazy
 from django.views import generic
+from django.forms.formsets import DELETION_FIELD_NAME
 from meta.views import Meta
 
 from stave.templates.stave import contexts
@@ -281,9 +282,7 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
         )
 
 
-class RoleGroupListView(LoginRequiredMixin, generic.ListView):
-    template_name = "stave/role_group_list.html"
-    model = models.RoleGroup
+class TenantedObjectMixin:
     league: models.League
 
     def setup(self, request: HttpRequest, *args, **kwargs):
@@ -299,6 +298,46 @@ class RoleGroupListView(LoginRequiredMixin, generic.ListView):
         base["league"] = self.league
 
         return base
+
+
+class MessageTemplateListView(
+    LoginRequiredMixin, TenantedObjectMixin, generic.ListView
+):
+    template_name = "stave/message_template_list.html"
+    model = models.MessageTemplate
+
+    def get_queryset(self) -> QuerySet[models.MessageTemplate]:
+        return self.league.message_templates.all()
+
+
+class MessageTemplateCreateView(
+    LoginRequiredMixin, TenantedObjectMixin, generic.edit.CreateView
+):
+    template_name = "stave/message_template_edit.html"
+    form_class = forms.MessageTemplateForm
+
+    def form_valid(self, form: forms.MessageTemplateForm) -> HttpResponse:
+        form.instance.league = self.league
+        self.object = form.save()
+
+        return HttpResponseRedirect(self.get_success_url())
+
+
+class MessageTemplateUpdateView(
+    LoginRequiredMixin, TenantedObjectMixin, generic.edit.UpdateView
+):
+    template_name = "stave/message_template_edit.html"
+    form_class = forms.MessageTemplateForm
+
+    def get_queryset(self) -> QuerySet[models.MessageTemplate]:
+        return models.MessageTemplate.objects.filter(
+            league__in=models.League.objects.manageable(self.request.user)
+        )
+
+
+class RoleGroupListView(LoginRequiredMixin, TenantedObjectMixin, generic.ListView):
+    template_name = "stave/role_group_list.html"
+    model = models.RoleGroup
 
     def get_queryset(self) -> QuerySet[models.RoleGroup]:
         return self.league.role_groups.all()
@@ -720,8 +759,8 @@ class FormCreateUpdateView(LoginRequiredMixin, views.View):
                 for question_form in question_formset.forms:
                     question_form.instance.application_form = app_form
                     if not question_form.cleaned_data.get(
-                        "DELETE",
-                        False,  # should import this TODO
+                        DELETION_FIELD_NAME,
+                        False,
                     ):
                         if question_form.instance.order_key != index:
                             question_form.instance.order_key = index
