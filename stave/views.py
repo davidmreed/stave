@@ -833,11 +833,7 @@ class ApplicationStatusView(LoginRequiredMixin, views.View):
                 status == models.ApplicationStatus.CONFIRMED
                 and application.form.application_kind
                 == models.ApplicationKind.CONFIRM_THEN_ASSIGN
-                and models.CrewAssignment.objects.filter(
-                    user=application.user,
-                    crew__event=application.form.event,
-                    role__in=application.roles.all(),
-                ).exists()
+                and application.has_assignments()
             ):
                 application.status = models.ApplicationStatus.ASSIGNMENT_PENDING
             elif status == models.ApplicationStatus.DECLINED:
@@ -1612,7 +1608,6 @@ class SendEmailView(LoginRequiredMixin, views.View):
             # Construct and render the template and persist a Message for each user.
             content: str = email_form.cleaned_data["content"]
             subject: str = email_form.cleaned_data["subject"]
-
             with transaction.atomic():
                 from . import emails  # avoid circular import
 
