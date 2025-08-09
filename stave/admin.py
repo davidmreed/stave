@@ -48,6 +48,11 @@ class MessageTemplateAdmin(admin.ModelAdmin):
     list_display = ("name", "league", "league_template", "subject")
 
 
+@admin.register(models.Message)
+class MessageAdmin(admin.ModelAdmin):
+    list_display = ("sent_date", "sent", "user", "subject")
+
+
 for model in [
     models.League,
     models.Event,
@@ -59,7 +64,6 @@ for model in [
     models.Application,
     models.ApplicationResponse,
     models.CrewAssignment,
-    models.Message,
     models.GameTemplate,
     models.LeagueTemplate,
     models.LeagueUserPermission,
