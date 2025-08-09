@@ -37,6 +37,21 @@ urlpatterns = [
         name="role-group-edit",
     ),
     path(
+        "_/<slug:league_slug>/message-templates//",
+        view=views.MessageTemplateListView.as_view(),
+        name="message-template-list",
+    ),
+    path(
+        "_/<slug:league_slug>/create-message-template/",
+        view=views.MessageTemplateCreateView.as_view(),
+        name="message-template-create",
+    ),
+    path(
+        "_/<slug:league_slug>/message-templates/<uuid:message_template_id>/edit/",
+        view=views.MessageTemplateUpdateView.as_view(),
+        name="message-template-edit",
+    ),
+    path(
         "_/<slug:league_slug>/create-event-with-template/",
         view=views.EventCreateView.as_view(),
         name="event-create",
