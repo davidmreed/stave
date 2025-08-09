@@ -12,6 +12,7 @@
 {% if request.user|can_manage_league:league %}
 <a role="button" href="{% url 'league-edit' league.slug %}">Edit</a>
 <a role="button" href="{% url 'role-group-list' league.slug %}">Manage Roles</a>
+<a role="button" href="{% url 'message-template-list' league.slug %}">Manage Message Templates</a>
 {% endif %}
 {% if request.user|can_manage_league_events:league %}
 <a role="button" href="{% url 'event-create' league.slug %}">Create Event</a>

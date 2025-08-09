@@ -1,16 +1,13 @@
 import copy
 import dataclasses
 import enum
-import re
 import uuid
 import zoneinfo
 from collections import defaultdict
-from collections.abc import Iterable
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.template.defaultfilters import slugify
@@ -114,7 +111,12 @@ class RoleGroup(models.Model):
         null=True,
         blank=True,
     )
-    event_only = models.BooleanField(default=False)
+    event_only = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Event-only Role Groups are used to assign Event-wide Roles. They cannot be applied to Games."
+        ),
+    )
 
     roles: models.Manager["Role"]
 
@@ -150,7 +152,12 @@ class Role(models.Model):
     )
     order_key = models.IntegerField()
     name = models.CharField(max_length=256)
-    nonexclusive = models.BooleanField(default=False)
+    nonexclusive = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Nonexclusive Roles can be held simultaneously with another Role in the same Role Group."
+        ),
+    )
 
     def __str__(self) -> str:
         return self.name
@@ -193,7 +200,10 @@ class LeagueQuerySet(models.QuerySet["League"]):
             user_permissions__user=user,
         ).distinct()
 
-    def manageable(self, user: User) -> models.QuerySet["League"]:
+    def manageable(self, user: User | AnonymousUser) -> models.QuerySet["League"]:
+        if isinstance(user, AnonymousUser):
+            return self.none()
+
         return self.filter(
             user_permissions__permission=UserPermission.LEAGUE_MANAGER,
             user_permissions__user=user,
@@ -844,6 +854,9 @@ class MessageTemplate(models.Model):
     subject = models.TextField()
     content = models.TextField()
     name = models.CharField(max_length=256)
+
+    def __str__(self) -> str:
+        return self.name
 
     def clone_as_template(self, league: League) -> "MessageTemplate":
         new_object = copy.copy(self)
