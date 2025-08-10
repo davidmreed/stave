@@ -37,7 +37,12 @@ urlpatterns = [
         name="role-group-edit",
     ),
     path(
-        "_/<slug:league_slug>/message-templates//",
+        "_/<slug:league_slug>/role-groups/<uuid:role_group_id>/delete/",
+        view=views.RoleGroupDeleteView.as_view(),
+        name="role-group-delete",
+    ),
+    path(
+        "_/<slug:league_slug>/message-templates/",
         view=views.MessageTemplateListView.as_view(),
         name="message-template-list",
     ),
@@ -50,6 +55,51 @@ urlpatterns = [
         "_/<slug:league_slug>/message-templates/<uuid:message_template_id>/edit/",
         view=views.MessageTemplateUpdateView.as_view(),
         name="message-template-edit",
+    ),
+    path(
+        "_/<slug:league_slug>/message-templates/<uuid:id>/delete/",
+        view=views.MessageTemplateDeleteView.as_view(),
+        name="message-template-delete",
+    ),
+    path(
+        "_/<slug:league_slug>/event-templates/",
+        view=views.EventTemplateListView.as_view(),
+        name="event-template-list",
+    ),
+    path(
+        "_/<slug:league_slug>/create-event-template/",
+        view=views.EventTemplateCreateUpdateView.as_view(),
+        name="event-template-create",
+    ),
+    path(
+        "_/<slug:league_slug>/event-templates/<uuid:event_template_id>/edit/",
+        view=views.EventTemplateCreateUpdateView.as_view(),
+        name="event-template-edit",
+    ),
+    path(
+        "_/<slug:league_slug>/event-templates/<uuid:id>/delete/",
+        view=views.EventTemplateDeleteView.as_view(),
+        name="event-template-delete",
+    ),
+    path(
+        "_/<slug:league_slug>/application-form-templates/",
+        view=views.ApplicationFormTemplateListView.as_view(),
+        name="application-form-template-list",
+    ),
+    path(
+        "_/<slug:league_slug>/create-application-form-template/",
+        view=views.ApplicationFormTemplateCreateUpdateView.as_view(),
+        name="application-form-template-create",
+    ),
+    path(
+        "_/<slug:league_slug>/application-form-templates/<uuid:id>/edit/",
+        view=views.ApplicationFormTemplateCreateUpdateView.as_view(),
+        name="application-form-template-edit",
+    ),
+    path(
+        "_/<slug:league_slug>/application-form-templates/<uuid:id>/delete/",
+        view=views.ApplicationFormTemplateDeleteView.as_view(),
+        name="application-form-template-delete",
     ),
     path(
         "_/<slug:league_slug>/create-event-with-template/",

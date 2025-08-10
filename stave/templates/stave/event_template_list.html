@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <h1>{{ league }}: Event Templates</h1>
+    <a role="button" href="{% url 'event-template-create' league.slug %}">Create</a>
+</header>
+{% for event_template in eventtemplate_list %}
+<article>
+    <header>
+        <h2>{{ event_template }}</h2>
+        <a role="button" href="{% url 'event-template-edit' league.slug event_template.id %}">Edit</a>
+        <a role="button" href="{% url 'event-template-delete' league.slug event_template.id %}">Delete</a>
+    </header>
+    {{ event_template.description }}
+</article>
+{% endfor %}
+
+{% endblock %}

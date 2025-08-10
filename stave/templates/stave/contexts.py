@@ -105,6 +105,12 @@ class SendEmailInputs:
 
 
 @dataclass
+class MessageTemplateEditInputs:
+    form: forms.MessageTemplateForm
+    merge_fields: list[models.MergeField]
+
+
+@dataclass
 class TemplateSelectorInputs:
     templates: QuerySet[models.LeagueTemplate] | QuerySet[models.EventTemplate]
     object_type: str
@@ -135,6 +141,7 @@ class ParentChildCreateUpdateInputs:
     parent_name: str
     child_name: str
     child_name_plural: str
+    allow_child_deletes: bool
     time_zone: str | None = None
 
 

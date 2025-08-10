@@ -10,6 +10,7 @@
     <header>
         <h2>{{ message_template }}</h2>
         <a role="button" href="{% url 'message-template-edit' league.slug message_template.id %}">Edit</a>
+        <a role="button" href="{% url 'message-template-delete' league.slug message_template.id %}">Delete</a>
     </header>
 </article>
 {% endfor %}
