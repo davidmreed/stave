@@ -662,6 +662,64 @@ class ApplicationFormForm(forms.ModelForm):
             self.fields["requires_profile_fields"].disabled = True
 
 
+class ApplicationFormTemplateForm(forms.ModelForm):
+    application_kind = forms.TypedChoiceField(
+        empty_value=None,
+        choices=models.ApplicationKind,
+        widget=forms.RadioSelect,
+        help_text=models.ApplicationForm._meta.get_field("application_kind").help_text,
+        required=True,
+    )
+    application_availability_kind = forms.TypedChoiceField(
+        empty_value=None,
+        choices=models.ApplicationAvailabilityKind,
+        widget=forms.RadioSelect,
+        help_text=models.ApplicationForm._meta.get_field(
+            "application_availability_kind"
+        ).help_text,
+        required=True,
+    )
+    requires_profile_fields = forms.TypedMultipleChoiceField(
+        empty_value=None,
+        choices=[
+            (field, models.User._meta.get_field(field).verbose_name.title())
+            for field in models.User.ALLOWED_PROFILE_FIELDS
+        ],
+        widget=forms.CheckboxSelectMultiple,
+        help_text=models.ApplicationForm._meta.get_field(
+            "requires_profile_fields"
+        ).help_text,
+        required=False,
+    )
+
+    class Meta:
+        model = models.ApplicationFormTemplate
+        fields = [
+            "name",
+            "role_groups",
+            "application_kind",
+            "application_availability_kind",
+            "intro_text",
+            "invitation_email_template",
+            "rejected_email_template",
+            "assigned_email_template",
+            "requires_profile_fields",
+        ]
+        widgets = {"role_groups": forms.CheckboxSelectMultiple}
+
+    def __init__(self, league: models.League | None = None, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+        league = league or self.instance.league
+        assert league
+        self.fields["role_groups"].queryset = league.role_groups.all()
+        self.fields["invitation_email_template"].queryset = self.fields[
+            "rejection_email_template"
+        ].queryset = self.fields["schedule_email_template"].queryset = (
+            league.message_templates.all()
+        )
+
+
 class LeagueForm(forms.ModelForm):
     class Meta:
         model = models.League
@@ -692,10 +750,105 @@ class RoleForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
 
+class EventTemplateForm(forms.ModelForm):
+    league: models.League | None
+
+    class Meta:
+        model = models.EventTemplate
+        fields = ["name", "description", "location", "days", "role_groups"]
+        widgets = {
+            "role_groups": forms.CheckboxSelectMultiple,
+            "location": forms.TextInput,
+        }
+
+    def __init__(self, league: models.League | None = None, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
+        assert league or self.instance
+
+        if self.instance:
+            self.fields["role_groups"].queryset = self.instance.league.role_groups.all()
+        else:
+            self.league = league
+            self.fields["role_groups"].queryset = self.league.role_groups.all()
+
+
+class GameTemplateForm(forms.ModelForm):
+    league: models.League
+
+    class Meta:
+        model = models.GameTemplate
+        fields = [
+            "day",
+            "home_league",
+            "home_team",
+            "visiting_league",
+            "visiting_team",
+            "association",
+            "kind",
+            "start_time",
+            "end_time",
+        ]
+
+        widgets = {
+            "start_time": forms.DateInput(attrs={"type": "time"}),
+            "end_time": forms.DateInput(attrs={"type": "time"}),
+        }
+
+    def __init__(self, league: models.League | None = None, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+        assert league or self.instance
+
+        if self.instance:
+            # TODO: this is inelegant
+            self.fields[
+                "role_groups"
+            ].queryset = self.instance.event_template.league.role_groups.all()
+        else:
+            self.league = league
+            self.fields["role_groups"].queryset = self.league.role_groups.all()
+
+
+class EventTemplateCreateUpdateForm(ParentChildForm):
+    parent_form_class = EventTemplateForm
+    child_form_class = GameTemplateForm
+    relation_name = "event_template"
+    reverse_name = "game_templates"
+    league: models.League
+
+    def __init__(
+        self,
+        league: models.League,
+        *args,
+        **kwargs,
+    ):
+        self.league = league
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        self.parent_form.instance.league = self.league
+
+        for index, child_form in enumerate(
+            [
+                child_form
+                for child_form in self.child_formset.forms
+                if child_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
+            ]
+        ):
+            child_form.instance.order_key = index + 1
+
+    def get_redirect_url(self) -> str:
+        return reverse("event-template-list", args=[self.league.slug])
+
+
 class MessageTemplateForm(forms.ModelForm):
     class Meta:
         model = models.MessageTemplate
         fields = ["name", "subject", "content"]
+        widgets = {"subject": forms.TextInput}
 
     def __init__(self, *args, **kwargs):
         kwargs["label_suffix"] = ""
