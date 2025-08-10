@@ -22,7 +22,9 @@
     {% for child_form in form.child_formset %}
     {% if not child_form|is_form_deleted %}
     {{ child_form }}
+    {% if allow_child_deletes %}
     <input type="submit" formaction="{{ request.path }}{% querystring action='delete' index=forloop.counter0 %}" value="Delete {{ child_name|title }}" formnovalidate>
+    {% endif %}
     <hr>
     {% else %}
     {{ child_form.DELETE }}

@@ -119,6 +119,12 @@ class RoleGroup(models.Model):
 
     roles: models.Manager["Role"]
 
+    def can_delete(self) -> bool:
+        return not Event.objects.filter(
+            league=self.league,
+            role_groups=self,
+        ).exists()
+
     def __str__(self) -> str:
         return self.name
 

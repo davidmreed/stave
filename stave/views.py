@@ -56,6 +56,40 @@ class TypedContextMixin[T: dict[str, Any] | DataclassInstance]:
         return context
 
 
+class TenantedObjectMixin:
+    league: models.League
+
+    def setup(self, request: HttpRequest, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        self.league = get_object_or_404(
+            models.League.objects.manageable(self.request.user),
+            slug=self.kwargs.get("league_slug"),
+        )
+
+    def get_context_data(self, *args, **kwargs) -> dict:
+        base = super().get_context_data(*args, **kwargs)
+
+        base["league"] = self.league
+
+        return base
+
+
+class TenantedGenericDeleteView[T](
+    LoginRequiredMixin, TenantedObjectMixin, generic.edit.DeleteView
+):
+    template_name = "stave/confirm_delete.html"
+    list_view_name: str
+
+    def get_object(self) -> T:
+        return get_object_or_404(
+            self.model.objects.filter(league=self.league),
+            id=self.kwargs.get("id"),
+        )
+
+    def get_success_url(self) -> str:
+        return reverse(self.list_view_name, args=[self.league.slug])
+
+
 class MediaView(views.View):
     # TODO: do not serve files unless associated with a viewable
     # league or application form.
@@ -217,6 +251,9 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
     @abstractmethod
     def get_object(self, request: HttpRequest, **kwargs) -> Any | None: ...
 
+    def allow_child_deletes(self) -> bool:
+        return True
+
     def get_time_zone(self) -> str | None:
         return None
 
@@ -234,14 +271,17 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
         return render(
             request,
             template_name=self.template_name,
-            context={
-                "object": object_,
-                "form": form,
-                "parent_name": self.form_class.parent_form_class._meta.model._meta.verbose_name,
-                "child_name": self.form_class.child_form_class._meta.model._meta.verbose_name,
-                "child_name_plural": self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
-                "time_zone": self.get_time_zone(),
-            },
+            context=contexts.to_dict(
+                contexts.ParentChildCreateUpdateInputs(
+                    object=object_,
+                    form=form,
+                    parent_name=self.form_class.parent_form_class._meta.model._meta.verbose_name,
+                    child_name=self.form_class.child_form_class._meta.model._meta.verbose_name,
+                    child_name_plural=self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
+                    allow_child_deletes=self.allow_child_deletes(),
+                    time_zone=self.get_time_zone(),
+                )
+            ),
         )
 
     def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
@@ -255,14 +295,15 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
                 form.add_child_form()
             case "delete":
                 # We requested to delete a child object.
-                index = request.GET.get("index")
-                if index:
-                    try:
-                        index = int(index)
-                        # Index validation is done by the form.
-                        form.delete_child_form(index)
-                    except ValueError:
-                        pass
+                if self.allow_child_deletes():
+                    index = request.GET.get("index")
+                    if index:
+                        try:
+                            index = int(index)
+                            # Index validation is done by the form.
+                            form.delete_child_form(index)
+                        except ValueError:
+                            pass
             case _:
                 if form.is_valid():
                     object_ = form.save()
@@ -271,33 +312,23 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
         return render(
             request,
             template_name=self.template_name,
-            context={
-                "object": object_,
-                "form": form,
-                "parent_name": self.form_class.parent_form_class._meta.model._meta.verbose_name,
-                "child_name": self.form_class.child_form_class._meta.model._meta.verbose_name,
-                "child_name_plural": self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
-                "time_zone": self.get_time_zone(),
-            },
+            context=contexts.to_dict(
+                contexts.ParentChildCreateUpdateInputs(
+                    object=object_,
+                    form=form,
+                    parent_name=self.form_class.parent_form_class._meta.model._meta.verbose_name,
+                    child_name=self.form_class.child_form_class._meta.model._meta.verbose_name,
+                    child_name_plural=self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
+                    allow_child_deletes=self.allow_child_deletes(),
+                    time_zone=self.get_time_zone(),
+                )
+            ),
         )
 
 
-class TenantedObjectMixin:
-    league: models.League
+# League management views
 
-    def setup(self, request: HttpRequest, *args, **kwargs):
-        super().setup(request, *args, **kwargs)
-        self.league = get_object_or_404(
-            models.League.objects.manageable(self.request.user),
-            slug=self.kwargs.get("league_slug"),
-        )
-
-    def get_context_data(self, *args, **kwargs) -> dict:
-        base = super().get_context_data(*args, **kwargs)
-
-        base["league"] = self.league
-
-        return base
+## Message Templates
 
 
 class MessageTemplateListView(
@@ -322,6 +353,9 @@ class MessageTemplateCreateView(
 
         return HttpResponseRedirect(self.get_success_url())
 
+    def get_success_url(self) -> str:
+        return reverse("message-template-list", args=[self.league.slug])
+
 
 class MessageTemplateUpdateView(
     LoginRequiredMixin, TenantedObjectMixin, generic.edit.UpdateView
@@ -329,10 +363,38 @@ class MessageTemplateUpdateView(
     template_name = "stave/message_template_edit.html"
     form_class = forms.MessageTemplateForm
 
-    def get_queryset(self) -> QuerySet[models.MessageTemplate]:
-        return models.MessageTemplate.objects.filter(
-            league__in=models.League.objects.manageable(self.request.user)
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context["merge_fields"] = models.MergeContext(
+            models.Application(),
+            models.ApplicationForm(),
+            models.Event(),
+            models.League(),
+            models.User(),
+            models.User(),
+        ).get_merge_fields()
+
+        return context
+
+    def get_object(
+        self,
+    ) -> models.MessageTemplate | None:
+        return get_object_or_404(
+            models.MessageTemplate.objects.filter(league=self.league),
+            id=self.kwargs.get("message_template_id"),
         )
+
+    def get_success_url(self) -> str:
+        return reverse("message-template-list", args=[self.league.slug])
+
+
+class MessageTemplateDeleteView(TenantedGenericDeleteView[models.MessageTemplate]):
+    template_name = "stave/confirm_delete.html"
+    list_view_name = "message-template-list"
+    model = models.MessageTemplate
+
+
+## Role Groups
 
 
 class RoleGroupListView(LoginRequiredMixin, TenantedObjectMixin, generic.ListView):
@@ -343,8 +405,11 @@ class RoleGroupListView(LoginRequiredMixin, TenantedObjectMixin, generic.ListVie
         return self.league.role_groups.all()
 
 
-class RoleGroupCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView):
+class RoleGroupCreateUpdateView(
+    LoginRequiredMixin, TenantedObjectMixin, ParentChildCreateUpdateFormView
+):
     form_class = forms.RoleGroupCreateUpdateForm
+    role_group: models.RoleGroup | None
 
     def get_view_url(self) -> str:
         league_slug = self.kwargs.get("league_slug")
@@ -369,12 +434,159 @@ class RoleGroupCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormV
         role_group_id: UUID | None = None,
         **kwargs,
     ) -> models.RoleGroup | None:
-        league = get_object_or_404(
-            models.League.objects.manageable(self.request.user),
-            slug=league_slug,
-        )
         if role_group_id:
-            return get_object_or_404(league.role_groups.all(), id=role_group_id)
+            self.role_group = get_object_or_404(
+                self.league.role_groups.all(), id=role_group_id
+            )
+            return self.role_group
+
+    def allow_child_deletes(self) -> bool:
+        if self.role_group:
+            return self.role_group.can_delete()
+        return False
+
+
+class RoleGroupDeleteView(TenantedGenericDeleteView[models.RoleGroup]):
+    list_view_name = "role-group-list"
+    model = models.RoleGroup
+
+    def get_object(self) -> models.RoleGroup:
+        role_group = super().get_object()
+        if not role_group.can_delete():
+            raise Exception(
+                f"Cannot delete role group {role_group} because it is in use"
+            )
+
+        return role_group
+
+
+## League User Permissions
+
+
+class LeaguePermissionListView(
+    LoginRequiredMixin, TenantedObjectMixin, generic.ListView
+): ...
+
+
+class LeaguePermissionCreateView(LoginRequiredMixin, TenantedObjectMixin): ...
+
+
+class LeaguePermissionDeleteView(
+    TenantedGenericDeleteView[models.LeagueUserPermission]
+): ...
+
+
+## Event Templates
+
+
+class EventTemplateListView(LoginRequiredMixin, TenantedObjectMixin, generic.ListView):
+    template_name = "stave/event_template_list.html"
+    model = models.EventTemplate
+
+    def get_queryset(self) -> QuerySet[models.EventTemplate]:
+        return self.league.event_templates.all()
+
+
+class EventTemplateCreateUpdateView(
+    LoginRequiredMixin, TenantedObjectMixin, ParentChildCreateUpdateFormView
+):
+    form_class = forms.EventTemplateCreateUpdateForm
+    event_template: models.EventTemplate | None
+
+    def get_view_url(self) -> str:
+        league_slug = self.kwargs.get("league_slug")
+        event_template_id = self.kwargs.get("event_group_id")
+
+        if event_template_id:
+            return reverse("event-template-edit", args=[league_slug, event_template_id])
+        else:
+            return reverse("event-template-create", args=[league_slug])
+
+    def get_form(self, **kwargs) -> forms.EventTemplateCreateUpdateForm:
+        return forms.EventTemplateCreateUpdateForm(league=self.league, **kwargs)
+
+    def get_object(
+        self,
+        request: HttpRequest,
+        league_slug: str,
+        event_template_id: UUID | None = None,
+        **kwargs,
+    ) -> models.EventTemplate | None:
+        if event_template_id:
+            self.event_template = get_object_or_404(
+                self.league.event_templates.all(), id=event_template_id
+            )
+            return self.event_template
+
+    def allow_child_deletes(self) -> bool:
+        return True
+
+
+class EventTemplateDeleteView(TenantedGenericDeleteView[models.EventTemplate]):
+    template_name = "stave/confirm_delete.html"
+    model = models.EventTemplate
+    list_view_name = "event-template-list"
+
+
+## Application Form Templates
+
+
+class ApplicationFormTemplateListView(
+    LoginRequiredMixin, TenantedObjectMixin, generic.ListView
+):
+    template_name = "stave/application_form_template_list.html"
+    model = models.ApplicationFormTemplate
+
+    def get_queryset(self) -> QuerySet[models.ApplicationFormTemplate]:
+        return self.league.application_form_templates.all()
+
+
+class ApplicationFormTemplateCreateUpdateView(
+    LoginRequiredMixin, TenantedObjectMixin, ParentChildCreateUpdateFormView
+):
+    form_class = forms.ApplicationFormTemplateCreateUpdateForm
+    application_form_template: models.ApplicationFormTemplate | None
+
+    def get_view_url(self) -> str:
+        league_slug = self.kwargs.get("league_slug")
+        id = self.kwargs.get("id")
+
+        if id:
+            return reverse("application-form-template-edit", args=[league_slug, id])
+        else:
+            return reverse("application-form-template-create", args=[league_slug])
+
+    def get_form(self, **kwargs) -> forms.ApplicationFormTemplateCreateUpdateForm:
+        return forms.ApplicationFormTemplateCreateUpdateForm(
+            league=self.league, **kwargs
+        )
+
+    def get_object(
+        self,
+        request: HttpRequest,
+        league_slug: str,
+        id: UUID | None = None,
+        **kwargs,
+    ) -> models.ApplicationFormTemplate | None:
+        if id:
+            self.application_form_template = get_object_or_404(
+                self.league.application_form_templates.all(), id=id
+            )
+            return self.application_form_template
+
+    def allow_child_deletes(self) -> bool:
+        return True
+
+
+class ApplicationFormTemplateDeleteView(
+    TenantedGenericDeleteView[models.ApplicationFormTemplate]
+):
+    template_name = "stave/confirm_delete.html"
+    model = models.ApplicationFormTemplate
+    list_view_name = "application-form-template-list"
+
+
+# Non-Management Views
 
 
 class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView):
