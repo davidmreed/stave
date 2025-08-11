@@ -46,11 +46,13 @@ class SeparatedJSONListField(forms.JSONField):
 
         return value
 
-    def to_python(self, value: str) -> str:
-        if value:
+    def to_python(self, value: str | list[str]) -> str:
+        if isinstance(value, str):
             python_value = [
                 v.strip() for v in value.strip().replace("\r", "\n").split("\n") if v
             ]
+        elif isinstance(value, list):
+            python_value = value
         else:
             python_value = []
 
