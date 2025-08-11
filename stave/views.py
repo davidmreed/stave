@@ -1331,6 +1331,10 @@ class ApplicationFormView(views.View):
             url=request.path,
             use_og=True,
         )
+        if app_form.event.banner_image:
+            meta.image_object = {"url": app_form.event.banner.url}
+        elif app_form.event.league.logo:
+            meta.image_object = {"url": app_form.event.league.logo.url}
 
         return render(
             request,
