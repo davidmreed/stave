@@ -216,3 +216,6 @@ MARKDOWNIFY = {
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
+
+META_SITE_PROTOCOL = "https"
+META_SITE_DOMAIN = "stave.app"
