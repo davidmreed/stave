@@ -276,7 +276,7 @@ class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView)
 
     def get_form(self, **kwargs) -> forms.EventCreateUpdateForm:
         league = get_object_or_404(
-            models.League.objects.manageable(self.request.user),
+            models.League.objects.event_manageable(self.request.user),
             slug=self.kwargs.get("league_slug"),
         )
 
@@ -373,7 +373,7 @@ class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView)
 
     def get_time_zone(self) -> str | None:
         league = get_object_or_404(
-            models.League.objects.manageable(self.request.user),
+            models.League.objects.event_manageable(self.request.user),
             slug=self.kwargs.get("league_slug"),
         )
         return league.time_zone
