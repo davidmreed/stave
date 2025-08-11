@@ -29,6 +29,7 @@ from django.utils.dateparse import parse_date
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.utils.translation import gettext, gettext_lazy
 from django.views import generic
+from meta.views import Meta
 
 from stave.templates.stave import contexts
 
@@ -1321,8 +1322,21 @@ class ApplicationFormView(views.View):
             app_form=app_form,
             editable=editable,
         )
+        meta = Meta(
+            site_name=gettext_lazy("Stave"),
+            title=gettext_lazy("Apply for {} at {}").format(
+                app_form.event.name, app_form.event.league.name
+            ),
+            description=app_form.intro_text,
+            url=request.path,
+            use_og=True,
+        )
 
-        return render(request, "stave/view_application.html", contexts.to_dict(context))
+        return render(
+            request,
+            "stave/view_application.html",
+            {"meta": meta, **contexts.to_dict(context)},
+        )
 
     def post(
         self,
