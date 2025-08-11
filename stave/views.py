@@ -948,9 +948,23 @@ class ScheduleView(LoginRequiredMixin, views.View):
         if not manageable and not staffed:
             return HttpResponseForbidden()
 
-        role_groups = event.role_groups.all()
-        if role_group_ids:
-            role_groups = role_groups.filter(id__in=role_group_ids.split(","))
+        # Crew Builder requires that all Override Crews be present on our RoleGroupCrewAssignments.
+        with transaction.atomic():
+            role_groups = event.role_groups.all()
+            if role_group_ids:
+                role_groups = role_groups.filter(id__in=role_group_ids.split(","))
+
+            for rgca in models.RoleGroupCrewAssignment.objects.filter(
+                role_group__in=role_groups,
+                game__event=event,
+            ).select_for_update():
+                if not rgca.crew_overrides_id:
+                    rgca.crew_overrides = models.Crew.objects.create(
+                        kind=models.CrewKind.OVERRIDE_CREW,
+                        role_group_id=rgca.role_group_id,
+                        event_id=event.id,
+                    )
+                    rgca.save()
 
         sm = ScheduleManager(event, role_groups)
 
