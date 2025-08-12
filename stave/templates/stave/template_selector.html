@@ -15,13 +15,6 @@
     {% if templates and not selected_template %}
     <fieldset>
         <legend>Select a template:</legend>
-        <div>
-            <label for="no-template-id">
-            <input type="radio" id="no-template-id" name="template_id" value="none" checked>
-                Don't use a template<br>
-                <small>Start from scratch, with no default configuration.</small>
-            </label>
-        </div>
         {% for template in templates %}
         <div>
             <label for="{{ template.id }}">
@@ -30,6 +23,12 @@
                 <small>{{ template.description }}</small>
             </label>
         </div>
+        <div>
+            <label for="no-template-id">
+            <input type="radio" id="no-template-id" name="template_id" value="none">
+                Don't use a template<br>
+                <small>Start from scratch, with no default configuration.</small>
+            </label>
         </div>
         {% endfor %}
     </fieldset>

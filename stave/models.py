@@ -1625,6 +1625,9 @@ class Application(models.Model):
                 case ApplicationStatus.REJECTION_PENDING:
                     if can_manage:
                         states.extend([ApplicationStatus.APPLIED])
+                case ApplicationStatus.ASSIGNMENT_PENDING:
+                    if can_manage:
+                        states.extend([ApplicationStatus.ASSIGNED])
                 case ApplicationStatus.WITHDRAWN:
                     pass
                 case _:
