@@ -13,7 +13,7 @@ jobs:
         with:
           flakes-from-devshell: true
           script: |
-            pytest
+            uv run pytest
   lint:
     runs-on: ubuntu-latest
     steps:
