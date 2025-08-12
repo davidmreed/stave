@@ -17,7 +17,6 @@
               nixpkgs-fmt.enable = true;
               ruff.enable = true;
               ruff-format.enable = true;
-              uv-check.enable = true;
             };
           };
         };
