@@ -1,16 +1,13 @@
 import copy
 import dataclasses
 import enum
-import re
 import uuid
 import zoneinfo
 from collections import defaultdict
-from collections.abc import Iterable
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.template.defaultfilters import slugify

@@ -9,7 +9,6 @@ dependencies = [
     "django-allauth[mfa,socialaccount]>=65.3.1",
     "django-extensions>=3.2.3",
     "django-htmx>=1.21.0",
-    "ruff>=0.9.1",
     "pillow>=11.1.0",
     "django-markdownify>=0.9.5",
     "django-types>=0.20.0",
@@ -26,6 +25,7 @@ dependencies = [
     "django-anymail[amazon-ses]>=13.0",
     "django-debug-toolbar>=5.2.0",
     "django-meta>=2.5.0",
+    "pytest-django>=4.11.1",
 ]
 
 
@@ -35,3 +35,6 @@ reportUnannotatedClassAttribute = false
 reportImplicitOverride = false
 reportUninitializedInstanceVariable = false
 reportExplicitAny = false
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "stave.settings"

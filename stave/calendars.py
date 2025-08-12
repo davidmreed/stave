@@ -1,5 +1,5 @@
 import abc
-from datetime import date, datetime, time
+from datetime import date, datetime
 from uuid import UUID
 
 from django.db.models import Q, QuerySet

@@ -12,78 +12,78 @@ def create_templates() -> models.LeagueTemplate:
     role_group_nso = models.RoleGroup.objects.get_or_create(
         name="NSO", league_template=league_template
     )[0]
-    role_hnso = models.Role.objects.get_or_create(
+    _role_hnso = models.Role.objects.get_or_create(
         role_group=role_group_nso, name="HNSO", nonexclusive=True, order_key=1
     )[0]
-    role_jt = models.Role.objects.get_or_create(
+    _role_jt = models.Role.objects.get_or_create(
         role_group=role_group_nso, name="JT", order_key=2
     )[0]
-    role_plt = models.Role.objects.get_or_create(
+    _role_plt = models.Role.objects.get_or_create(
         role_group=role_group_nso, name="PLT", order_key=3
     )[0]
-    role_plt2 = models.Role.objects.get_or_create(
+    _role_plt2 = models.Role.objects.get_or_create(
         role_group=role_group_nso, name="PLT", order_key=4
     )[0]
-    role_sbo = models.Role.objects.get_or_create(
+    _role_sbo = models.Role.objects.get_or_create(
         role_group=role_group_nso, name="SBO", order_key=5
     )[0]
-    role_sk = models.Role.objects.get_or_create(
+    _role_sk = models.Role.objects.get_or_create(
         role_group=role_group_nso, name="SK", order_key=6
     )[0]
-    role_sk2 = models.Role.objects.get_or_create(
+    _role_sk2 = models.Role.objects.get_or_create(
         role_group=role_group_nso, name="SK", order_key=7
     )[0]
-    role_pbm = models.Role.objects.get_or_create(
+    _role_pbm = models.Role.objects.get_or_create(
         role_group=role_group_nso, name="PBM", order_key=8
     )[0]
-    role_pbt = models.Role.objects.get_or_create(
+    _role_pbt = models.Role.objects.get_or_create(
         role_group=role_group_nso, name="PBT", order_key=9
     )[0]
-    role_pbt2 = models.Role.objects.get_or_create(
+    _role_pbt2 = models.Role.objects.get_or_create(
         role_group=role_group_nso, name="PBT", order_key=10
     )[0]
-    role_alt = models.Role.objects.get_or_create(
+    _role_alt = models.Role.objects.get_or_create(
         role_group=role_group_nso, name="ALT", order_key=11
     )[0]
 
     role_group_so = models.RoleGroup.objects.get_or_create(
         name="SO", league_template=league_template
     )[0]
-    role_hr = models.Role.objects.get_or_create(
+    _role_hr = models.Role.objects.get_or_create(
         role_group=role_group_so, name="HR", order_key=1
     )[0]
-    role_ipr = models.Role.objects.get_or_create(
+    _role_ipr = models.Role.objects.get_or_create(
         role_group=role_group_so, name="IPR", order_key=2
     )[0]
-    role_jr = models.Role.objects.get_or_create(
+    _role_jr = models.Role.objects.get_or_create(
         role_group=role_group_so, name="JR", order_key=3
     )[0]
-    role_jr2 = models.Role.objects.get_or_create(
+    _role_jr2 = models.Role.objects.get_or_create(
         role_group=role_group_so, name="JR", order_key=4
     )[0]
-    role_opr = models.Role.objects.get_or_create(
+    _role_opr = models.Role.objects.get_or_create(
         role_group=role_group_so, name="OPR", order_key=5
     )[0]
-    role_opr2 = models.Role.objects.get_or_create(
+    _role_opr2 = models.Role.objects.get_or_create(
         role_group=role_group_so, name="OPR", order_key=6
     )[0]
-    role_opr3 = models.Role.objects.get_or_create(
+    _role_opr3 = models.Role.objects.get_or_create(
         role_group=role_group_so, name="OPR", order_key=7
     )[0]
-    role_altref = models.Role.objects.get_or_create(
+    _role_altref = models.Role.objects.get_or_create(
         role_group=role_group_so, name="ALT", order_key=8
     )[0]
 
     role_group_tho = models.RoleGroup.objects.get_or_create(
         name="THO", league_template=league_template, event_only=True
     )[0]
-    role_thr = models.Role.objects.get_or_create(
+    _role_thr = models.Role.objects.get_or_create(
         role_group=role_group_tho, name="THR", order_key=1
     )[0]
-    role_thnso = models.Role.objects.get_or_create(
+    _role_thnso = models.Role.objects.get_or_create(
         role_group=role_group_tho, name="THNSO", order_key=2
     )[0]
-    role_gto = models.Role.objects.get_or_create(
+    _role_gto = models.Role.objects.get_or_create(
         role_group=role_group_tho, name="GTO", order_key=3
     )[0]
 
