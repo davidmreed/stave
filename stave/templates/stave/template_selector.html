@@ -23,6 +23,7 @@
                 <small>{{ template.description }}</small>
             </label>
         </div>
+        {% endfor %}
         <div>
             <label for="no-template-id">
             <input type="radio" id="no-template-id" name="template_id" value="none">
@@ -30,7 +31,6 @@
                 <small>Start from scratch, with no default configuration.</small>
             </label>
         </div>
-        {% endfor %}
     </fieldset>
     <hr>
     {% endif %}
