@@ -143,7 +143,7 @@ def tournament(tournament_template, enabled_league):
     app_form.requires_profile_fields = ["preferred_name"]
     app_form.save()
 
-    app_form_question_faction = models.Question.objects.create(
+    models.Question.objects.create(
         application_form=app_form,
         content="What is your affiliated faction?",
         kind=models.QuestionKind.SELECT_ONE,
@@ -151,7 +151,7 @@ def tournament(tournament_template, enabled_league):
         required=True,
         order_key=1,
     )
-    app_form_question_kibble = models.Question.objects.create(
+    models.Question.objects.create(
         application_form=app_form,
         content="What kinds of kibble do you like?",
         kind=models.QuestionKind.SELECT_MANY,
@@ -160,13 +160,13 @@ def tournament(tournament_template, enabled_league):
         required=True,
         order_key=2,
     )
-    app_form_question_skills = models.Question.objects.create(
+    models.Question.objects.create(
         application_form=app_form,
         content="What are your special skills?",
         kind=models.QuestionKind.LONG_TEXT,
         order_key=3,
     )
-    app_form_question_marco = models.Question.objects.create(
+    models.Question.objects.create(
         application_form=app_form,
         content="What do you think of Marco Inaros?",
         kind=models.QuestionKind.SHORT_TEXT,
@@ -183,7 +183,7 @@ def tournament(tournament_template, enabled_league):
     app_form_tho.requires_profile_fields = ["preferred_name"]
     app_form_tho.save()
 
-    app_form_tho_question = models.Question.objects.create(
+    models.Question.objects.create(
         application_form=app_form_tho,
         content="What do you want to do?",
         kind=models.QuestionKind.LONG_TEXT,
