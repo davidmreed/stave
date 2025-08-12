@@ -9,7 +9,6 @@ dependencies = [
     "django-allauth[mfa,socialaccount]>=65.3.1",
     "django-extensions>=3.2.3",
     "django-htmx>=1.21.0",
-    "ruff>=0.9.1",
     "pillow>=11.1.0",
     "django-markdownify>=0.9.5",
     "django-types>=0.20.0",
