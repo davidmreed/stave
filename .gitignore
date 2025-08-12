@@ -5,3 +5,4 @@
 *.sqlite3
 __pycache__
 *.pyc
+.pre-commit-config.yaml
