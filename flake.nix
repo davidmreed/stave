@@ -17,6 +17,7 @@
               nixpkgs-fmt.enable = true;
               ruff.enable = true;
               ruff-format.enable = true;
+              actionlint.enable = true;
             };
           };
         };
