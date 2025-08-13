@@ -301,8 +301,12 @@ class ApplicationForm(forms.Form):
         self.profile_form = profile_form_class(
             instance=user, prefix="profile", *args, **kwargs
         )
-        for f in self.profile_form.fields.values():
+        for name, f in self.profile_form.fields.items():
             f.disabled = not editable
+            if name == "email":
+                # Cannot edit email from a profile;
+                # must be verified by django-allauth
+                f.disabled = True
 
         self.user = user
 
@@ -579,6 +583,9 @@ class ApplicationFormForm(forms.ModelForm):
         empty_value=None,
         choices=models.ApplicationKind,
         widget=forms.RadioSelect,
+        label=models.ApplicationForm._meta.get_field(
+            "application_kind"
+        ).verbose_name.capitalize(),
         help_text=models.ApplicationForm._meta.get_field("application_kind").help_text,
         required=True,
     )
@@ -586,16 +593,20 @@ class ApplicationFormForm(forms.ModelForm):
         empty_value=None,
         choices=models.ApplicationAvailabilityKind,
         widget=forms.RadioSelect,
+        label=models.ApplicationForm._meta.get_field(
+            "application_availability_kind"
+        ).verbose_name.capitalize(),
         help_text=models.ApplicationForm._meta.get_field(
             "application_availability_kind"
         ).help_text,
         required=True,
     )
     requires_profile_fields = forms.TypedMultipleChoiceField(
-        empty_value=None,
         choices=[
-            (field, models.User._meta.get_field(field).verbose_name.title())
+            # FIXME: this is not correct
+            (field, models.User._meta.get_field(field).verbose_name.capitalize())
             for field in models.User.ALLOWED_PROFILE_FIELDS
+            if field != "preferred_name"
         ],
         widget=forms.CheckboxSelectMultiple,
         help_text=models.ApplicationForm._meta.get_field(
@@ -816,16 +827,6 @@ class EventCreateUpdateForm(ParentChildForm):
             ]
         ):
             game_form.instance.order_key = index + 1
-
-
-class ProfileForm(forms.ModelForm):
-    class Meta:
-        model = models.User
-        fields = models.User.ALLOWED_PROFILE_FIELDS
-
-    def __init__(self, *args, **kwargs):
-        kwargs["label_suffix"] = ""
-        super().__init__(*args, **kwargs)
 
 
 class SendEmailRecipientsForm(forms.Form):

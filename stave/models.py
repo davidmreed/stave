@@ -51,7 +51,7 @@ class User(AbstractBaseUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     is_superuser = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
-    preferred_name = models.CharField(max_length=256, verbose_name=_("preferred name"))
+    preferred_name = models.CharField(max_length=256, verbose_name=_("derby name"))
     legal_name = models.CharField(max_length=256, blank=True, null=True)
     pronouns = models.CharField(
         max_length=32, blank=True, null=True, verbose_name=_("pronouns")
@@ -1141,7 +1141,7 @@ class ApplicationForm(models.Model):
         blank=False,
         verbose_name=_("application process"),
         help_text=_(
-            "Choose Confirm Only to contact applicants only once, when the schedule is finalized. Choose Confirm then Assign to send acceptance messages first, then follow with a schedule."
+            "Choose Assign Only to contact applicants only once, when the schedule is finalized. Choose Confirm then Assign to send acceptance messages first, then follow with a schedule."
         ),
     )
     application_availability_kind = models.IntegerField(
@@ -1178,7 +1178,7 @@ class ApplicationForm(models.Model):
         default=list,
         blank=True,
         help_text=_(
-            "You can accept standard fields from the user's profile without requiring them to re-type their information."
+            "You can accept standard fields from the user's profile without requiring them to re-type their information. You always receive the Derby Name field."
         ),
     )
     objects = ApplicationFormQuerySet().as_manager()
@@ -1230,6 +1230,11 @@ class ApplicationForm(models.Model):
 
     def __str__(self) -> str:
         return f"{self.event.name} ({self.role_group_names})"
+
+    def save(self, **kwargs):
+        if "preferred_name" not in self.requires_profile_fields:
+            self.requires_profile_fields.insert(0, "preferred_name")
+        super().save(**kwargs)
 
     def get_absolute_url(self) -> str:
         return reverse(
