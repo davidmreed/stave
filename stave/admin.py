@@ -64,9 +64,38 @@ class ApplicationAdmin(admin.ModelAdmin):
     inlines = [ApplicationResponseInline]
 
 
+class GameInline(admin.TabularInline):
+    model = models.Game
+    list_display = (
+        "order_key",
+        "name",
+        "home_league",
+        "home_team",
+        "visiting_league",
+        "visiting_team",
+        "association",
+        "kind",
+    )
+
+
+class ApplicationFormInline(admin.TabularInline):
+    model = models.ApplicationForm
+    list_display = (
+        "slug",
+        "hidden",
+        "application_kind",
+        "application_availability_kind",
+    )
+
+
+@admin.register(models.Event)
+class EventAdmin(admin.ModelAdmin):
+    list_display = ("league", "start_date", "end_date", "status", "name")
+    inlines = [GameInline, ApplicationFormInline]
+
+
 for model in [
     models.League,
-    models.Event,
     models.Game,
     models.ApplicationForm,
     models.Role,
