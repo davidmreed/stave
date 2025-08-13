@@ -721,7 +721,7 @@ class ProfileView(
 ):
     template_name = "stave/profile.html"
     model = models.User
-    fields = models.User.ALLOWED_PROFILE_FIELDS
+    fields = [f for f in models.User.ALLOWED_PROFILE_FIELDS if f != "email"]
     success_url = reverse_lazy("profile")
 
     def get_object(self) -> models.User:
