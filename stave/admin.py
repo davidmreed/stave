@@ -8,7 +8,8 @@ admin.site.login = secure_admin_login(admin.site.login)
 
 class CrewAssignmentInline(admin.TabularInline):
     model = models.CrewAssignment
-    list_display = ("event", "role", "user")
+    fields = ("event", "role", "user")
+    extra = 0
 
 
 @admin.register(models.Crew)
@@ -24,12 +25,14 @@ class UserAdmin(admin.ModelAdmin):
 
 class ApplicationFormTemplateInline(admin.TabularInline):
     model = models.EventTemplate.application_form_templates.through
-    list_display = ("name",)
+    fields = ("name",)
+    extra = 0
 
 
 class GameTemplateInline(admin.TabularInline):
     model = models.GameTemplate
-    list_display = ("name",)
+    fields = ("name",)
+    extra = 0
 
 
 @admin.register(models.EventTemplate)
@@ -66,7 +69,7 @@ class ApplicationAdmin(admin.ModelAdmin):
 
 class GameInline(admin.TabularInline):
     model = models.Game
-    list_display = (
+    fields = (
         "order_key",
         "name",
         "home_league",
@@ -76,16 +79,18 @@ class GameInline(admin.TabularInline):
         "association",
         "kind",
     )
+    extra = 0
 
 
 class ApplicationFormInline(admin.TabularInline):
     model = models.ApplicationForm
-    list_display = (
+    fields = (
         "slug",
         "hidden",
         "application_kind",
         "application_availability_kind",
     )
+    extra = 0
 
 
 @admin.register(models.Event)
