@@ -138,6 +138,7 @@ class RoleGroup(models.Model):
                 name="either_league_or_league_template",
             )
         ]
+        ordering = ["name"]
 
 
 class Role(models.Model):

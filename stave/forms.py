@@ -795,8 +795,6 @@ class EventCreateUpdateForm(ParentChildForm):
             return super().is_valid()
 
     def clean(self):
-        super().clean()
-
         # Validate that all Game role groups are a subset of Event role groups
         # m2m fields aren't saved, so use cleaned_data rather than instance.
         event_role_groups = [
@@ -823,10 +821,19 @@ class EventCreateUpdateForm(ParentChildForm):
             [
                 game_form
                 for game_form in self.child_formset.forms
-                if game_form.cleaned_data.get("DELETE") != "on"
+                if not game_form.cleaned_data.get("DELETE", False)
             ]
         ):
-            game_form.instance.order_key = index + 1
+            new_order_key = index + 1
+            if game_form.instance.order_key != new_order_key:
+                game_form.cleaned_data["order_key"] = game_form.instance.order_key = (
+                    index + 1
+                )
+                # force super to save this form, even if the user did not
+                # edit it.
+                game_form.has_changed = lambda: True
+
+        super().clean()
 
 
 class SendEmailRecipientsForm(forms.Form):

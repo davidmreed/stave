@@ -668,8 +668,11 @@ class FormCreateUpdateView(LoginRequiredMixin, views.View):
                         "DELETE",
                         False,  # should import this TODO
                     ):
-                        question_form.instance.order_key = index
-                        index += 1
+                        if question_form.instance.order_key != index:
+                            question_form.instance.order_key = index
+                            # force the formset to save this instance
+                            question_form.has_changed = lambda: True
+                            index += 1
 
                 question_formset.save_existing_objects()
                 question_formset.save_new_objects()
