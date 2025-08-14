@@ -160,6 +160,15 @@ class HomeView(generic.TemplateView):
         context["application_forms"] = application_forms
         context["events"] = events
         context["applications"] = applications
+        context["meta"] = Meta(
+            site_name=gettext_lazy("Stave"),
+            title=gettext_lazy("Stave: Signups and Staffing for Roller Derby"),
+            description=gettext_lazy(
+                "Build events and signup forms, manage officiating crews, and track your officiating calendar."
+            ),
+            url="https://stave.app",
+            use_og=True,
+        )
 
         return context
 
