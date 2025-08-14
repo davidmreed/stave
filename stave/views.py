@@ -202,9 +202,6 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
     @abstractmethod
     def get_object(self, request: HttpRequest, **kwargs) -> Any | None: ...
 
-    @abstractmethod
-    def get_view_url(self) -> str: ...
-
     def get_time_zone(self) -> str | None:
         return None
 
@@ -225,7 +222,6 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
             context={
                 "object": object_,
                 "form": form,
-                "view_url": self.get_view_url(),
                 "parent_name": self.form_class.parent_form_class._meta.model._meta.verbose_name,
                 "child_name": self.form_class.child_form_class._meta.model._meta.verbose_name,
                 "child_name_plural": self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
@@ -263,7 +259,6 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
             context={
                 "object": object_,
                 "form": form,
-                "view_url": self.get_view_url(),
                 "parent_name": self.form_class.parent_form_class._meta.model._meta.verbose_name,
                 "child_name": self.form_class.child_form_class._meta.model._meta.verbose_name,
                 "child_name_plural": self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
@@ -360,17 +355,6 @@ class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView)
                 ),
                 slug=event_slug,
             )
-
-    def get_view_url(self) -> str:
-        league_slug = self.kwargs.get("league_slug")
-        event_slug = self.kwargs.get("event_slug")
-
-        if league_slug and event_slug:
-            return reverse("event-edit", args=[league_slug, event_slug])
-        elif league_slug:
-            return reverse("event-edit", args=[league_slug])
-
-        return ""  # FIXME: raise appropriate exception
 
     def get_time_zone(self) -> str | None:
         league = get_object_or_404(
