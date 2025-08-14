@@ -3,15 +3,25 @@
 
 {% block content %}
 
+
+<p style="text-align: center;">
+Welcome to Stave, a free and open source platform for roller derby signups and staffing.<br> <small>Stave is in <strong>open beta</strong>. Please <a href="mailto:david@ktema.org">contact Stacktrace</a> with any concerns or issues. <a href="#video-guides">Getting started?</a></small>
+</p>
+
 <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
 
 <article style="flex: 1 1 auto;">
     <header><h2>Open Applications</h2></header>
 
 <ul>
-{% for application_form in application_forms %}
+{% regroup application_forms by event as app_forms_by_event %}
+{% for by_event in app_forms_by_event %}
     <li>
-        {{ application_form.event }}: <a href="{{ application_form.get_absolute_url }}">Apply as {{ application_form.role_groups.all|commalist }}</a> {% if application_form.close_date %}(closes {{ application_form.close_date }}){% endif %}
+        <a href="{{ by_event.grouper.get_absolute_url }}">{{ by_event.grouper }} </a><br>
+        {% for application_form in by_event.list %}
+        <a href="{{ application_form.get_absolute_url }}">Apply as {{ application_form.role_groups.all|commalist }}</a>{% if application_form.close_date %} (closes {{ application_form.close_date }}){% endif %}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+        <br><small>{{ by_event.grouper.start_date }}{% if by_event.grouper.start_date != by_event.grouper.end_date %}&ndash;{{ by_event.grouper.end_date }}{% endif %}, {{ by_event.grouper.league }}, {{ by_event.grouper.league.location }}</small>
     </li>
 {% empty %}
 There aren't any open applications for you right now.
@@ -77,7 +87,7 @@ You aren't managing any events.
 {% endif %}
 <article style="flex: 1 1 auto;">
     <header>
-        <h2>Video Guides</h2>
+        <h2 id="video-guides">Video Guides</h2>
     </header>
 <style type="text/css">
 iframe {
