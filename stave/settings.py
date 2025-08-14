@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     "allauth.mfa",
     "allauth.usersessions",
     "allauth.socialaccount",
-    "allauth.socialaccount.providers.facebook",
     "allauth.socialaccount.providers.google",
     "template_partials",
     "markdownify",
@@ -160,19 +159,7 @@ SOCIALACCOUNT_PROVIDERS = {
         "SCOPE": ["profile", "email"],
         "AUTH_PARAMS": {"access_type": "offline"},
         "OAUTH_PKCE_ENABLED": True,
-    },
-    "facebook": {
-        "METHOD": "oauth2",
-        "SCOPE": ["email", "public_profile"],
-        "VERIFIED_EMAIL": True,
-        "APPS": [
-            {
-                "client_id": os.environ.get("FACEBOOK_CLIENT_ID"),
-                "secret": os.environ.get("FACEBOOK_CLIENT_SECRET"),
-                "key": "",
-            }
-        ],
-    },
+    }
 }
 MFA_PASSKEY_LOGIN_ENABLED = True
 MFA_PASSKEY_SIGNUP_ENABLED = True
