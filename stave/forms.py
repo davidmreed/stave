@@ -835,6 +835,17 @@ class EventCreateUpdateForm(ParentChildForm):
 
         super().clean()
 
+    def save(self, **kwargs):
+        instance = super().save(**kwargs)
+        # If we cloned a template, instantiate the application form templates.
+        if self.template:
+            for (
+                application_form_template
+            ) in self.template.application_form_templates.all():
+                _ = application_form_template.clone(event=instance)
+
+        return instance
+
 
 class SendEmailRecipientsForm(forms.Form):
     recipients = forms.ModelMultipleChoiceField(

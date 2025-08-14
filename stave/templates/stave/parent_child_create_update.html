@@ -11,7 +11,7 @@
     <h1>{% if object %}{{ object }}{% else %}New {{ parent_name|title }}{% endif %}</h1>
 </header>
 
-<form action="{{ view_url }}" enctype="multipart/form-data" method="POST">
+<form action="{{ request.path }}" enctype="multipart/form-data" method="POST">
     {% csrf_token %}
 
     {{ form.parent_form }}
@@ -22,7 +22,7 @@
     {% for child_form in form.child_formset %}
     {% if not child_form|is_form_deleted %}
     {{ child_form }}
-    <input type="submit" formaction="{{ view_url }}{% querystring action='delete' index=forloop.counter0 %}" value="Delete {{ child_name|title }}" formnovalidate>
+    <input type="submit" formaction="{{ request.path }}{% querystring action='delete' index=forloop.counter0 %}" value="Delete {{ child_name|title }}" formnovalidate>
     <hr>
     {% else %}
     {{ child_form.DELETE }}
@@ -31,7 +31,7 @@
     {% empty %}
     This {{ parent_name|lower }} doesn't have any {{ child_name_plural|lower }} yet.
     {% endfor %}
-    <input type="submit" formaction="{{ view_url }}{% querystring action='add' %}" value="Add {{ child_name|title }} to {{ parent_name|title }}" formnovalidate>
+    <input type="submit" formaction="{{ request.path }}{% querystring action='add' %}" value="Add {{ child_name|title }} to {{ parent_name|title }}" formnovalidate>
     <hr>
     <input type="submit" value="Save">
 </form>

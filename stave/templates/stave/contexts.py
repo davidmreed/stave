@@ -132,7 +132,6 @@ class EventCardInputs(EventDetailInputs):
 class ParentChildCreateUpdateInputs:
     object: Any
     form: forms.ParentChildForm
-    view_url: str
     parent_name: str
     child_name: str
     child_name_plural: str
