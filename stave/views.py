@@ -895,6 +895,29 @@ class SetGameCrewView(LoginRequiredMixin, views.View):
             return HttpResponseRedirect(game.event.get_absolute_url())
 
 
+class CrewDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
+    template_name = "stave/confirm_delete.html"
+    model = models.Crew
+
+    def get_object(self) -> models.Crew:
+        return get_object_or_404(
+            models.Crew.objects.filter(
+                id=self.kwargs.get("crew_id"),
+                kind=models.CrewKind.GAME_CREW,
+                event__in=models.Event.objects.manageable(self.request.user),
+            ),
+        )
+
+    def get_success_url(self) -> str:
+        redirect_url = self.request.GET.get("redirect_url")
+        if redirect_url and url_has_allowed_host_and_scheme(
+            redirect_url, settings.ALLOWED_HOSTS
+        ):
+            return redirect_url
+
+        return self.get_object().event.get_absolute_url()
+
+
 class StaffedUserView(LoginRequiredMixin, views.View):
     def get(
         self,

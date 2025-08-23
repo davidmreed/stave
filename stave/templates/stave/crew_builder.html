@@ -85,7 +85,12 @@
 
 {% for crew in static_crews|get:role_group.id %}
 <div class="crew-container">
+    <header>
     <h6 id="ctx-{{ crew.id }}">{{ crew }}</h6>
+    {% if editable %}
+    <a role="button" href="{% url 'crew-delete' crew.id %}{% querystring redirect_url=request.path %}">Delete</a>
+    {% endif %}
+    </header>
 {% include 'stave/partials/crew_editor.html' with editable=editable form=form crew=crew crew_assignments=crew.get_assignments_by_role_id role_group=crew.role_group focus_user_id=None counts=counts|get:crew.id csrf_token=csrf_token only %}
 </div>
 {% empty %}

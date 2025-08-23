@@ -129,6 +129,11 @@ urlpatterns = [
         name="crew-builder-add-crew",
     ),
     path(
+        "_/crews/<uuid:crew_id>/delete/",
+        views.CrewDeleteView.as_view(),
+        name="crew-delete",
+    ),
+    path(
         "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/builder/set-crew/<uuid:game_id>/<uuid:role_group_id>/",
         views.SetGameCrewView.as_view(),
         name="set-game-crew",
