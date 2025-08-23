@@ -42,7 +42,7 @@ class User(AbstractBaseUser):
         "email",
         "league_affiliation",
         "game_history_url",
-        "wftda_insurance_number",
+        "insurance",
         "nso_certification_level",
         "so_certification_level",
     ]
@@ -61,9 +61,7 @@ class User(AbstractBaseUser):
     game_history_url = models.URLField(
         verbose_name=_("game history URL"), blank=True, null=True
     )
-    wftda_insurance_number = models.IntegerField(
-        blank=True, null=True, verbose_name=_("WFTDA insurance number")
-    )
+    insurance = models.CharField(max_length=256, blank=True, null=True)
     nso_certification_level = models.CharField(
         max_length=32,
         choices=CertificationLevel.choices,
