@@ -14,6 +14,8 @@
         <title>{% block title %}Stave{% endblock %}</title>
         {% include 'meta/meta.html' %}
         {% block resources %}{% endblock %}
+        {% block extra_head %}
+        {% endblock extra_head %}
     </head>
     <body>
     <header class="container">
@@ -50,6 +52,7 @@
         {% endif %}
         {% block breadcrumbs %}{% endblock %}
         {% block content %}{% endblock %}
+        {% block extra_body %}{% endblock %}
     </main>
     <footer class="container"><small>Stave &copy; 2025 <a href="https://ktema.org">David "Stacktrace" Reed</a>. <a href="https://github.com/davidmreed/stave">Free and open source</a> for the roller derby community. <a href="{% url 'about' %}">About</a> <a href="{% url 'privacy-policy' %}">Privacy</a></small></footer>
     </body>
