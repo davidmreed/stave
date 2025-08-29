@@ -99,8 +99,19 @@ class EventAdmin(admin.ModelAdmin):
     inlines = [GameInline, ApplicationFormInline]
 
 
+class LeagueUserPermissionInline(admin.TabularInline):
+    model = models.LeagueUserPermission
+    fields = ("league", "user", "permission")
+    extra = 0
+
+
+@admin.register(models.League)
+class LeagueAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "enabled")
+    inlines = [LeagueUserPermissionInline]
+
+
 for model in [
-    models.League,
     models.Game,
     models.ApplicationForm,
     models.Role,
@@ -110,6 +121,5 @@ for model in [
     models.CrewAssignment,
     models.GameTemplate,
     models.LeagueTemplate,
-    models.LeagueUserPermission,
 ]:
     admin.site.register(model)
