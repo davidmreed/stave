@@ -1,0 +1,1247 @@
+{
+  "id": "11435b0b-13b8-4224-b751-483c51ccfa6f",
+  "version": "2.0",
+  "name": "Stave",
+  "url": "http://127.0.0.1:8888",
+  "tests": [{
+    "id": "1c875211-9158-4eaa-9b01-51ceb88a16d1",
+    "name": "Logged Out Cannot Submit App",
+    "commands": [{
+      "id": "d4a7735b-e8f5-47c4-ad67-ee4a92e996e1",
+      "comment": "",
+      "command": "open",
+      "target": "/",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "eb745800-2c76-4def-8cc2-61ad2ebacf39",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//a[contains(@href, '/_/ceres/events/2218-02-28-doubleheader/forms/apply/')]",
+      "targets": [
+        ["linkText=Apply as SO and NSO", "linkText"],
+        ["css=ul:nth-child(2) > li:nth-child(1) > a", "css:finder"],
+        ["xpath=//a[contains(text(),'Apply as SO and NSO')]", "xpath:link"],
+        ["xpath=//a[contains(@href, '/_/ceres/events/2218-02-28-doubleheader/forms/apply/')]", "xpath:href"],
+        ["xpath=//article/ul/li/a", "xpath:position"],
+        ["xpath=//a[contains(.,'Apply as SO and NSO')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "40c2aaac-cca2-45ef-9f79-81b9abfb0d9b",
+      "comment": "",
+      "command": "assertNotEditable",
+      "target": "xpath=//label[contains(.,' HR')]/input",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//fieldset/div/fieldset/div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }]
+  }, {
+    "id": "9a28d6c9-b5b0-436a-be94-46de164857e0",
+    "name": "Can Submit App for Singleheader",
+    "commands": [{
+      "id": "ac5c7b29-dcad-4e38-acfe-7bb6648fb10a",
+      "comment": "",
+      "command": "open",
+      "target": "/",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "533ebcd1-ad0e-46a1-958b-90d42681c8f7",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//a[contains(@href, '/_/ceres/events/2218-01-19-game/forms/apply/')]",
+      "targets": [
+        ["css=ul:nth-child(2) > li:nth-child(2) > a", "css:finder"],
+        ["xpath=(//a[contains(text(),'Apply as SO and NSO')])[2]", "xpath:link"],
+        ["xpath=//a[contains(@href, '/_/ceres/events/2218-01-19-game/forms/apply/')]", "xpath:href"],
+        ["xpath=//article/ul/li[2]/a", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "e2f48d63-f349-4ffa-a93e-5b645015bd72",
+      "comment": "",
+      "command": "assertNotEditable",
+      "target": "xpath=//label[contains(.,' HR')]/input",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "763b4070-55ea-4713-96bc-a4a885335cd1",
+      "comment": "",
+      "command": "click",
+      "target": "linkText=Log in",
+      "targets": [
+        ["linkText=Log in", "linkText"],
+        ["css=p > a:nth-child(1)", "css:finder"],
+        ["xpath=//a[contains(text(),'Log in')]", "xpath:link"],
+        ["xpath=(//a[contains(@href, '/accounts/login/?next=%2F_%2Fceres%2Fevents%2F2218-01-19-game%2Fforms%2Fapply%2F')])[2]", "xpath:href"],
+        ["xpath=//p[3]/a", "xpath:position"],
+        ["xpath=//a[contains(.,'Log in')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "86d11814-f645-46ff-8ba5-f1f44e62552e",
+      "comment": "",
+      "command": "type",
+      "target": "id=id_login",
+      "targets": [
+        ["id=id_login", "id"],
+        ["name=login", "name"],
+        ["css=#id_login", "css:finder"],
+        ["xpath=//input[@id='id_login']", "xpath:attributes"],
+        ["xpath=//p/input", "xpath:position"]
+      ],
+      "value": "admin@example.com"
+    }, {
+      "id": "c1db8bba-dbd6-4018-ac11-3874bda87294",
+      "comment": "",
+      "command": "type",
+      "target": "id=id_password",
+      "targets": [
+        ["id=id_password", "id"],
+        ["name=password", "name"],
+        ["css=#id_password", "css:finder"],
+        ["xpath=//input[@id='id_password']", "xpath:attributes"],
+        ["xpath=//p[2]/input", "xpath:position"]
+      ],
+      "value": "admin"
+    }, {
+      "id": "a3ee0c05-d8e8-49fe-9c73-3fd24a35e9dd",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//button[contains(.,'Sign In')]",
+      "targets": [
+        ["css=button:nth-child(6)", "css:finder"],
+        ["xpath=//button[@type='submit']", "xpath:attributes"],
+        ["xpath=//button", "xpath:position"],
+        ["xpath=//button[contains(.,'Sign In')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "b536c398-3620-4c2a-b19d-78140fd25420",
+      "comment": "",
+      "command": "assertEditable",
+      "target": "xpath=//label[contains(., 'HR')]/input",
+      "targets": [
+        ["id=id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles_0", "id"],
+        ["name=role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles", "name"],
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles_0", "css:finder"],
+        ["xpath=//input[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles_0']", "xpath:attributes"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div/label/input", "xpath:idRelative"],
+        ["xpath=//label/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "ed46be89-a88a-460f-84f1-a8ca7f5b4837",
+      "comment": "",
+      "command": "click",
+      "target": "id=id_profile-preferred_name",
+      "targets": [
+        ["id=id_profile-preferred_name", "id"],
+        ["name=profile-preferred_name", "name"],
+        ["css=#id_profile-preferred_name", "css:finder"],
+        ["xpath=//input[@id='id_profile-preferred_name']", "xpath:attributes"],
+        ["xpath=//div/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "4a6fc4ca-811f-4b1e-bf83-2d819f493594",
+      "comment": "",
+      "command": "type",
+      "target": "id=id_profile-preferred_name",
+      "targets": [
+        ["id=id_profile-preferred_name", "id"],
+        ["name=profile-preferred_name", "name"],
+        ["css=#id_profile-preferred_name", "css:finder"],
+        ["xpath=//input[@id='id_profile-preferred_name']", "xpath:attributes"],
+        ["xpath=//div/input", "xpath:position"]
+      ],
+      "value": "admin-foo"
+    }, {
+      "id": "90e66dfa-9ebf-490b-8f77-660fd7e0acca",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' HR')]",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "6d72e28c-e628-4caa-a841-87210c2ca283",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' IPR')]",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(2) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div[2]/label", "xpath:idRelative"],
+        ["xpath=//div[2]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' IPR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "946dd470-815c-434b-95c4-c416e4a7c4a9",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' HNSO')]",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HNSO')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "d96190b0-724c-439b-a0bc-0e819bc7662c",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' JT')]",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(2) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[2]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[2]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' JT')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "40595e4e-adda-42ce-8529-0e1e53e527be",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' PLT')]",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(3) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[3]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[3]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' PLT')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "b75c0d4f-8a77-4b6b-bc3a-11569b91e915",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//input[@value='Submit']",
+      "targets": [
+        ["css=input:nth-child(12)", "css:finder"],
+        ["xpath=//input[@value='Submit']", "xpath:attributes"],
+        ["xpath=//input[2]", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "f7e7329e-c060-456e-a28b-7417b4583e77",
+      "comment": "",
+      "command": "assertText",
+      "target": "css=div:nth-child(2) > dd",
+      "targets": [
+        ["css=div:nth-child(2) > dd", "css:finder"],
+        ["xpath=//div[2]/dd", "xpath:position"],
+        ["xpath=//dd[contains(.,'Applied')]", "xpath:innerText"]
+      ],
+      "value": "Applied"
+    }, {
+      "id": "07068852-2089-46eb-a8a3-fd6f386f44ac",
+      "comment": "",
+      "command": "assertValue",
+      "target": "xpath=//div[contains(.,'Preferred name')]/input",
+      "targets": [
+        ["css=form:nth-child(6) > div", "css:finder"],
+        ["xpath=//form[2]/div", "xpath:position"],
+        ["xpath=//div[contains(.,'Preferred name')]", "xpath:innerText"]
+      ],
+      "value": "admin-foo"
+    }, {
+      "id": "953a6a2f-e67a-4dbe-a900-341b6f93d552",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,' HR')]/input",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "b20dea6b-0de4-4641-aa4b-4b36d30a3924",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,' IPR')]/input",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(2) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div[2]/label", "xpath:idRelative"],
+        ["xpath=//div[2]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' IPR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "015eba98-8218-42c9-a256-6e4170f55366",
+      "comment": "",
+      "command": "assertNotChecked",
+      "target": "xpath=//label[contains(.,' JR')]/input",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(3) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div[3]/label", "xpath:idRelative"],
+        ["xpath=//div[3]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' JR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "7bad61e6-ecc9-4925-a3ec-caa19b9d1283",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,' HNSO')]/input",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HNSO')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "454f3183-2435-4471-99af-5ace6632f897",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,' JT')]/input",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(2) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[2]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[2]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' JT')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "c4eb6d48-fe42-434f-a496-87aaac1d7fc8",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,' PLT')]/input",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(3) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[3]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[3]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' PLT')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "7f4d252a-24cc-4139-8d7a-fc2b2076a6eb",
+      "comment": "",
+      "command": "assertNotChecked",
+      "target": "xpath=//label[contains(.,' SBO')]/input",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(4) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[4]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[4]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' SBO')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "d662eddb-ffe4-46cd-a740-106301e03b8c",
+      "comment": "",
+      "command": "click",
+      "target": "linkText=Logout",
+      "targets": [
+        ["linkText=Logout", "linkText"],
+        ["css=div:nth-child(2) li:nth-child(3) > a", "css:finder"],
+        ["xpath=//a[contains(text(),'Logout')]", "xpath:link"],
+        ["xpath=//a[contains(@href, '/accounts/logout/')]", "xpath:href"],
+        ["xpath=//div[2]/ul/li[3]/a", "xpath:position"],
+        ["xpath=//a[contains(.,'Logout')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "8067f8f1-882e-4250-802d-616e80decaf2",
+      "comment": "",
+      "command": "click",
+      "target": "css=button",
+      "targets": [
+        ["css=button", "css:finder"],
+        ["xpath=//button[@type='submit']", "xpath:attributes"],
+        ["xpath=//button", "xpath:position"],
+        ["xpath=//button[contains(.,'Sign Out')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }]
+  }, {
+    "id": "4e678e10-80f0-4d5f-a004-bb816e4f4829",
+    "name": "Can Submit App for Doubleheader",
+    "commands": [{
+      "id": "8a764ce8-eed4-400c-8802-8377caf16758",
+      "comment": "",
+      "command": "open",
+      "target": "/",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "a43b89a2-fde6-4e3e-8480-bb9976bba06f",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//a[contains(@href, '/_/ceres/events/2218-02-28-doubleheader/forms/apply/')]",
+      "targets": [
+        ["css=ul:nth-child(2) > li:nth-child(2) > a", "css:finder"],
+        ["xpath=(//a[contains(text(),'Apply as SO and NSO')])[2]", "xpath:link"],
+        ["xpath=//a[contains(@href, '/_/ceres/events/2218-01-19-game/forms/apply/')]", "xpath:href"],
+        ["xpath=//article/ul/li[2]/a", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "1b998687-85d9-4ac5-9af9-a7984a69be04",
+      "comment": "",
+      "command": "assertNotEditable",
+      "target": "xpath=//label[contains(.,' HR')]/input",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "c758454e-deda-4a02-8e19-d27b9a969a13",
+      "comment": "",
+      "command": "click",
+      "target": "linkText=Log in",
+      "targets": [
+        ["linkText=Log in", "linkText"],
+        ["css=p > a:nth-child(1)", "css:finder"],
+        ["xpath=//a[contains(text(),'Log in')]", "xpath:link"],
+        ["xpath=(//a[contains(@href, '/accounts/login/?next=%2F_%2Fceres%2Fevents%2F2218-01-19-game%2Fforms%2Fapply%2F')])[2]", "xpath:href"],
+        ["xpath=//p[3]/a", "xpath:position"],
+        ["xpath=//a[contains(.,'Log in')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "930e3bd9-8540-4d81-abd1-bc7360afb917",
+      "comment": "",
+      "command": "type",
+      "target": "id=id_login",
+      "targets": [
+        ["id=id_login", "id"],
+        ["name=login", "name"],
+        ["css=#id_login", "css:finder"],
+        ["xpath=//input[@id='id_login']", "xpath:attributes"],
+        ["xpath=//p/input", "xpath:position"]
+      ],
+      "value": "admin@example.com"
+    }, {
+      "id": "d8ba4d32-3c78-44ad-b49d-6cbb6e383456",
+      "comment": "",
+      "command": "type",
+      "target": "id=id_password",
+      "targets": [
+        ["id=id_password", "id"],
+        ["name=password", "name"],
+        ["css=#id_password", "css:finder"],
+        ["xpath=//input[@id='id_password']", "xpath:attributes"],
+        ["xpath=//p[2]/input", "xpath:position"]
+      ],
+      "value": "admin"
+    }, {
+      "id": "0c283e37-c557-41a5-854b-8aba1831fa44",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//button[contains(.,'Sign In')]",
+      "targets": [
+        ["css=button:nth-child(6)", "css:finder"],
+        ["xpath=//button[@type='submit']", "xpath:attributes"],
+        ["xpath=//button", "xpath:position"],
+        ["xpath=//button[contains(.,'Sign In')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "5098fa28-5f92-4181-bcd4-70d11ed3698a",
+      "comment": "",
+      "command": "assertEditable",
+      "target": "xpath=//label[contains(., 'HR')]/input",
+      "targets": [
+        ["id=id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles_0", "id"],
+        ["name=role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles", "name"],
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles_0", "css:finder"],
+        ["xpath=//input[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles_0']", "xpath:attributes"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div/label/input", "xpath:idRelative"],
+        ["xpath=//label/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "bc57ab58-7f40-4a8b-ac4e-f7540ffa6417",
+      "comment": "",
+      "command": "click",
+      "target": "id=id_profile-preferred_name",
+      "targets": [
+        ["id=id_profile-preferred_name", "id"],
+        ["name=profile-preferred_name", "name"],
+        ["css=#id_profile-preferred_name", "css:finder"],
+        ["xpath=//input[@id='id_profile-preferred_name']", "xpath:attributes"],
+        ["xpath=//div/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "5af73a9d-7b29-4367-86ec-b18f65433500",
+      "comment": "",
+      "command": "type",
+      "target": "id=id_profile-preferred_name",
+      "targets": [
+        ["id=id_profile-preferred_name", "id"],
+        ["name=profile-preferred_name", "name"],
+        ["css=#id_profile-preferred_name", "css:finder"],
+        ["xpath=//input[@id='id_profile-preferred_name']", "xpath:attributes"],
+        ["xpath=//div/input", "xpath:position"]
+      ],
+      "value": "admin-foo"
+    }, {
+      "id": "8e8ef242-095c-4554-8e25-d8643f78c286",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' HR')]",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "3707ef19-b900-4685-a448-4ed093e7e4b9",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,'Game 1')]/input",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "831cb6ea-61ec-4f27-8ce0-5ba696674ce0",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' IPR')]",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(2) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div[2]/label", "xpath:idRelative"],
+        ["xpath=//div[2]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' IPR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "8810a280-00d1-448b-8ff4-0317fce04a1c",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' HNSO')]",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HNSO')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "b7841fb4-c018-4c39-b382-b2c9380ef96b",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' JT')]",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(2) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[2]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[2]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' JT')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "d49a707b-baf5-48a6-866a-c5fbb6b5d6d5",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' PLT')]",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(3) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[3]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[3]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' PLT')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "90bf4ec3-bb2d-4069-9713-b62d2edd79a2",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//input[@value='Submit']",
+      "targets": [
+        ["css=input:nth-child(12)", "css:finder"],
+        ["xpath=//input[@value='Submit']", "xpath:attributes"],
+        ["xpath=//input[2]", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "dae32cb4-37ff-408f-803d-3ebbb0f1b52e",
+      "comment": "",
+      "command": "assertText",
+      "target": "css=div:nth-child(2) > dd",
+      "targets": [
+        ["css=div:nth-child(2) > dd", "css:finder"],
+        ["xpath=//div[2]/dd", "xpath:position"],
+        ["xpath=//dd[contains(.,'Applied')]", "xpath:innerText"]
+      ],
+      "value": "Applied"
+    }, {
+      "id": "22bf4a2d-b6dc-4010-a968-ebea14e9345a",
+      "comment": "",
+      "command": "assertValue",
+      "target": "xpath=//div[contains(.,'Preferred name')]/input",
+      "targets": [
+        ["css=form:nth-child(6) > div", "css:finder"],
+        ["xpath=//form[2]/div", "xpath:position"],
+        ["xpath=//div[contains(.,'Preferred name')]", "xpath:innerText"]
+      ],
+      "value": "admin-foo"
+    }, {
+      "id": "6f53dbd8-03b7-4113-992d-04dc0af1243e",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,' HR')]/input",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "53cfd2cb-48c2-4e41-a79a-3e774ae6c515",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,' IPR')]/input",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(2) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div[2]/label", "xpath:idRelative"],
+        ["xpath=//div[2]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' IPR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "e21f5757-fdc8-4644-9585-219be941199e",
+      "comment": "",
+      "command": "assertNotChecked",
+      "target": "xpath=//label[contains(.,' JR')]/input",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(3) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div[3]/label", "xpath:idRelative"],
+        ["xpath=//div[3]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' JR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "06d9c4fe-2de2-4e79-b383-6af5b12cc540",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,' HNSO')]/input",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HNSO')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "e1a34298-2306-4a7c-9d2d-0ff6b1a35101",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,' JT')]/input",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(2) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[2]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[2]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' JT')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "b3bde12a-3ea7-416e-8657-683340061c37",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,' PLT')]/input",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(3) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[3]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[3]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' PLT')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "523b48f7-1c5e-4eda-86ef-1b62be81c39a",
+      "comment": "",
+      "command": "assertNotChecked",
+      "target": "xpath=//label[contains(.,' SBO')]/input",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(4) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[4]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[4]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' SBO')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "8d3cb49b-b078-469b-a58f-0b1085921c90",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,'Game 1')]/input",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "870347c9-a847-42c9-88ae-930277940594",
+      "comment": "",
+      "command": "assertNotChecked",
+      "target": "xpath=//label[contains(.,'Game 2')]/input",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(4) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[4]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[4]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' SBO')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "2c95e08c-4044-41a7-a742-fd82d56aa600",
+      "comment": "",
+      "command": "click",
+      "target": "linkText=Logout",
+      "targets": [
+        ["linkText=Logout", "linkText"],
+        ["css=div:nth-child(2) li:nth-child(3) > a", "css:finder"],
+        ["xpath=//a[contains(text(),'Logout')]", "xpath:link"],
+        ["xpath=//a[contains(@href, '/accounts/logout/')]", "xpath:href"],
+        ["xpath=//div[2]/ul/li[3]/a", "xpath:position"],
+        ["xpath=//a[contains(.,'Logout')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "ac5bd2cc-90b3-49df-a7d3-42854c909d80",
+      "comment": "",
+      "command": "click",
+      "target": "css=button",
+      "targets": [
+        ["css=button", "css:finder"],
+        ["xpath=//button[@type='submit']", "xpath:attributes"],
+        ["xpath=//button", "xpath:position"],
+        ["xpath=//button[contains(.,'Sign Out')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }]
+  }, {
+    "id": "0490ac84-42e6-40cc-8948-7973cd6e5d41",
+    "name": "Can Submit App for Tournament",
+    "commands": [{
+      "id": "4460d893-fece-4b8f-af8c-6c2ff945045e",
+      "comment": "",
+      "command": "open",
+      "target": "/",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "995c54e8-bebd-4043-b76d-85e0f4525d05",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//a[contains(@href, '/_/ceres/events/outer-planets-throwdown/forms/apply/')]",
+      "targets": [
+        ["css=ul:nth-child(2) > li:nth-child(2) > a", "css:finder"],
+        ["xpath=(//a[contains(text(),'Apply as SO and NSO')])[2]", "xpath:link"],
+        ["xpath=//a[contains(@href, '/_/ceres/events/2218-01-19-game/forms/apply/')]", "xpath:href"],
+        ["xpath=//article/ul/li[2]/a", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "1a3c98c7-d131-4a83-87cf-b1df7cb07b3a",
+      "comment": "",
+      "command": "assertNotEditable",
+      "target": "xpath=//label[contains(.,' HR')]/input",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "d00efcc4-78db-4a32-a449-bb7770117b3c",
+      "comment": "",
+      "command": "click",
+      "target": "linkText=Log in",
+      "targets": [
+        ["linkText=Log in", "linkText"],
+        ["css=p > a:nth-child(1)", "css:finder"],
+        ["xpath=//a[contains(text(),'Log in')]", "xpath:link"],
+        ["xpath=(//a[contains(@href, '/accounts/login/?next=%2F_%2Fceres%2Fevents%2F2218-01-19-game%2Fforms%2Fapply%2F')])[2]", "xpath:href"],
+        ["xpath=//p[3]/a", "xpath:position"],
+        ["xpath=//a[contains(.,'Log in')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "f52c1f1e-6404-4fa8-8fc9-3d359ade13b3",
+      "comment": "",
+      "command": "type",
+      "target": "id=id_login",
+      "targets": [
+        ["id=id_login", "id"],
+        ["name=login", "name"],
+        ["css=#id_login", "css:finder"],
+        ["xpath=//input[@id='id_login']", "xpath:attributes"],
+        ["xpath=//p/input", "xpath:position"]
+      ],
+      "value": "admin@example.com"
+    }, {
+      "id": "22b3459c-acaf-4403-a277-f13fb61d45a0",
+      "comment": "",
+      "command": "type",
+      "target": "id=id_password",
+      "targets": [
+        ["id=id_password", "id"],
+        ["name=password", "name"],
+        ["css=#id_password", "css:finder"],
+        ["xpath=//input[@id='id_password']", "xpath:attributes"],
+        ["xpath=//p[2]/input", "xpath:position"]
+      ],
+      "value": "admin"
+    }, {
+      "id": "09b52313-4a00-4d5c-b547-5bfab30ebefc",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//button[contains(.,'Sign In')]",
+      "targets": [
+        ["css=button:nth-child(6)", "css:finder"],
+        ["xpath=//button[@type='submit']", "xpath:attributes"],
+        ["xpath=//button", "xpath:position"],
+        ["xpath=//button[contains(.,'Sign In')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "af7207ab-aaea-4d8e-835d-0b8c9396919e",
+      "comment": "",
+      "command": "assertEditable",
+      "target": "xpath=//label[contains(., 'HR')]/input",
+      "targets": [
+        ["id=id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles_0", "id"],
+        ["name=role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles", "name"],
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles_0", "css:finder"],
+        ["xpath=//input[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles_0']", "xpath:attributes"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div/label/input", "xpath:idRelative"],
+        ["xpath=//label/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "ea87c0bc-fae1-478f-b51a-325577bc7a1c",
+      "comment": "",
+      "command": "click",
+      "target": "id=id_profile-preferred_name",
+      "targets": [
+        ["id=id_profile-preferred_name", "id"],
+        ["name=profile-preferred_name", "name"],
+        ["css=#id_profile-preferred_name", "css:finder"],
+        ["xpath=//input[@id='id_profile-preferred_name']", "xpath:attributes"],
+        ["xpath=//div/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "dd3cd6f5-53fa-4f0f-8aa1-c40206b0087b",
+      "comment": "",
+      "command": "type",
+      "target": "id=id_profile-preferred_name",
+      "targets": [
+        ["id=id_profile-preferred_name", "id"],
+        ["name=profile-preferred_name", "name"],
+        ["css=#id_profile-preferred_name", "css:finder"],
+        ["xpath=//input[@id='id_profile-preferred_name']", "xpath:attributes"],
+        ["xpath=//div/input", "xpath:position"]
+      ],
+      "value": "admin-foo"
+    }, {
+      "id": "7371105a-1c39-4034-aa4c-4e291fbdf67c",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' HR')]",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "47112ed5-d07f-49f6-8328-b5997b58f41d",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,'Game 1')]/input",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "872cd5a5-37a3-479c-aa99-711e077af9a0",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' IPR')]",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(2) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div[2]/label", "xpath:idRelative"],
+        ["xpath=//div[2]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' IPR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "0eefc8a9-3008-4943-ac2d-34fc1f5023ca",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' HNSO')]",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HNSO')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "3137c7e5-50fa-4730-b272-962b755ffbee",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' JT')]",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(2) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[2]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[2]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' JT')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "60eed222-d8fc-4022-99ba-24f63d0596a6",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' PLT')]",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(3) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[3]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[3]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' PLT')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "4dc7e6f0-9a7f-4024-846f-02ebc8f3de57",
+      "comment": "",
+      "command": "click",
+      "target": "id=id_days-days_0",
+      "targets": [
+        ["id=id_days-days_0", "id"],
+        ["name=days-days", "name"],
+        ["css=#id_days-days_0", "css:finder"],
+        ["xpath=//input[@id='id_days-days_0']", "xpath:attributes"],
+        ["xpath=//div[@id='id_days-days']/div/label/input", "xpath:idRelative"],
+        ["xpath=//label/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "4f8e3385-1e5c-4d86-a13e-41ae2175acf9",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' OPA')]/input",
+      "targets": [
+        ["css=#id_custom-657ab7d8-b636-44bb-bb11-018d483b80a3 > div:nth-child(3) > label", "css:finder"],
+        ["xpath=//div[@id='id_custom-657ab7d8-b636-44bb-bb11-018d483b80a3']/div[3]/label", "xpath:idRelative"],
+        ["xpath=//div[3]/fieldset/div/div[3]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' OPA')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "8ad1c011-ef67-4171-85c7-17fef1940622",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' red')]/input",
+      "targets": [
+        ["css=#id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_0 > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_0']/div/label", "xpath:idRelative"],
+        ["xpath=//div[4]/fieldset/div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' red')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "705597b7-8833-4e31-adf0-0db145beb626",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//label[contains(.,' blue')]/input",
+      "targets": [
+        ["css=#id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_0 > div:nth-child(2) > label", "css:finder"],
+        ["xpath=//div[@id='id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_0']/div[2]/label", "xpath:idRelative"],
+        ["xpath=//div[4]/fieldset/div/div[2]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' blue')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "279ee7f8-3358-4cf3-a0c7-9b05fdf65581",
+      "comment": "",
+      "command": "click",
+      "target": "id=id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_0_3",
+      "targets": [
+        ["id=id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_0_3", "id"],
+        ["css=#id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_0_3", "css:finder"],
+        ["xpath=//input[@id='id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_0_3']", "xpath:attributes"],
+        ["xpath=//div[@id='id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_0']/div[4]/label/input", "xpath:idRelative"],
+        ["xpath=//div[4]/fieldset/div/div[4]/label/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "82cb1263-d6ae-44ae-b3bd-02bbfafbba90",
+      "comment": "",
+      "command": "click",
+      "target": "id=id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_1",
+      "targets": [
+        ["id=id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_1", "id"],
+        ["name=custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_1", "name"],
+        ["css=#id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_1", "css:finder"],
+        ["xpath=//input[@id='id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_1']", "xpath:attributes"],
+        ["xpath=//fieldset/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "a1c1cd5d-1be6-4b05-8025-c74ba7c8c750",
+      "comment": "",
+      "command": "type",
+      "target": "id=id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_1",
+      "targets": [
+        ["id=id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_1", "id"],
+        ["name=custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_1", "name"],
+        ["css=#id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_1", "css:finder"],
+        ["xpath=//input[@id='id_custom-00dbd66e-b42f-4b0d-8674-a1fea8810e07_1']", "xpath:attributes"],
+        ["xpath=//fieldset/input", "xpath:position"]
+      ],
+      "value": "black"
+    }, {
+      "id": "424ccfa7-eca7-4948-9297-c9bf125afbb3",
+      "comment": "",
+      "command": "click",
+      "target": "id=id_custom-76bf4b6b-43b8-4370-b5c7-166751757cad",
+      "targets": [
+        ["id=id_custom-76bf4b6b-43b8-4370-b5c7-166751757cad", "id"],
+        ["name=custom-76bf4b6b-43b8-4370-b5c7-166751757cad", "name"],
+        ["css=#id_custom-76bf4b6b-43b8-4370-b5c7-166751757cad", "css:finder"],
+        ["xpath=//textarea[@id='id_custom-76bf4b6b-43b8-4370-b5c7-166751757cad']", "xpath:attributes"],
+        ["xpath=//textarea", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "b4c9f4cb-e78f-4c06-beee-714ccd034c22",
+      "comment": "",
+      "command": "type",
+      "target": "id=id_custom-76bf4b6b-43b8-4370-b5c7-166751757cad",
+      "targets": [
+        ["id=id_custom-76bf4b6b-43b8-4370-b5c7-166751757cad", "id"],
+        ["name=custom-76bf4b6b-43b8-4370-b5c7-166751757cad", "name"],
+        ["css=#id_custom-76bf4b6b-43b8-4370-b5c7-166751757cad", "css:finder"],
+        ["xpath=//textarea[@id='id_custom-76bf4b6b-43b8-4370-b5c7-166751757cad']", "xpath:attributes"],
+        ["xpath=//textarea", "xpath:position"]
+      ],
+      "value": "Piloting"
+    }, {
+      "id": "06ccf53d-00a8-4c66-8b38-6618575a1af2",
+      "comment": "",
+      "command": "click",
+      "target": "id=id_custom-d4dce213-2308-4f47-8fd6-dd29aed20b47",
+      "targets": [
+        ["id=id_custom-d4dce213-2308-4f47-8fd6-dd29aed20b47", "id"],
+        ["name=custom-d4dce213-2308-4f47-8fd6-dd29aed20b47", "name"],
+        ["css=#id_custom-d4dce213-2308-4f47-8fd6-dd29aed20b47", "css:finder"],
+        ["xpath=//input[@id='id_custom-d4dce213-2308-4f47-8fd6-dd29aed20b47']", "xpath:attributes"],
+        ["xpath=//div[6]/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "0a6f0306-34cb-4b62-9cab-0a82936f3ba4",
+      "comment": "",
+      "command": "type",
+      "target": "id=id_custom-d4dce213-2308-4f47-8fd6-dd29aed20b47",
+      "targets": [
+        ["id=id_custom-d4dce213-2308-4f47-8fd6-dd29aed20b47", "id"],
+        ["name=custom-d4dce213-2308-4f47-8fd6-dd29aed20b47", "name"],
+        ["css=#id_custom-d4dce213-2308-4f47-8fd6-dd29aed20b47", "css:finder"],
+        ["xpath=//input[@id='id_custom-d4dce213-2308-4f47-8fd6-dd29aed20b47']", "xpath:attributes"],
+        ["xpath=//div[6]/input", "xpath:position"]
+      ],
+      "value": "Terrible guy"
+    }, {
+      "id": "4f3c6a06-e198-4545-b260-644bd0e6bda4",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//input[@value='Submit']",
+      "targets": [
+        ["css=input:nth-child(12)", "css:finder"],
+        ["xpath=//input[@value='Submit']", "xpath:attributes"],
+        ["xpath=//input[2]", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "900b2fbe-6e34-41e5-b6b4-8dd1cd92d82b",
+      "comment": "",
+      "command": "assertText",
+      "target": "css=div:nth-child(2) > dd",
+      "targets": [
+        ["css=div:nth-child(2) > dd", "css:finder"],
+        ["xpath=//div[2]/dd", "xpath:position"],
+        ["xpath=//dd[contains(.,'Applied')]", "xpath:innerText"]
+      ],
+      "value": "Applied"
+    }, {
+      "id": "d7fcd4d6-ccd4-4175-bef8-59fa375684c6",
+      "comment": "",
+      "command": "assertValue",
+      "target": "xpath=//div[contains(.,'Preferred name')]/input",
+      "targets": [
+        ["css=form:nth-child(6) > div", "css:finder"],
+        ["xpath=//form[2]/div", "xpath:position"],
+        ["xpath=//div[contains(.,'Preferred name')]", "xpath:innerText"]
+      ],
+      "value": "admin-foo"
+    }, {
+      "id": "5242fc97-ea28-4ab6-8f22-639eebd0cc8a",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,' HR')]/input",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "6a71ad3d-1ab5-4c5c-84ef-f5399e73b18c",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,' IPR')]/input",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(2) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div[2]/label", "xpath:idRelative"],
+        ["xpath=//div[2]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' IPR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "fefd10be-fe2a-44c4-b920-58b790de43eb",
+      "comment": "",
+      "command": "assertNotChecked",
+      "target": "xpath=//label[contains(.,' JR')]/input",
+      "targets": [
+        ["css=#id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles > div:nth-child(3) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-48501e62-8d75-45a2-bf64-a14c743cf3bb-roles']/div[3]/label", "xpath:idRelative"],
+        ["xpath=//div[3]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' JR')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "852ee9cd-f91c-41a4-a184-3143fe2e6d8b",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,' HNSO')]/input",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(1) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div/label", "xpath:position"],
+        ["xpath=//label[contains(.,' HNSO')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "b8002d16-9c1c-4621-9666-61ba7d01422b",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,' JT')]/input",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(2) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[2]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[2]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' JT')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "8313bbc7-30e0-4ef1-8cb1-55b3362aa12f",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,' PLT')]/input",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(3) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[3]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[3]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' PLT')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "2d097b25-679e-47f1-8b40-6c0014c3dda6",
+      "comment": "",
+      "command": "assertNotChecked",
+      "target": "xpath=//label[contains(.,' SBO')]/input",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(4) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[4]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[4]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' SBO')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "6782a46c-4563-4bb9-b8e6-134abf1f810b",
+      "comment": "",
+      "command": "assertChecked",
+      "target": "xpath=//label[contains(.,'Game 1')]/input",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "eee4ea68-4122-40af-9afe-ba4c1f48734f",
+      "comment": "",
+      "command": "assertNotChecked",
+      "target": "xpath=//label[contains(.,'Game 2')]/input",
+      "targets": [
+        ["css=#id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles > div:nth-child(4) > label", "css:finder"],
+        ["xpath=//div[@id='id_role-group-a5ab2c89-3669-41c1-a568-af549044e7bb-roles']/div[4]/label", "xpath:idRelative"],
+        ["xpath=//fieldset[2]/div/fieldset/div/div[4]/label", "xpath:position"],
+        ["xpath=//label[contains(.,' SBO')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "3e5c7f09-fa35-4f48-ac86-3c87ff8b13ae",
+      "comment": "",
+      "command": "click",
+      "target": "linkText=Logout",
+      "targets": [
+        ["linkText=Logout", "linkText"],
+        ["css=div:nth-child(2) li:nth-child(3) > a", "css:finder"],
+        ["xpath=//a[contains(text(),'Logout')]", "xpath:link"],
+        ["xpath=//a[contains(@href, '/accounts/logout/')]", "xpath:href"],
+        ["xpath=//div[2]/ul/li[3]/a", "xpath:position"],
+        ["xpath=//a[contains(.,'Logout')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "9cd92549-0847-4f9c-a53e-4e075401efba",
+      "comment": "",
+      "command": "click",
+      "target": "css=button",
+      "targets": [
+        ["css=button", "css:finder"],
+        ["xpath=//button[@type='submit']", "xpath:attributes"],
+        ["xpath=//button", "xpath:position"],
+        ["xpath=//button[contains(.,'Sign Out')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }]
+  }],
+  "suites": [{
+    "id": "dba24b3e-81ff-448a-ba95-09ee3be3c4b4",
+    "name": "Default Suite",
+    "persistSession": false,
+    "parallel": false,
+    "timeout": 300,
+    "tests": ["1c875211-9158-4eaa-9b01-51ceb88a16d1"]
+  }],
+  "urls": ["http://127.0.0.1:8888/"],
+  "plugins": []
+}

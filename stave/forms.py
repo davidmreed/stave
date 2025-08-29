@@ -245,6 +245,7 @@ class ApplicationForm(forms.Form):
     """This is a compound form class that represents the content of a
     user-designed models.ApplicationForm"""
 
+    email_form: forms.Form | None
     profile_form: forms.ModelForm
     availability_form: forms.Form | None
     role_group_forms: list[forms.Form]
@@ -293,6 +294,15 @@ class ApplicationForm(forms.Form):
             kwargs.pop("prefix")
         if "initial" in kwargs:
             kwargs.pop("initial")
+
+        # if user is None, they're not logged in -
+        # add the email_form.
+
+        if not user:
+            self.email_form = forms.Form(
+                prefix="email", initial=initial, *args, **kwargs
+            )
+            self.email_form.fields["email"] = forms.EmailField(required=True)
 
         # Generate fields for profile
         profile_form_class = forms.modelform_factory(
@@ -431,7 +441,7 @@ class ApplicationForm(forms.Form):
         return [
             f
             for f in (
-                [self.profile_form, self.availability_form]
+                [self.email_form, self.profile_form, self.availability_form]
                 + self.role_group_forms
                 + [self.custom_form]
             )

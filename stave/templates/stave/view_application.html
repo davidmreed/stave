@@ -115,6 +115,7 @@ This application's status is <strong>{{ application.get_status_display }}</stron
 
 {% if not request.user.is_authenticated and not application %}
 {% include "stave/login_options.html" %}
+You can create your Stave account by filling out this form!
 <hr>
 {% endif %}
 
