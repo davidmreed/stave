@@ -1,3 +1,8 @@
+set dotenv-load := true
+
+backup:
+    pg_dump -U postgres -h $PGHOST_PROD -p $PGPORT_PROD -W -f backups/database-$(date +%F).bak -F t railway
+
 migrate:
     uv run manage.py makemigrations && uv run manage.py migrate
 
