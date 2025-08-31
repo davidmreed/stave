@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
+import allauth.account.models
 from django.core.mail import EmailMultiAlternatives
 from django_apscheduler.util import close_old_connections
 
@@ -51,3 +52,19 @@ def update_event_statuses():
         status=models.EventStatus.IN_PROGRESS,
         end_date__lt=datetime.now(tz=timezone.utc),
     ).update(status=models.EventStatus.COMPLETE)
+
+
+@close_old_connections
+def clean_up_unconfirmed_users():
+    deleted = (
+        models.User.objects.filter(
+            date_created__lt=datetime.now(tz=timezone.utc) - timedelta(days=7)
+        )
+        .exclude(
+            id__in=allauth.account.models.EmailAddress.objects.filter(
+                verified=True
+            ).values_list("user")
+        )
+        .delete()
+    )
+    logging.info(f"Deleted {deleted} unconfirmed accounts")
