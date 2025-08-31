@@ -59,6 +59,16 @@ class Command(BaseCommand):
             replace_existing=True,
         )
         logger.info("Added job 'update_event_statuses'.")
+
+        _ = scheduler.add_job(
+            jobs.clean_up_unconfirmed_users,
+            trigger=CronTrigger(hour="*"),
+            id="clean_up_unconfirmed_users",
+            max_instances=1,
+            replace_existing=True,
+        )
+        logger.info("Added job 'clean_up_unconfirmed_users'.")
+
         _ = scheduler.add_job(
             delete_old_job_executions,
             trigger=CronTrigger(
