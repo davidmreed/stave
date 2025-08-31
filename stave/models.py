@@ -76,6 +76,7 @@ class User(AbstractBaseUser):
         blank=True,
         verbose_name=_("SO certification level"),
     )
+    date_created = models.DateTimeField(auto_now_add=True)
 
     league_permissions: models.Manager["LeagueUserPermission"]
 
