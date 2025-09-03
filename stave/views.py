@@ -11,7 +11,7 @@ from django import views
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import Q, QuerySet
+from django.db.models import QuerySet
 from django.http import (
     FileResponse,
     Http404,
@@ -94,14 +94,10 @@ class OfficiatingHistoryView(LoginRequiredMixin, generic.ListView):
     model = models.RoleGroupCrewAssignment
 
     def get_queryset(self):
-        cas = models.CrewAssignment.objects.filter(user=self.request.user)
-        crews = models.Crew.objects.filter(
-            assignments__in=cas, event__status=models.EventStatus.COMPLETE
-        )
-        rgcas = models.RoleGroupCrewAssignment.objects.filter(
-            Q(crew__in=crews) | Q(crew_overrides__in=crews)
+        return models.RoleGroupCrewAssignment.for_user(
+            self.request.user,
+            [models.EventStatus.COMPLETE],
         ).order_by("-game__start_time")
-        return rgcas
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -153,13 +149,55 @@ class HomeView(generic.TemplateView):
             events = models.Event.objects.manageable(self.request.user).exclude(
                 status__in=[models.EventStatus.CANCELED, models.EventStatus.COMPLETE]
             )
+
+            # Upcoming crew assignments.
+            rgcas = models.RoleGroupCrewAssignment.for_user(
+                self.request.user,
+                [models.EventStatus.OPEN, models.EventStatus.IN_PROGRESS],
+            ).order_by("game__start_time")
+
+            upcoming_assignments: list[models.GameHistory] = []
+            for rgca in rgcas:
+                # TODO: Surely there's a better way to do this instead of an N+1.
+                if (
+                    not models.User.objects.staffed(rgca.game.event)
+                    .filter(id=self.request.user.id)
+                    .exists()
+                ):
+                    continue
+                user_cas = [
+                    ca for ca in rgca.effective_crew() if ca.user == self.request.user
+                ]
+                if len(user_cas) == 0:
+                    continue
+                elif len(user_cas) == 1:
+                    role = user_cas[0].role
+                    secondary_role = None
+                else:
+                    role = next(
+                        (ca.role for ca in user_cas if ca.role.nonexclusive), None
+                    )
+                    assert role is not None
+                    secondary_role = next(
+                        (ca.role for ca in user_cas if not ca.role.nonexclusive), None
+                    )
+                upcoming_assignments.append(
+                    models.GameHistory(
+                        game=rgca.game,
+                        user=self.request.user,
+                        role=role,
+                        secondary_role=secondary_role,
+                    )
+                )
         else:
             applications = []
             events = []
+            upcoming_assignments = []
 
         context["application_forms"] = application_forms
         context["events"] = events
         context["applications"] = applications
+        context["upcoming_assignments"] = upcoming_assignments
         context["meta"] = Meta(
             site_name=gettext_lazy("Stave"),
             title=gettext_lazy("Stave: Signups and Staffing for Roller Derby"),
