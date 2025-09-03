@@ -73,7 +73,12 @@ class MyApplicationsView(LoginRequiredMixin, generic.ListView):
     model = models.Application
 
     def get_queryset(self) -> QuerySet[models.Application]:
-        return super().get_queryset().filter(user=self.request.user)
+        return (
+            super()
+            .get_queryset()
+            .filter(user=self.request.user)
+            .order_by("-form__event__start_date")
+        )
 
 
 class OfficiatingHistoryView(LoginRequiredMixin, generic.ListView):
