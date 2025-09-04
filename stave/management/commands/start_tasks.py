@@ -33,7 +33,7 @@ class Command(BaseCommand):
         scheduler = BlockingScheduler(timezone=settings.TIME_ZONE)
         scheduler.add_jobstore(DjangoJobStore(), "default")
 
-        _ = scheduler.add_job(
+        scheduler.add_job(
             jobs.delete_old_messages,
             trigger=CronTrigger(day="*"),
             id="delete_old_messages",
@@ -42,7 +42,7 @@ class Command(BaseCommand):
         )
         logger.info("Added job 'delete_old_messages'.")
 
-        _ = scheduler.add_job(
+        scheduler.add_job(
             jobs.send_emails,
             trigger=CronTrigger(minute="*"),
             id="send_emails",
@@ -51,7 +51,7 @@ class Command(BaseCommand):
         )
         logger.info("Added job 'send_emails'.")
 
-        _ = scheduler.add_job(
+        scheduler.add_job(
             jobs.update_event_statuses,
             trigger=CronTrigger(hour="*"),
             id="update_event_statuses",
@@ -60,7 +60,7 @@ class Command(BaseCommand):
         )
         logger.info("Added job 'update_event_statuses'.")
 
-        _ = scheduler.add_job(
+        scheduler.add_job(
             jobs.clean_up_unconfirmed_users,
             trigger=CronTrigger(hour="*"),
             id="clean_up_unconfirmed_users",
@@ -69,7 +69,7 @@ class Command(BaseCommand):
         )
         logger.info("Added job 'clean_up_unconfirmed_users'.")
 
-        _ = scheduler.add_job(
+        scheduler.add_job(
             delete_old_job_executions,
             trigger=CronTrigger(
                 day_of_week="mon", hour="00", minute="00"
