@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 license = "AGPL-3.0"
+classifiers = [
+    "Private :: Do Not Upload",  # prevent project from being uploaded to PyPI
+]
 requires-python = ">=3.13"
 dependencies = [
     "django>=5.1.4",
