@@ -27,7 +27,7 @@ run-prod:
 
 # Seed database with dummy data
 seed: migrate
-     uv run manage.py seed
+    uv run manage.py seed
 
 # Run tests
 test:
