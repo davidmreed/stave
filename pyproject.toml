@@ -1,7 +1,7 @@
 [project]
 name = "stave"
 version = "0.1.0"
-description = "Add your description here"
+description = "Official and volunteer signups for roller derby events"
 readme = "README.md"
 license = "AGPL-3.0"
 classifiers = [
