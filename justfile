@@ -1,20 +1,34 @@
 set dotenv-load := true
 
+[private]
+default:
+    @just --list
+
+# Export database to backup file
 backup:
     pg_dump -U postgres -h $PGHOST_PROD -p $PGPORT_PROD -W -f backups/database-$(date +%F).bak -F t railway
 
+# Generate new migrations based on model changes
 makemigrations:
     uv run manage.py makemigrations
 
+# Apply database migrations
 migrate:
     uv run manage.py migrate
 
+# Run server in development mode
 run:
     uv run manage.py collectstatic --noinput
     uv run manage.py runserver 0.0.0.0:8888
 
+# Run server in production mode
 run-prod:
     docker/entrypoint.sh
 
-seed:
+# Seed database with dummy data
+seed: migrate
      uv run manage.py seed
+
+# Run tests
+test:
+    uv run pytest
