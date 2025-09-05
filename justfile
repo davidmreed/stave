@@ -6,7 +6,7 @@ default:
 
 # Export database to backup file
 backup:
-    pg_dump -U postgres -h $PGHOST_PROD -p $PGPORT_PROD -W -f backups/database-$(date +%F).bak -F t railway
+    pg_dump -U postgres -h $PGHOST_PROD -p $PGPORT_PROD -W -f backups/database-{{datetime("%F")}}.bak -F t railway
 
 # Generate new migrations based on model changes
 makemigrations:
