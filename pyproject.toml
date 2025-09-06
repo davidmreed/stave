@@ -1,8 +1,12 @@
 [project]
 name = "stave"
 version = "0.1.0"
-description = "Add your description here"
+description = "Official and volunteer signups for roller derby events"
 readme = "README.md"
+license = "AGPL-3.0"
+classifiers = [
+    "Private :: Do Not Upload",  # prevent project from being uploaded to PyPI
+]
 requires-python = ">=3.13"
 dependencies = [
     "django>=5.1.4",
