@@ -1,3 +1,7 @@
+"""
+Base settings shared by all environments.
+"""
+
 import os
 from pathlib import Path
 
@@ -6,24 +10,29 @@ import django_stubs_ext
 import dotenv
 import sentry_sdk
 
+# Sentry initialization should happen before importing Django apps/middleware
+# to ensure errors are captured correctly.
+if sentry_dsn := os.environ.get("SENTRY_DSN"):
+    # Initialize Sentry for production error tracking
+    sentry_sdk.init(
+        dsn=sentry_dsn,
+        # Add data like request headers and IP for users,
+        # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+        send_default_pii=True,
+        traces_sample_rate=1.0,
+        environment="production",
+    )
+
+
 django_stubs_ext.monkeypatch()
 
-_ = dotenv.load_dotenv()
+dotenv.load_dotenv()
 
-_ = sentry_sdk.init(
-    dsn=os.environ.get("SENTRY_DSN"),
-    # Add data like request headers and IP for users,
-    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
-    send_default_pii=True,
-    traces_sample_rate=1.0,
-)
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Build paths
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
-DEBUG = os.environ.get("DEBUG") == "True"
-EMAIL_BACKEND = os.environ.get(
-    "EMAIL_BACKEND", "anymail.backends.amazon_ses.EmailBackend"
-)
 
+# Host configuration
 ALLOWED_HOSTS = [
     "stave.app",
     "stave.onrailway.app",
@@ -34,6 +43,7 @@ ALLOWED_HOSTS = [
 
 CSRF_TRUSTED_ORIGINS = ["https://*.kcabi3mb.up.railway.app", "https://*.stave.app"]
 
+# Application definition - Base apps used in all environments
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -52,13 +62,12 @@ INSTALLED_APPS = [
     "markdownify",
     "anymail",
     "django_apscheduler",
-    "debug_toolbar",
     "meta",
     "stave",
 ]
 
+# Base middleware - Additional middleware added per environment
 MIDDLEWARE = [
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -70,6 +79,7 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
 ]
 
+# Authentication
 AUTH_USER_MODEL = "stave.User"
 AUTHENTICATION_BACKENDS = [
     # Needed to login by username in Django admin, regardless of `allauth`
@@ -80,6 +90,7 @@ AUTHENTICATION_BACKENDS = [
 
 ROOT_URLCONF = "stave.urls"
 
+# Templates
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -99,12 +110,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "stave.wsgi.application"
 
+# Database
 DATABASES = {
     "default": dj_database_url.config(
         default="sqlite:///db.sqlite3", conn_max_age=600, conn_health_checks=True
     )
 }
 
+# File storage
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -117,6 +130,7 @@ STORAGES = {
 MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "images")
 MEDIA_URL = "media/"
 
+# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -132,17 +146,20 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Internationalization
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
+# Static files
 STATIC_URL = "static/"
 STATIC_ROOT = "static"
 STATICFILES_DIRS = ["stave/static"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# django-allauth settings
 ACCOUNT_SIGNUP_FORM_HONEYPOT_FIELD = "phone_number"
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
@@ -171,14 +188,21 @@ ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_USER_MODEL_EMAIL_FIELD = "email"
 ACCOUNT_LOGIN_METHODS = {"email"}
-ANYMAIL = {"RESEND_API_KEY": os.environ.get("RESEND_API_KEY")}
-DEFAULT_FROM_EMAIL = "stave@stave.app"
-SERVER_EMAIL = "stave@stave.app"
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
 LOGIN_REDIRECT_URL = "/"
 
+# Email settings
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND", "anymail.backends.amazon_ses.EmailBackend"
+)
+ANYMAIL = {"RESEND_API_KEY": os.environ.get("RESEND_API_KEY")}
+DEFAULT_FROM_EMAIL = "stave@stave.app"
+SERVER_EMAIL = "stave@stave.app"
+
+# Custom app settings
 STAVE_EMAIL_MAX_TRIES = 3
 
+# Markdownify settings
 MARKDOWNIFY = {
     "default": {
         "WHITELIST_TAGS": [
@@ -201,9 +225,6 @@ MARKDOWNIFY = {
     }
 }
 
-INTERNAL_IPS = [
-    "127.0.0.1",
-]
-
+# Meta settings for SEO
 META_SITE_PROTOCOL = "https"
 META_SITE_DOMAIN = "stave.app"

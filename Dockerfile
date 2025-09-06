@@ -2,6 +2,7 @@ FROM ghcr.io/astral-sh/uv:python3.13-alpine
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV HOME=/home/app
+ENV DJANGO_ENV=production
 
 RUN addgroup --system app && adduser --system app --ingroup app
 EXPOSE 8888
