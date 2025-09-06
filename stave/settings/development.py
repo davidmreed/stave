@@ -14,6 +14,7 @@ DEBUG = True
 INSTALLED_APPS += [
     "debug_toolbar",
     "django_extensions",  # Useful development tools like shell_plus
+    "behave_django",  # BDD testing framework
 ]
 
 # Add debug toolbar middleware at the beginning for development

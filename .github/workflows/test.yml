@@ -16,6 +16,7 @@ jobs:
           flakes-from-devshell: true
           script: |
             uv run pytest
+            just behave
   lint:
     runs-on: ubuntu-latest
     steps:

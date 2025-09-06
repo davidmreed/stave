@@ -31,6 +31,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "behave-django>=1.7.0",
     "django-debug-toolbar>=5.2.0",
     "django-extensions>=3.2.3",
     "pytest-django>=4.11.1",
@@ -46,3 +47,9 @@ reportExplicitAny = false
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "stave.settings"
+
+[tool.uv]
+# behave-django 1.7.0 relies on a prerelease version of behave
+# Remove this once behave-django updates to a stable release with behave 1.3.x
+# See https://github.com/behave/behave-django/pull/172
+prerelease = "if-necessary"
