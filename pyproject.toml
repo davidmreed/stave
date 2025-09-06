@@ -11,7 +11,6 @@ requires-python = ">=3.13"
 dependencies = [
     "django>=5.1.4",
     "django-allauth[mfa,socialaccount]>=65.3.1",
-    "django-extensions>=3.2.3",
     "django-htmx>=1.21.0",
     "pillow>=11.1.0",
     "django-markdownify>=0.9.5",
@@ -27,11 +26,15 @@ dependencies = [
     "whitenoise>=6.9.0",
     "sentry-sdk[django]>=2.24.0",
     "django-anymail[amazon-ses]>=13.0",
-    "django-debug-toolbar>=5.2.0",
     "django-meta>=2.5.0",
-    "pytest-django>=4.11.1",
 ]
 
+[dependency-groups]
+dev = [
+    "django-debug-toolbar>=5.2.0",
+    "django-extensions>=3.2.3",
+    "pytest-django>=4.11.1",
+]
 
 [tool.basedpyright]
 venv = ".venv"

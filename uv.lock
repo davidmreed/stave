@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.13"
 
 [[package]]
@@ -698,8 +698,6 @@ dependencies = [
     { name = "django-allauth", extra = ["mfa", "socialaccount"] },
     { name = "django-anymail", extra = ["amazon-ses"] },
     { name = "django-apscheduler" },
-    { name = "django-debug-toolbar" },
-    { name = "django-extensions" },
     { name = "django-htmx" },
     { name = "django-ical" },
     { name = "django-markdownify" },
@@ -710,10 +708,16 @@ dependencies = [
     { name = "gunicorn" },
     { name = "pillow" },
     { name = "psycopg2-binary" },
-    { name = "pytest-django" },
     { name = "python-dotenv" },
     { name = "sentry-sdk", extra = ["django"] },
     { name = "whitenoise" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "django-debug-toolbar" },
+    { name = "django-extensions" },
+    { name = "pytest-django" },
 ]
 
 [package.metadata]
@@ -723,8 +727,6 @@ requires-dist = [
     { name = "django-allauth", extras = ["mfa", "socialaccount"], specifier = ">=65.3.1" },
     { name = "django-anymail", extras = ["amazon-ses"], specifier = ">=13.0" },
     { name = "django-apscheduler", specifier = ">=0.7.0" },
-    { name = "django-debug-toolbar", specifier = ">=5.2.0" },
-    { name = "django-extensions", specifier = ">=3.2.3" },
     { name = "django-htmx", specifier = ">=1.21.0" },
     { name = "django-ical", specifier = ">=1.9.2" },
     { name = "django-markdownify", specifier = ">=0.9.5" },
@@ -735,10 +737,16 @@ requires-dist = [
     { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "pillow", specifier = ">=11.1.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
-    { name = "pytest-django", specifier = ">=4.11.1" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "sentry-sdk", extras = ["django"], specifier = ">=2.24.0" },
     { name = "whitenoise", specifier = ">=6.9.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "django-debug-toolbar", specifier = ">=5.2.0" },
+    { name = "django-extensions", specifier = ">=3.2.3" },
+    { name = "pytest-django", specifier = ">=4.11.1" },
 ]
 
 [[package]]

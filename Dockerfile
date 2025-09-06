@@ -12,9 +12,9 @@ WORKDIR $HOME
 USER app
 COPY pyproject.toml pyproject.toml
 COPY uv.lock uv.lock
-RUN uv sync --frozen
+RUN uv sync --frozen --no-dev
 
 COPY --chown=app:app . .
 
-RUN uv run manage.py collectstatic --noinput
+RUN uv run --no-dev manage.py collectstatic --noinput
 CMD ["/home/app/docker/entrypoint.sh"]
