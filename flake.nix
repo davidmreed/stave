@@ -18,6 +18,7 @@
               ruff.enable = true;
               ruff-format.enable = true;
               actionlint.enable = true;
+              editorconfig-checker.enable = true;
             };
           };
         };
