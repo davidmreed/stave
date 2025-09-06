@@ -645,5 +645,5 @@ class Migration(migrations.Migration):
                 max_length=256,
             ),
         ),
-        migrations.RunPython(update_timezones),
+        migrations.RunPython(update_timezones, elidable=True),
     ]

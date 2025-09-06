@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
             name="insurance",
             field=models.CharField(blank=True, max_length=256, null=True),
         ),
-        migrations.RunPython(migrate_insurance_field),
+        migrations.RunPython(migrate_insurance_field, elidable=True),
         migrations.RemoveField(
             model_name="user",
             name="wftda_insurance_number",
