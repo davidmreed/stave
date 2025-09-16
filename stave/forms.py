@@ -714,8 +714,8 @@ class ApplicationFormTemplateForm(forms.ModelForm):
         assert league
         self.fields["role_groups"].queryset = league.role_groups.all()
         self.fields["invitation_email_template"].queryset = self.fields[
-            "rejection_email_template"
-        ].queryset = self.fields["schedule_email_template"].queryset = (
+            "rejected_email_template"
+        ].queryset = self.fields["assigned_email_template"].queryset = (
             league.message_templates.all()
         )
 
@@ -789,6 +789,7 @@ class GameTemplateForm(forms.ModelForm):
             "kind",
             "start_time",
             "end_time",
+            "role_groups",
         ]
 
         widgets = {
@@ -842,6 +843,39 @@ class EventTemplateCreateUpdateForm(ParentChildForm):
 
     def get_redirect_url(self) -> str:
         return reverse("event-template-list", args=[self.league.slug])
+
+
+class ApplicationFormTemplateCreateUpdateForm(ParentChildForm):
+    parent_form_class = ApplicationFormTemplateForm
+    child_form_class = QuestionForm
+    relation_name = "event_template"
+    reverse_name = "template_questions"
+    league: models.League
+
+    def __init__(
+        self,
+        league: models.League,
+        *args,
+        **kwargs,
+    ):
+        self.league = league
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        self.parent_form.instance.league = self.league
+
+        for index, child_form in enumerate(
+            [
+                child_form
+                for child_form in self.child_formset.forms
+                if child_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
+            ]
+        ):
+            child_form.instance.order_key = index + 1
+
+    def get_redirect_url(self) -> str:
+        return reverse("application-form-template-list", args=[self.league.slug])
 
 
 class MessageTemplateForm(forms.ModelForm):

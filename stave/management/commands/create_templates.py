@@ -198,10 +198,11 @@ Thank you!
     )
     if created:
         application_form_template_games.role_groups.set([role_group_nso, role_group_so])
-        application_form_template_games.event_templates.set(
-            [event_template_single_game]
-        )
         application_form_template_games.save()
+        models.ApplicationFormTemplateAssignment.objects.create(
+            event_template=event_template_single_game,
+            application_form_template=application_form_template_games,
+        )
 
     application_form_template_doubleheader, created = (
         models.ApplicationFormTemplate.objects.get_or_create(
@@ -220,10 +221,11 @@ Thank you!
         application_form_template_doubleheader.role_groups.set(
             [role_group_nso, role_group_so]
         )
-        application_form_template_doubleheader.event_templates.set(
-            [event_template_doubleheader]
-        )
         application_form_template_doubleheader.save()
+        models.ApplicationFormTemplateAssignment.objects.create(
+            event_template=event_template_doubleheader,
+            application_form_template=application_form_template_doubleheader,
+        )
 
     application_form_template_tournament, created = (
         models.ApplicationFormTemplate.objects.get_or_create(
@@ -242,10 +244,11 @@ Thank you!
         application_form_template_tournament.role_groups.set(
             [role_group_nso, role_group_so]
         )
-        application_form_template_tournament.event_templates.set(
-            [event_template_tournament]
-        )
         application_form_template_tournament.save()
+        models.ApplicationFormTemplateAssignment.objects.create(
+            event_template=event_template_tournament,
+            application_form_template=application_form_template_tournament,
+        )
 
     application_form_template_tournament_tho, created = (
         models.ApplicationFormTemplate.objects.get_or_create(
@@ -262,10 +265,11 @@ Thank you!
     )
     if created:
         application_form_template_tournament_tho.role_groups.set([role_group_tho])
-        application_form_template_tournament_tho.event_templates.set(
-            [event_template_tournament]
-        )
         application_form_template_tournament_tho.save()
+        models.ApplicationFormTemplateAssignment.objects.create(
+            event_template=event_template_tournament,
+            application_form_template=application_form_template_tournament_tho,
+        )
 
     return league_template
 

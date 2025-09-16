@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% load stave_tags %}
+
+{% block content %}
+<header>
+    <h1>{{ league }}: Application Form Templates</h1>
+    <a role="button" href="{% url 'application-form-template-create' league.slug %}">Create</a>
+</header>
+{% for application_form_template in applicationformtemplate_list %}
+<article>
+    <header>
+        <h2>{{ application_form_template.name }}</h2>
+        <a role="button" href="{% url 'application-form-template-edit' league.slug application_form_template.id %}">Edit</a>
+        <a role="button" href="{% url 'application-form-template-delete' league.slug application_form_template.id %}">Delete</a>
+    </header>
+    <dl>
+        <div>
+            <dt>Availability Type</dt>
+            <dd>{{ application_form_template.get_application_availability_kind_display }}</dd>
+        </div>
+        <div>
+            <dt>Application Process</dt>
+            <dd>{{ application_form_template.get_application_kind_display }}</dd>
+        </div>
+        <div>
+            <dt>Event Templates</dt>
+            <dd>
+                {{ application_form_template.event_templates.all|commalist }}
+            </dd>
+        </div>
+        <div>
+            <dt>Questions</dt>
+            <dd>{{ application_form_template.template_questions.all|length }}
+        </div>
+    </dl>
+</article>
+{% endfor %}
+
+{% endblock %}
