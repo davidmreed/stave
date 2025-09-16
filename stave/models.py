@@ -320,9 +320,24 @@ class LeagueTemplate(models.Model):
             message_template_map[message_template.id] = new_message_template.id
 
         # Copy Application Form Templates
+        application_form_template_map = {}
         for application_form_template in self.application_form_templates.all():
-            application_form_template.clone_as_template(
-                league, message_template_map, event_template_map, role_group_map
+            new_application_form_template = application_form_template.clone_as_template(
+                league, message_template_map, role_group_map
+            )
+            application_form_template_map[application_form_template.id] = (
+                new_application_form_template.id
+            )
+
+        # Copy Application Form Template Assignments
+        for aft_assignment in ApplicationFormTemplateAssignment.objects.filter(
+            application_form_template__in=self.application_form_templates.all()
+        ):
+            ApplicationFormTemplateAssignment.objects.create(
+                event_template_id=event_template_map[aft_assignment.event_template_id],
+                application_form_template_id=application_form_template_map[
+                    aft_assignment.application_form_template_id
+                ],
             )
 
         return league
@@ -414,8 +429,12 @@ class EventTemplate(models.Model):
                 values.update(game_kwargs[i])
             game_template.clone(**values)
 
-        for application_form_template in self.application_form_templates.all():
-            application_form_template.clone(event=new_object)
+        for (
+            application_form_template_assignment
+        ) in self.application_form_template_assignments.all():
+            _ = application_form_template_assignment.application_form_template.clone(
+                event=new_object
+            )
 
         return new_object
 
@@ -926,6 +945,24 @@ class ApplicationAvailabilityKind(models.IntegerChoices):
 # Single-game events require WHOLE_EVENT (the availability kind isn't meaningful)
 
 
+class ApplicationFormTemplateAssignment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    event_template = models.ForeignKey(
+        EventTemplate,
+        blank=False,
+        null=False,
+        on_delete=models.CASCADE,
+        related_name="application_form_template_assignments",
+    )
+    application_form_template = models.ForeignKey(
+        "ApplicationFormTemplate",
+        blank=False,
+        null=False,
+        on_delete=models.CASCADE,
+        related_name="event_template_assignments",
+    )
+
+
 class ApplicationFormTemplate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     league = models.ForeignKey(
@@ -1024,7 +1061,6 @@ class ApplicationFormTemplate(models.Model):
         self,
         league: League,
         email_template_map: dict[uuid.UUID, uuid.UUID],
-        event_template_map: dict[uuid.UUID, uuid.UUID],
         role_group_map: dict[uuid.UUID, uuid.UUID],
     ) -> "ApplicationFormTemplate":
         new_object = copy.copy(self)
@@ -1051,11 +1087,6 @@ class ApplicationFormTemplate(models.Model):
             new_question.save()
 
         new_object.save()
-        new_event_template_ids = {
-            event_template_map[event_template.id]
-            for event_template in self.event_templates.all()
-        }
-        new_object.event_templates.set(new_event_template_ids)
         new_object.role_groups.set(
             [role_group_map.get(rg.id) for rg in self.role_groups.all()]
         )
@@ -1187,6 +1218,7 @@ class ApplicationForm(models.Model):
             "Choose Assign Only to contact applicants only once, when the schedule is finalized. Choose Confirm then Assign to send acceptance messages first, then follow with a schedule."
         ),
     )
+    # FIXME: copy these strings to the Template object
     application_availability_kind = models.IntegerField(
         choices=ApplicationAvailabilityKind.choices,
         null=False,
