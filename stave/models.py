@@ -365,6 +365,13 @@ class EventTemplate(models.Model):
         models.ManyToManyField(RoleGroup, blank=True)
     )  # TODO: validate that Role Groups are associated to the same
     # League or League Template we are.
+    application_form_templates: models.ManyToManyField[
+        "EventTemplate", "ApplicationFormTemplate"
+    ] = models.ManyToManyField(
+        "ApplicationFormTemplate",
+        blank=True,
+        through="ApplicationFormTemplateAssignment",
+    )
     days = models.IntegerField()
     location = models.TextField(blank=True, null=True)
 
@@ -1013,6 +1020,13 @@ class ApplicationFormTemplate(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
     )
+    event_templates: models.ManyToManyField[
+        "ApplicationFormTemplate", "EventTemplate"
+    ] = models.ManyToManyField(
+        "EventTemplate",
+        blank=True,
+        through="ApplicationFormTemplateAssignment",
+    )
 
     event_templates: models.ManyToManyField[
         "ApplicationFormTemplate", EventTemplate
@@ -1024,7 +1038,7 @@ class ApplicationFormTemplate(models.Model):
     )
 
     def __str__(self):
-        return f"{self.name} ({self.league.name if self.league else self.league_template.name})"
+        return f"{self.name} ({self.get_application_kind_display()}, {self.get_application_availability_kind_display()})"
 
     def clone(self, event: Event, **kwargs) -> "ApplicationForm":
         values = {

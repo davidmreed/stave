@@ -2,7 +2,7 @@
 
 {% block content %}
 <header>
-    <h1>{{ league }}: Role Groups</h1>
+    <h1><a href="{{ league.get_absolute_url}}">{{ league }}</a>: Role Groups</h1>
     <a role="button" href="{% url 'role-group-create' league.slug %}">Create</a>
 </header>
 {% for role_group in rolegroup_list %}

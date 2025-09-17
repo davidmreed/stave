@@ -532,31 +532,6 @@ class EventTemplateDeleteView(TenantedGenericDeleteView[models.EventTemplate]):
 ## Application Form Templates
 
 
-class ApplicationFormTemplateAssignmentListView(
-    LoginRequiredMixin, TenantedObjectMixin, generic.ListView
-):
-    template_name = "stave/application_form_template_assignment_list.html"
-    model = models.ApplicationFormTemplateAssignment
-
-    def get_queryset(self) -> QuerySet[models.ApplicationFormTemplateAssignment]:
-        return models.ApplicationFormTemplateAssignment.objects.filter(
-            event_template__in=get_object_or_404(
-                models.EventTemplate.objects.filter(
-                    league__in=models.League.manageable(self.request.user)
-                ),
-                id=self.kwargs.get("event_template_id"),
-            )
-        )
-
-
-class ApplicationFormTemplateAssignmentDeleteView(
-    LoginRequiredMixin, TenantedObjectMixin, generic.edit.DeleteView
-):
-    template_name = "stave/confirm_delete.html"
-    model = models.ApplicationFormTemplateAssignment
-    list_view_name = "application-form-template-assignment-list"
-
-
 class ApplicationFormTemplateListView(
     LoginRequiredMixin, TenantedObjectMixin, generic.ListView
 ):
