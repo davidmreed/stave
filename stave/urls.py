@@ -82,16 +82,6 @@ urlpatterns = [
         name="event-template-delete",
     ),
     path(
-        "_/<slug:league_slug>/event-templates/<uuid:event_template_id>/application-form-templates/",
-        view=views.ApplicationFormTemplateAssignmentListView.as_view(),
-        name="application-form-template-assignment-list",
-    ),
-    path(
-        "_/<slug:league_slug>/event-templates/<uuid:event_template_id>/application-form-templates/<uuid:application_form_template_id>/delete/",
-        view=views.ApplicationFormTemplateAssignmentDeleteView.as_view(),
-        name="application-form-template-assignment-delete",
-    ),
-    path(
         "_/<slug:league_slug>/application-form-templates/",
         view=views.ApplicationFormTemplateListView.as_view(),
         name="application-form-template-list",

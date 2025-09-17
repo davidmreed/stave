@@ -755,9 +755,17 @@ class EventTemplateForm(forms.ModelForm):
 
     class Meta:
         model = models.EventTemplate
-        fields = ["name", "description", "location", "days", "role_groups"]
+        fields = [
+            "name",
+            "description",
+            "location",
+            "days",
+            "role_groups",
+            "application_form_templates",
+        ]
         widgets = {
             "role_groups": forms.CheckboxSelectMultiple,
+            "application_form_templates": forms.CheckboxSelectMultiple,
             "location": forms.TextInput,
         }
 
@@ -769,9 +777,14 @@ class EventTemplateForm(forms.ModelForm):
 
         if self.instance:
             self.fields["role_groups"].queryset = self.instance.league.role_groups.all()
+            self.fields[
+                "application_form_templates"
+            ].queryset = self.instance.league.application_form_templates.all()
         else:
             self.league = league
-            self.fields["role_groups"].queryset = self.league.role_groups.all()
+            self.fields[
+                "application_form_templates"
+            ].queryset = self.league.application_form_templates.all()
 
 
 class GameTemplateForm(forms.ModelForm):
@@ -795,6 +808,7 @@ class GameTemplateForm(forms.ModelForm):
         widgets = {
             "start_time": forms.DateInput(attrs={"type": "time"}),
             "end_time": forms.DateInput(attrs={"type": "time"}),
+            "role_groups": forms.CheckboxSelectMultiple,
         }
 
     def __init__(self, league: models.League | None = None, *args, **kwargs):

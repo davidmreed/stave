@@ -4,7 +4,7 @@
 
 {% block content %}
 <header>
-    <h1>{{ league }}: Application Form Templates</h1>
+    <h1><a href="{{ league.get_absolute_url }}">{{ league }}</a>: Application Form Templates</h1>
     <a role="button" href="{% url 'application-form-template-create' league.slug %}">Create</a>
 </header>
 {% for application_form_template in applicationformtemplate_list %}
