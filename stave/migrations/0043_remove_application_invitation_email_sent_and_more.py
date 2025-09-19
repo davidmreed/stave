@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
                 ]
             ),
         ),
-        migrations.RunPython(convert_statuses),
+        migrations.RunPython(convert_statuses, elidable=True),
         migrations.RemoveField(
             model_name="application",
             name="invitation_email_sent",

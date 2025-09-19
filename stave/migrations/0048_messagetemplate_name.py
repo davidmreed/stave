@@ -36,5 +36,5 @@ class Migration(migrations.Migration):
             name="name",
             field=models.CharField(blank=True, max_length=256, null=True),
         ),
-        migrations.RunPython(set_messagetemplate_names),
+        migrations.RunPython(set_messagetemplate_names, elidable=True),
     ]
