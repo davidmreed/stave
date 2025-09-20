@@ -15,7 +15,7 @@ trim_trailing_whitespace = true
 # strict rules, so we don't want to enforce any particular indentation style
 indent_size = unset
 
-[*.yml]
+[*.{yml,yaml}]
 indent_size = 2
 
 [{LICENSE,flake.*}]
