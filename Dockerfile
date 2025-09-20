@@ -2,6 +2,7 @@ FROM ghcr.io/astral-sh/uv:python3.13-alpine
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV HOME=/home/app
+ENV DJANGO_ENV=production
 
 RUN addgroup --system app && adduser --system app --ingroup app
 EXPOSE 8888
@@ -11,9 +12,9 @@ WORKDIR $HOME
 USER app
 COPY pyproject.toml pyproject.toml
 COPY uv.lock uv.lock
-RUN uv sync --frozen
+RUN uv sync --frozen --no-dev
 
 COPY --chown=app:app . .
 
-RUN uv run manage.py collectstatic --noinput
+RUN uv run --no-dev manage.py collectstatic --noinput
 CMD ["/home/app/docker/entrypoint.sh"]
