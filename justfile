@@ -18,7 +18,6 @@ migrate:
 
 # Run server in development mode
 run:
-    uv run manage.py collectstatic --noinput
     uv run manage.py runserver 0.0.0.0:8888
 
 # Run server in production mode
@@ -32,3 +31,7 @@ seed: migrate
 # Run tests
 test:
     uv run pytest
+
+# Run behavioral tests
+behave arguments="":
+    uv run manage.py behave {{arguments}}

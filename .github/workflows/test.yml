@@ -7,6 +7,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      DJANGO_SECRET_KEY: django-insecure-secret-key
     steps:
       - uses: actions/checkout@v5
       - uses: DeterminateSystems/nix-installer-action@main
@@ -16,6 +18,7 @@ jobs:
           flakes-from-devshell: true
           script: |
             uv run pytest
+            just behave
   lint:
     runs-on: ubuntu-latest
     steps:
