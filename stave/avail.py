@@ -182,7 +182,37 @@ class AvailabilityManager:
         return am
 
     @property
-    def applications(self) -> dict[UUID, dict[str, list[models.Application]]]:
+    @functools.cache
+    def applications(self) -> list[models.Application]:
+        return list(self.application_form.applications.all())
+
+    @property
+    @functools.cache
+    def applications_by_status(
+        self,
+    ) -> dict[models.ApplicationStatus, list[models.Application]]:
+        apps = {}
+        for application in self.applications:
+            apps.setdefault(application.status, []).append(application)
+
+        return apps
+
+    # TODO: can't functools-cache because list is unhashable
+    def get_applications_in_statuses(
+        self, statuses: list[models.ApplicationStatus]
+    ) -> list[models.Application]:
+        apps = []
+        for status in statuses:
+            apps.extend(self.applications_by_status.get(status, []))
+
+        # TODO: not sorted
+        return apps
+
+    @property
+    @functools.cache
+    def applications_by_role_group(
+        self,
+    ) -> dict[UUID, dict[str, list[models.Application]]]:
         applications = defaultdict(lambda: defaultdict(list))
         for application in self.application_form.applications.all():
             for role in application.roles.all():
@@ -232,6 +262,16 @@ class AvailabilityManager:
 
         return user_assigned_times_map
 
+    def get_game_count_for_user(self, user: models.User) -> int:
+        return len(self.user_availability.get(user.id, []))
+
+    @property
+    @functools.cache
+    def game_counts_by_user(self) -> dict[UUID, int]:
+        return {
+            a.user.id: self.get_game_count_for_user(a.user) for a in self.applications
+        }
+
     @property
     @functools.cache
     def user_event_availability(self) -> dict[UUID, list[UserAvailabilityEntry]]:
@@ -279,7 +319,7 @@ class AvailabilityManager:
         self, crew: models.Crew, game: models.Game | None, role: models.Role
     ) -> list[models.Application]:
         return self._filter_for_basic_availability(
-            self.applications[role.role_group_id][role.name], crew, game
+            self.applications_by_role_group[role.role_group_id][role.name], crew, game
         )
 
     @functools.cache
