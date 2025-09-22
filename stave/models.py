@@ -302,7 +302,7 @@ class LeagueTemplate(models.Model):
 
         # Copy Application Form Templates
         for application_form_template in self.application_form_templates.all():
-            _ = application_form_template.clone_as_template(
+            application_form_template.clone_as_template(
                 league, message_template_map, event_template_map, role_group_map
             )
 
@@ -365,7 +365,7 @@ class EventTemplate(models.Model):
 
         # Copy Game Templates
         for game_template in self.game_templates.all():
-            _ = game_template.clone_as_template(new_object, role_group_map)
+            game_template.clone_as_template(new_object, role_group_map)
 
         # Application Form Templates are copied at the League Template level
         # and associated to EventTemplates.
@@ -393,10 +393,10 @@ class EventTemplate(models.Model):
             values = {"event": new_object, "order_key": i + 1}
             if i < len(game_kwargs):
                 values.update(game_kwargs[i])
-            _ = game_template.clone(**values)
+            game_template.clone(**values)
 
         for application_form_template in self.application_form_templates.all():
-            _ = application_form_template.clone(event=new_object)
+            application_form_template.clone(event=new_object)
 
         return new_object
 
@@ -481,7 +481,7 @@ class GameTemplate(models.Model):
 
         # Copy Role Group assignments
         for role_group in self.role_groups.filter(event_only=False):
-            _ = RoleGroupCrewAssignment.objects.create(
+            RoleGroupCrewAssignment.objects.create(
                 role_group=role_group, game=new_object
             )
 
@@ -1533,7 +1533,7 @@ class Application(models.Model):
         ]:
             # Remove all CrewAssignments for this user that correspond
             # to this application's form's Role Groups.
-            _ = CrewAssignment.objects.filter(
+            CrewAssignment.objects.filter(
                 user=self.user,
                 crew__event=self.form.event,
                 role__role_group__in=self.form.role_groups.all(),

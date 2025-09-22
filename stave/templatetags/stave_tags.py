@@ -39,7 +39,7 @@ def inputs(context: template.Context, model_name: str) -> str:
         del input_values["meta"]
 
     try:
-        _ = type_(**input_values)
+        type_(**input_values)
     except Exception as e:
         raise TemplateValidationException from e
 

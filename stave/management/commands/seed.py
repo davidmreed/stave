@@ -140,7 +140,7 @@ class Command(BaseCommand):
             tournament_game_5,
         ]:
             for role_group in [role_group_so, role_group_nso]:
-                _ = models.RoleGroupCrewAssignment.objects.create(
+                models.RoleGroupCrewAssignment.objects.create(
                     game=game, role_group=role_group
                 )
 
@@ -300,16 +300,16 @@ class Command(BaseCommand):
             )
             user.set_password(username)
             user.save()
-            _ = EmailAddress.objects.create(
+            EmailAddress.objects.create(
                 user=user, email=f"{username}@example.com", verified=True, primary=True
             )
             return user
 
         admin = create_user("admin", "admin", True, "he/him")
-        _ = models.LeagueUserPermission.objects.create(
+        models.LeagueUserPermission.objects.create(
             user=admin, league=league, permission=models.UserPermission.EVENT_MANAGER
         )
-        _ = models.LeagueUserPermission.objects.create(
+        models.LeagueUserPermission.objects.create(
             user=admin, league=league, permission=models.UserPermission.LEAGUE_MANAGER
         )
         drummer = create_user("drummer", "bossmang", False, "she/they")
@@ -349,7 +349,7 @@ class Command(BaseCommand):
         )
         drummer_app_tho.roles.set([role_thnso, role_thr, role_gto])
 
-        _ = models.ApplicationResponse.objects.create(
+        models.ApplicationResponse.objects.create(
             application=drummer_app_tho,
             question=app_form_tho_question,
             content=["Live shamed and die empty"],
@@ -371,23 +371,23 @@ class Command(BaseCommand):
                 availability_by_day=avail,
             )
             app.roles.set(roles)
-            _ = models.ApplicationResponse.objects.create(
+            models.ApplicationResponse.objects.create(
                 application=app,
                 question=app_form_question_faction,
                 content=[faction],
             )
 
-            _ = models.ApplicationResponse.objects.create(
+            models.ApplicationResponse.objects.create(
                 application=app,
                 question=app_form_question_kibble,
                 content=kibble,
             )
-            _ = models.ApplicationResponse.objects.create(
+            models.ApplicationResponse.objects.create(
                 application=app,
                 question=app_form_question_skills,
                 content=[skills],
             )
-            _ = models.ApplicationResponse.objects.create(
+            models.ApplicationResponse.objects.create(
                 application=app,
                 question=app_form_question_marco,
                 content=[marco],

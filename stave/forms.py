@@ -842,7 +842,7 @@ class EventCreateUpdateForm(ParentChildForm):
             for (
                 application_form_template
             ) in self.template.application_form_templates.all():
-                _ = application_form_template.clone(event=instance)
+                application_form_template.clone(event=instance)
 
         return instance
 

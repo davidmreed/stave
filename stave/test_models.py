@@ -133,7 +133,7 @@ def tournament(tournament_template, enabled_league):
         tournament_game_5,
     ]:
         for role_group in [role_group_so, role_group_nso]:
-            _ = models.RoleGroupCrewAssignment.objects.create(
+            models.RoleGroupCrewAssignment.objects.create(
                 game=game, role_group=role_group
             )
 
