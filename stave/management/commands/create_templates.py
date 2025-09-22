@@ -274,4 +274,4 @@ class Command(BaseCommand):
     help = "Create base templates"
 
     def handle(self, *_args, **_kwargs):  # type: ignore
-        _ = create_templates()
+        create_templates()

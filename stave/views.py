@@ -48,9 +48,9 @@ class TypedContextMixin[T: dict[str, Any] | DataclassInstance]:
 
         typed_context = self.get_context()
         if is_dataclass(typed_context):
-            _ = context.update(contexts.to_dict(typed_context))
+            context.update(contexts.to_dict(typed_context))
         else:
-            _ = context.update(typed_context)
+            context.update(typed_context)
 
         return context
 
@@ -420,7 +420,7 @@ class EventCreateView(
     def form_valid(self, form: forms.EventFromTemplateForm) -> HttpResponse:
         template_id = self.request.POST.get("template_id")
         if template_id and template_id != "none":
-            _ = get_object_or_404(self.league.event_templates.all(), pk=template_id)
+            get_object_or_404(self.league.event_templates.all(), pk=template_id)
             url = reverse("event-create-template", args=[self.league.slug, template_id])
             querystring = urlencode(
                 {"name": form.instance.name, "start_date": form.instance.start_date}
@@ -454,7 +454,7 @@ class CrewCreateView(LoginRequiredMixin, views.View):
             + 1,
         )
 
-        _ = models.Crew.objects.create(
+        models.Crew.objects.create(
             kind=models.CrewKind.GAME_CREW,
             event=form.event,
             role_group=role_group,
@@ -510,14 +510,14 @@ class LeagueCreateView(
                 league = form.save()
 
             # Make the current user a league manager
-            _ = models.LeagueUserPermission.objects.create(
+            models.LeagueUserPermission.objects.create(
                 league=league,
                 user=self.request.user,
                 permission=models.UserPermission.LEAGUE_MANAGER,
             )
 
             # Make the current user an event manager
-            _ = models.LeagueUserPermission.objects.create(
+            models.LeagueUserPermission.objects.create(
                 league=league,
                 user=self.request.user,
                 permission=models.UserPermission.EVENT_MANAGER,
@@ -764,7 +764,7 @@ class SingleApplicationView(
         application_form = self.get_form()
         # Force a clean since we're going to override
         # the `form` kwarg from our mixin
-        _ = application_form.is_valid()
+        application_form.is_valid()
 
         return contexts.ViewApplicationContext(
             ApplicationStatus=models.ApplicationStatus,
@@ -1258,7 +1258,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
 
         # Add a new assignment, if requested
         if applications:
-            _ = models.CrewAssignment.objects.create(
+            models.CrewAssignment.objects.create(
                 role=role, crew=crew, user=applications[0].user
             )
 
