@@ -1513,7 +1513,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             game = None
         applications = am.get_available_applications(crew, game, role)
         game_counts = {
-            a.user.id: am.get_game_count_for_user(a.user) for a in all_applications
+            a.user.id: am.get_game_count_for_user(a.user) for a in applications
         }
 
         # TODO: get the Game from AM to reduce queries.
