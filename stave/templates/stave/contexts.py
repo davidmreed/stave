@@ -53,6 +53,7 @@ class CrewBuilderDetailInputs:
     role: models.Role
     game: models.Game | None
     applications: list[models.Application]
+    unavail_applications: list[models.Application]
     game_counts: dict[UUID, int]
 
 

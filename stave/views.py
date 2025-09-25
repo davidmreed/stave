@@ -2054,6 +2054,11 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         else:
             game = None
         applications = am.get_available_applications(crew, game, role)
+        all_applications = am.get_all_applications(crew, game, role)
+        unavail_applications = [
+            a for a in all_applications if a not in applications
+        ]  # TODO: efficiency!
+
         game_counts = {
             a.user.id: am.get_game_count_for_user(a.user) for a in applications
         }
@@ -2066,6 +2071,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                 contexts.CrewBuilderDetailInputs(
                     form=application_form,
                     applications=applications,
+                    unavail_applications=unavail_applications,
                     game=game,
                     event=am.application_form.event,
                     role=role,
