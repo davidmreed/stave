@@ -16,3 +16,4 @@ class UserFactory(factory.django.DjangoModelFactory):
         model = "stave.User"
 
     email = factory.LazyAttribute(lambda x: faker.email())
+    password = factory.django.Password("password123")  # Default password for all users
