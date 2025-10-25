@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 from behave import given, when, then
-from django.contrib.auth import get_user_model
 from bs4 import BeautifulSoup
 from stave.models import (
     League,
@@ -16,23 +15,13 @@ from stave.models import (
     EventStatus,
 )
 
+from tests.factories import UserFactory
+
 
 @given("a regular user exists")
 def given_regular_user_exists(context):
-    # TODO: Replace with a Factory pattern
-    User = get_user_model()
-    email = "user@example.com"
-    password = "password123"
-    context.user = User.objects.create(
-        email=email,
-        preferred_name="Test User",
-        is_superuser=False,
-        is_staff=False,
-    )
-    context.user.set_password(password)
-    context.user.save()
-    context.user_email = email
-    context.user_password = password
+    context.user = UserFactory.create()
+    context.user_password = "password123"
 
 
 @given("there are open application forms available")
@@ -98,37 +87,14 @@ def given_user_manages_events(context):
         permission=UserPermission.EVENT_MANAGER,
     )
 
-    # Create some applications to test pending/open indicators
-    User = get_user_model()
-
-    # Create a user with an "open" application (status: APPLIED)
-    open_user = User.objects.create(
-        email="open@example.com",
-        preferred_name="Open User",
-        is_superuser=False,
-        is_staff=False,
-    )
-    open_user.set_password("password123")
-    open_user.save()
-
+    # Create some applications to test pending/open indicators with distinct users
     context.open_application = Application.objects.create(
-        user=open_user,
+        user=UserFactory.create(),
         form=context.application_form,
         status=ApplicationStatus.APPLIED,  # This is an "open" application
     )
-
-    # Create a user with a "pending" application (status: INVITATION_PENDING)
-    pending_user = User.objects.create(
-        email="pending@example.com",
-        preferred_name="Pending User",
-        is_superuser=False,
-        is_staff=False,
-    )
-    pending_user.set_password("password123")
-    pending_user.save()
-
     context.pending_application = Application.objects.create(
-        user=pending_user,
+        user=UserFactory.create(),
         form=context.application_form,
         status=ApplicationStatus.INVITATION_PENDING,  # This is a "pending" application
     )
@@ -152,7 +118,7 @@ def when_unauthenticated_navigate_home(context):
 def when_login_with_valid_credentials(context):
     # Use Django's test client login method
     login_success = context.test.client.login(
-        email=context.user_email, password=context.user_password
+        email=context.user.email, password=context.user_password
     )
     context.test.assertTrue(login_success)
     # Reload the home page after login

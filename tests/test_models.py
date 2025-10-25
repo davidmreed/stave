@@ -1,4 +1,4 @@
-from . import models
+from stave import models
 from stave.management.commands.create_templates import create_templates
 import random
 from datetime import datetime, date, time
@@ -195,10 +195,8 @@ def tournament(tournament_template, enabled_league):
 
 
 @pytest.fixture
-def league_manager_user(enabled_league):
-    user = models.User.objects.create(
-        password="foo", preferred_name="League Manager User"
-    )
+def league_manager_user(enabled_league, user_factory):
+    user = user_factory.create(preferred_name="League Manager User")
     models.LeagueUserPermission.objects.create(
         user=user,
         league=enabled_league,
@@ -208,10 +206,8 @@ def league_manager_user(enabled_league):
 
 
 @pytest.fixture
-def event_manager_user(enabled_league):
-    user = models.User.objects.create(
-        password="foo", preferred_name="Event Manager User"
-    )
+def event_manager_user(enabled_league, user_factory):
+    user = user_factory.create(preferred_name="Event Manager User")
     models.LeagueUserPermission.objects.create(
         user=user, league=enabled_league, permission=models.UserPermission.EVENT_MANAGER
     )
@@ -219,10 +215,8 @@ def event_manager_user(enabled_league):
 
 
 @pytest.fixture
-def full_privilege_user(enabled_league):
-    user = models.User.objects.create(
-        password="foo", preferred_name="Full Privilege User"
-    )
+def full_privilege_user(enabled_league, user_factory):
+    user = user_factory.create(preferred_name="Full Privilege User")
     models.LeagueUserPermission.objects.create(
         user=user, league=enabled_league, permission=models.UserPermission.EVENT_MANAGER
     )
@@ -235,15 +229,13 @@ def full_privilege_user(enabled_league):
 
 
 @pytest.fixture
-def anonymous_user(db):
+def anonymous_user():
     return AnonymousUser()
 
 
 @pytest.fixture
-def unprivileged_user(db):
-    return models.User.objects.create(
-        password="foo", preferred_name="Unprivileged User"
-    )
+def unprivileged_user(user_factory):
+    return user_factory.create(preferred_name="Unprivileged User")
 
 
 def test_league_query_set__event_manageable(

@@ -1,20 +1,13 @@
 from behave import given, when, then
-from django.contrib.auth import get_user_model
 from bs4 import BeautifulSoup
+
+from tests.factories import UserFactory
 
 
 @given("a Stave admin user exists")
 def given_superuser_exists(context):
-    User = get_user_model()
-    email = "admin@example.com"
-    password = "password123"
-    context.superuser = User.objects.create(
-        email=email, is_superuser=True, is_staff=True
-    )
-    context.superuser.set_password(password)
-    context.superuser.save()
-    context.superuser_email = email
-    context.superuser_password = password
+    context.superuser = UserFactory.create(is_superuser=True, is_staff=True)
+    context.superuser_password = "password123"
 
 
 @when("the user navigates to the Django Admin login page")
@@ -28,7 +21,7 @@ def when_navigate_admin_login(context):
 def when_enter_valid_credentials(context):
     # Use Django's test client login method
     login_success = context.test.client.login(
-        email=context.superuser_email, password=context.superuser_password
+        email=context.superuser.email, password=context.superuser_password
     )
     context.test.assertTrue(login_success)
     # Load the admin dashboard page, mimicking the `next=` behavior
