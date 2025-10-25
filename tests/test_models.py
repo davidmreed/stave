@@ -1,4 +1,4 @@
-from . import models
+from stave import models
 from stave.management.commands.create_templates import create_templates
 import random
 from datetime import datetime, date, time
