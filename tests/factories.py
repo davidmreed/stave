@@ -5,15 +5,20 @@ See: https://factoryboy.readthedocs.io/
 """
 
 import factory
-from faker import Factory as FakerFactory
+from django.utils.text import slugify
 
 
-faker = FakerFactory.create()
+class LeagueFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "stave.League"
+
+    name = factory.Faker("company")
+    slug = factory.LazyAttribute(lambda obj: slugify(obj.name))
 
 
 class UserFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "stave.User"
 
-    email = factory.LazyAttribute(lambda x: faker.email())
+    email = factory.Faker("email")
     password = factory.django.Password("password123")  # Default password for all users

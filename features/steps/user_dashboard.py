@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 from behave import given, when, then
 from bs4 import BeautifulSoup
 from stave.models import (
-    League,
     Event,
     ApplicationForm,
     Application,
@@ -15,7 +14,7 @@ from stave.models import (
     EventStatus,
 )
 
-from tests.factories import UserFactory
+from tests.factories import LeagueFactory, UserFactory
 
 
 @given("a regular user exists")
@@ -27,13 +26,7 @@ def given_regular_user_exists(context):
 @given("there are open application forms available")
 def given_open_application_forms(context):
     # Create a league and event with open application forms
-    # TODO: Replace with a Factory pattern
-    league = League.objects.create(
-        name="Test League",
-        slug="test-league",
-        location="Test City",
-        enabled=True,
-    )
+    league = LeagueFactory.create(enabled=True)
 
     future_date = datetime.now() + timedelta(days=30)
 
