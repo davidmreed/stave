@@ -742,7 +742,7 @@ class RoleGroupCrewAssignment(models.Model):
 class GameQuerySet(models.QuerySet["Game"]):
     def manageable(self, user: User) -> models.QuerySet["Game"]:
         return self.filter(
-            event__league__user_permissions__permission=UserPermission.LEAGUE_MANAGER,
+            event__league__user_permissions__permission=UserPermission.EVENT_MANAGER,
             event__league__user_permissions__user=user,
         ).distinct()
 
