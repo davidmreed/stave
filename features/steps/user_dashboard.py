@@ -2,8 +2,6 @@ from datetime import datetime, timedelta
 from behave import given, when, then
 from bs4 import BeautifulSoup
 from stave.models import (
-    League,
-    Event,
     ApplicationForm,
     Application,
     ApplicationStatus,
@@ -12,10 +10,9 @@ from stave.models import (
     ApplicationAvailabilityKind,
     LeagueUserPermission,
     UserPermission,
-    EventStatus,
 )
 
-from tests.factories import UserFactory
+from tests.factories import EventFactory, LeagueFactory, UserFactory
 
 
 @given("a regular user exists")
@@ -27,27 +24,14 @@ def given_regular_user_exists(context):
 @given("there are open application forms available")
 def given_open_application_forms(context):
     # Create a league and event with open application forms
-    # TODO: Replace with a Factory pattern
-    league = League.objects.create(
-        name="Test League",
-        slug="test-league",
-        location="Test City",
-        enabled=True,
-    )
+    league = LeagueFactory.create(enabled=True)
 
-    future_date = datetime.now() + timedelta(days=30)
-
-    event = Event.objects.create(
-        name="Test Event",
-        slug="test-event",
-        league=league,
-        start_date=future_date.date(),
-        end_date=future_date.date(),
-        status=EventStatus.OPEN,
-    )
+    event = EventFactory.create(league=league, status_open=True)
+    context.event = event
 
     role_group = RoleGroup.objects.create(name="Test Role", league=league)
 
+    future_date = datetime.now() + timedelta(days=30)
     context.application_form = ApplicationForm.objects.create(
         event=event,
         slug="test-form",
@@ -263,7 +247,7 @@ def then_application_shows_event_name(context):
     article = my_apps_header.find_parent("article")
 
     # Look for the test event name
-    event_text = article.find(text=lambda t: t and "Test Event" in t)
+    event_text = article.find(text=lambda t: t and context.event.name in t)
     context.test.assertIsNotNone(event_text, "Event name not found in application")
 
 
