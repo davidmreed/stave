@@ -10,16 +10,49 @@ from django.utils.text import slugify
 
 from stave.models import EventStatus
 from stave import models
-
+import random
 from zoneinfo import ZoneInfo
+
+
+class RoleFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "stave.Role"
+
+    order_key = factory.Sequence(lambda n: n)
+    role_group = factory.SubFactory("tests.factories.RoleGroupFactory")
+    name = factory.Faker("sentence", nb_words=1)
+    nonexclusive = False
+
+
+class RoleGroupFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "stave.RoleGroup"
+        skip_postgeneration_save = True
+
+    name = factory.Faker("sentence", nb_words=1)
+    event_only = False
+
+    roles = factory.RelatedFactoryList(
+        RoleFactory,
+        factory_related_name="role_group",
+        size=lambda: random.randint(1, 10),
+    )
+    league = factory.SubFactory("tests.factories.LeagueFactory")
 
 
 class LeagueFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "stave.League"
+        skip_postgeneration_save = True
 
     name = factory.Faker("company")
     slug = factory.LazyAttribute(lambda obj: slugify(obj.name))
+
+    role_groups = factory.RelatedFactoryList(
+        RoleGroupFactory,
+        factory_related_name="league",
+        size=lambda: random.randint(3, 6),
+    )
 
 
 class EventFactory(factory.django.DjangoModelFactory):
@@ -83,6 +116,7 @@ class UserFactory(factory.django.DjangoModelFactory):
 class ApplicationFormFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "stave.ApplicationForm"
+        skip_postgeneration_save = True
 
     event = factory.SubFactory(EventFactory)
     application_kind = factory.fuzzy.FuzzyChoice(models.ApplicationKind)
@@ -96,7 +130,7 @@ class ApplicationFormFactory(factory.django.DjangoModelFactory):
         end_date=factory.SelfAttribute("..event.end_date"),
     )
     hidden = False
-    intro_text = factory.Faker("sentence", nb_words=20)
+    intro_text = factory.Faker("paragraph", nb_sentences=3)
     requires_profile_fields = factory.LazyAttribute(
         lambda _: models.User.ALLOWED_PROFILE_FIELDS[:]
     )
@@ -104,13 +138,19 @@ class ApplicationFormFactory(factory.django.DjangoModelFactory):
     schedule_email_template = None
     rejection_email_template = None
 
+    questions = factory.RelatedFactoryList(
+        "tests.factories.QuestionFactory",
+        factory_related_name="application_form",
+        size=lambda: random.randint(1, 10),
+    )
+
 
 class QuestionFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "stave.Question"
 
     application_form = factory.SubFactory(ApplicationFormFactory)
-    order_key = factory.Faker("integer")
+    order_key = factory.Sequence(lambda n: n)
     content = factory.Faker("sentence", nb_words=5)
     kind = factory.fuzzy.FuzzyChoice(models.QuestionKind)
     options = factory.LazyAttribute(
@@ -123,11 +163,20 @@ class QuestionFactory(factory.django.DjangoModelFactory):
     )
     allow_other = factory.LazyAttribute(
         lambda obj: (
-            factory.Faker("boolean")
+            bool(random.randint(0, 1))
             if obj.kind == models.QuestionKind.SELECT_MANY
             else False
         )
     )
+
+
+class ApplicationResponseFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "stave.ApplicationResponse"
+
+    application = factory.SubFactory("tests.factories.ApplicationFactory")
+    question = factory.SubFactory(QuestionFactory)
+    content = factory.Faker("sentence", nb_words=6)
 
 
 class ApplicationFactory(factory.django.DjangoModelFactory):
@@ -138,3 +187,5 @@ class ApplicationFactory(factory.django.DjangoModelFactory):
     form = factory.SubFactory(ApplicationFormFactory)
 
     status = models.ApplicationStatus.APPLIED
+
+    # Roles
