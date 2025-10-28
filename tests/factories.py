@@ -103,6 +103,14 @@ class GameFactory(factory.django.DjangoModelFactory):
     )
     order_key = 1
 
+class CrewFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "stave.Crew"
+
+    name = factory.Faker("sentence", nb_words=2)
+    event = factory.SubFactory(EventFactory)
+    role_group = factory.SubFactory(RoleGroupFactory)
+    kind = factory.fuzzy.FuzzyChoice(models.CrewKind)
 
 class UserFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -189,3 +197,5 @@ class ApplicationFactory(factory.django.DjangoModelFactory):
     status = models.ApplicationStatus.APPLIED
 
     # Roles
+
+    # Questions

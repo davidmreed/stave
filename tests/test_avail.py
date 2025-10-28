@@ -24,6 +24,9 @@ def test_availability_manager__applications(tournament):
         for role in roles[:2]:
             assert len(am.applications[key][role.name]) == 5
 
+    # TODO: test exclusion by application status
+    # TODO: test that prefetches cache
+
 
 def test_availability_manager__static_crews(): ...
 
