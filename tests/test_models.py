@@ -534,7 +534,9 @@ def test_application_form_query_set__submittable(
         anonymous_user
     )
 
-    assert closed_form in models.ApplicationForm.objects.submittable(event_manager_user)
+    assert closed_form not in models.ApplicationForm.objects.submittable(
+        event_manager_user
+    )
     assert closed_form not in models.ApplicationForm.objects.submittable(
         unprivileged_user
     )

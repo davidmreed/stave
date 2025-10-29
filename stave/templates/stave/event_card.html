@@ -93,6 +93,15 @@
             {% endif %}
         </h6>
         {% if can_manage_this_event %}
+        <form class="inline" method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="redirect_url" value="{{ event.get_absolute_url }}">
+            {% if form.closed %}
+            <input type="submit" value="Reopen" formaction="{% url 'form-open' form.event.league.slug form.event.slug form.slug %}">
+            {% else %}
+            <input type="submit" value="Close" formaction="{% url 'form-close' form.event.league.slug form.event.slug form.slug %}">
+            {% endif %}
+        </form>
         <a role="button" href="{% url 'form-update' event.league.slug event.slug form.slug %}">Edit</a>
         <a role="button" href="{% url 'form-delete' event.league.slug event.slug form.slug %}">Delete</a>
         {% endif %}

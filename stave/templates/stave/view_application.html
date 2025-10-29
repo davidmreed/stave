@@ -15,15 +15,26 @@
 {% if not app_form.event.league.enabled %}
 <div class="disabled-warning">{{ app_form.event.league }} is not yet enabled by an administrator. This form is visible only to you. <a href="mailto:david@ktema.org">Contact Stacktrace</a> to enable your league.</div>
 {% endif %}
-
 {% if app_form.event.status == app_form.event.EventStatus.DRAFTING %}
 <div class="disabled-warning">{{ app_form.event }} is in Drafting status. The event and its forms cannot be viewed by other users.</div>
 {% endif %}
+{% if app_form.closed %}
+<div class="disabled-warning">This form is not currently accepting submissions.</div>
+{% endif %}
+
 <header>
     <h1>
         <a href="{{ app_form.event.get_absolute_url }}">{{ app_form.event.name }}</a>
     </h1>
     {% if not application and request.user|can_manage_event:app_form.event %}
+    <form class="inline" method="POST">
+        {% csrf_token %}
+        {% if app_form.closed %}
+        <input type="submit" value="Reopen Form" formaction="{% url 'form-open' app_form.event.league.slug app_form.event.slug app_form.slug %}">
+        {% else %}
+        <input type="submit" value="Close Form" formaction="{% url 'form-close' app_form.event.league.slug app_form.event.slug app_form.slug %}">
+        {% endif %}
+    </form>
     <a href="{% url 'form-update' app_form.event.league.slug app_form.event.slug app_form.slug %}" role="button">Edit Form</a>
     <a href="{% url 'form-delete' app_form.event.league.slug app_form.event.slug app_form.slug %}" role="button">Delete Form</a>
     {% endif %}

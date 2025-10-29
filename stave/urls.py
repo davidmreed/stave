@@ -57,6 +57,16 @@ urlpatterns = [
         name="form-update",
     ),
     path(
+        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/close/",
+        views.FormOpenCloseView.as_view(),
+        name="form-close",
+    ),
+    path(
+        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/open/",
+        views.FormOpenCloseView.as_view(),
+        name="form-open",
+    ),
+    path(
         "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/delete/",
         views.FormDeleteView.as_view(),
         name="form-delete",
