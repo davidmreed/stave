@@ -716,6 +716,30 @@ class FormDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
         )
 
 
+class FormOpenCloseView(LoginRequiredMixin, views.View):
+    def post(
+        self, request: HttpRequest, league_slug: str, event_slug: str, form_slug: str
+    ) -> HttpResponse:
+        form = get_object_or_404(
+            models.ApplicationForm.objects.manageable(request.user).filter(
+                event__league__slug=league_slug,
+                event__slug=event_slug,
+            ),
+            slug=form_slug,
+        )
+
+        form.closed = request.path.endswith("/close/")
+        form.save()
+
+        redirect_url = request.POST.get("redirect_url")
+        if redirect_url and url_has_allowed_host_and_scheme(
+            redirect_url, settings.ALLOWED_HOSTS
+        ):
+            return HttpResponseRedirect(redirect_url)
+
+        return HttpResponseRedirect(form.get_absolute_url())
+
+
 class ProfileView(
     LoginRequiredMixin,
     generic.edit.UpdateView,

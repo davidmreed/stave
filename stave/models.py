@@ -1070,11 +1070,13 @@ class ApplicationFormQuerySet(models.QuerySet["ApplicationForm"]):
     def submittable(
         self, user: User | AnonymousUser
     ) -> models.QuerySet["ApplicationForm"]:
-        return self.filter(
-            closed=False,
-            event__status__in=[EventStatus.OPEN, EventStatus.LINK_ONLY],
-            event__league__enabled=True,
-        ).distinct() | self.manageable(user)
+        return (
+            self.filter(
+                event__status__in=[EventStatus.OPEN, EventStatus.LINK_ONLY],
+                event__league__enabled=True,
+            ).distinct()
+            | self.manageable(user)
+        ).exclude(closed=True)
 
     def manageable(
         self, user: User | AnonymousUser
