@@ -738,6 +738,20 @@ class RoleGroupCrewAssignment(models.Model):
     def effective_crew(self) -> list[CrewAssignment]:
         return list(self.effective_crew_by_role_id().values())
 
+    @classmethod
+    def for_user(
+        cls, user: User, event_status_in: list[EventStatus]
+    ) -> models.QuerySet["RoleGroupCrewAssignment"]:
+        cas = CrewAssignment.objects.filter(user=user)
+        crews = Crew.objects.filter(
+            assignments__in=cas,
+            event__status__in=event_status_in,
+        )
+        rgcas = RoleGroupCrewAssignment.objects.filter(
+            Q(crew__in=crews) | Q(crew_overrides__in=crews)
+        )
+        return rgcas
+
 
 class GameQuerySet(models.QuerySet["Game"]):
     def manageable(self, user: User) -> models.QuerySet["Game"]:
