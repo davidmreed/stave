@@ -640,3 +640,30 @@ def test_application_query_set__pending(db):
 
     assert application in models.Application.objects.pending()
     assert closed_application not in models.Application.objects.pending()
+
+
+def test_clone_league_template(db):
+    league_template = LeagueTemplateFactory()
+    event_template = EventTemplateFactory(league_template=league_template)
+    role_group_template = RoleGroupFactory(league_template=league_template)
+    message_template = MessageTemplateFactory(league_template=league_template)
+    application_form_template = ApplicationFormTemplateFactory(
+        league_template=league_template
+    )
+    application_form_template_assignment = ApplicationFormTemplateAssignmentFactory(
+        application_form_template=application_form_template,
+        event_template=event_template,
+    )
+
+    league = league_template.clone()
+
+    assert league.role_groups.count() == 1
+    assert league.role_groups.first().roles.count() == role_group_template.roles.count()
+    assert league.event_templates.count() == 1
+    assert league.application_form_templates.count() == 1
+    assert (
+        models.ApplicationFormTemplateAssignment.objects.filter(
+            application_form_template__league=league
+        ).count()
+        == 1
+    )
