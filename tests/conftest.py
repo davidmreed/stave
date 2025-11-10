@@ -15,6 +15,12 @@ from tests import factories
 register(factories.EventFactory)
 register(factories.LeagueFactory)
 register(factories.UserFactory)
+register(factories.ApplicationFormFactory)
+register(factories.ApplicationResponseFactory)
+register(factories.CrewFactory)
+register(factories.QuestionFactory)
+register(factories.RoleGroupFactory)
+register(factories.RoleFactory)
 
 
 @pytest.fixture

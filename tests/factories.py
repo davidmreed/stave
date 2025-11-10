@@ -12,6 +12,7 @@ from stave.models import EventStatus
 from stave import models
 import random
 from zoneinfo import ZoneInfo
+from datetime import date, time, datetime, timedelta
 
 
 class RoleFactory(factory.django.DjangoModelFactory):
@@ -103,6 +104,7 @@ class GameFactory(factory.django.DjangoModelFactory):
     )
     order_key = 1
 
+
 class CrewFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "stave.Crew"
@@ -111,6 +113,7 @@ class CrewFactory(factory.django.DjangoModelFactory):
     event = factory.SubFactory(EventFactory)
     role_group = factory.SubFactory(RoleGroupFactory)
     kind = factory.fuzzy.FuzzyChoice(models.CrewKind)
+
 
 class UserFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -199,3 +202,67 @@ class ApplicationFactory(factory.django.DjangoModelFactory):
     # Roles
 
     # Questions
+
+
+class LeagueTemplateFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "stave.LeagueTemplate"
+
+    name = factory.Faker("sentence", nb_words=2)
+    description = factory.Faker("sentence", nb_words=12)
+
+
+class EventTemplateFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "stave.EventTemplate"
+
+    class Params:
+        single = factory.Trait(days=1, game_templates__per_day=1)
+        double = factory.Trait(days=1, game_templates__per_day=2)
+        two_day = factory.Trait(days=2, game_templates__per_day=2)
+
+    @factory.post_generation
+    def game_templates(obj, create, extracted, **kwargs):
+        for day in range(obj.days):
+            start_time = time(8, 0, 0)
+            for template in range(kwargs.get("per_day", 1)):
+                GameTemplateFactory(
+                    event_template=obj,
+                    day=day,
+                    start_time=start_time,
+                    end_time=time(start_time.hour + 2, 0, 0),
+                )
+                start_time = time(start_time.hour + 2, 0, 0)
+
+    league_template = factory.SubFactory(LeagueTemplateFactory)
+    name = factory.Faker("sentence", nb_words=2)
+    description = factory.Faker("sentence", nb_words=12)
+    # application_form_templates = None
+
+    location = factory.Faker("sentence", nb_words=6)
+
+
+class GameTemplateFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "stave.GameTemplate"
+
+    event_template = factory.SubFactory(EventTemplateFactory)
+    home_league = factory.Faker("sentence", nb_words=2)
+    home_team = factory.Faker("sentence", nb_words=2)
+    visiting_league = factory.Faker("sentence", nb_words=2)
+    visiting_team = factory.Faker("sentence", nb_words=2)
+    association = factory.fuzzy.FuzzyChoice(models.GameAssociation)
+    kind = factory.fuzzy.FuzzyChoice(models.GameKind)
+    start_time = None
+    end_time = None
+    day = None
+
+
+class ApplicationFormTemplateFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "stave.ApplicationFormTemplate"
+
+
+class ApplicationFormTemplateAssignmentFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "stave.ApplicationFormTemplateAssignment"

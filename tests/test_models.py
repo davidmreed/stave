@@ -5,6 +5,8 @@ from .factories import (
     EventFactory,
     ApplicationFormFactory,
     GameFactory,
+    RoleGroupFactory,
+    RoleFactory,
 )
 
 
