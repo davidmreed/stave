@@ -987,17 +987,44 @@ class ApplicationFormTemplate(models.Model):
     name = models.CharField(max_length=256)
 
     application_kind = models.IntegerField(
-        choices=ApplicationKind.choices, null=False, blank=False
+        choices=ApplicationKind.choices,
+        null=False,
+        blank=False,
+        verbose_name=_("application process"),
+        help_text=_(
+            "Choose Assign Only to contact applicants only once, when the schedule is finalized. Choose Confirm then Assign to send acceptance messages first, then follow with a schedule."
+        ),
     )
     application_availability_kind = models.IntegerField(
-        choices=ApplicationAvailabilityKind.choices, null=False, blank=False
+        choices=ApplicationAvailabilityKind.choices,
+        null=False,
+        blank=False,
+        verbose_name=_("availability type"),
+        help_text=_(
+            "You can request availability at the level of the whole event, whole days, or by individual game. Single-game events must use Entire Event."
+        ),
     )
     role_groups: models.ManyToManyField["ApplicationFormTemplate", RoleGroup] = (
-        models.ManyToManyField(RoleGroup)
+        models.ManyToManyField(
+            RoleGroup,
+            help_text=_(
+                "The role groups covered by this form. You can select any or all of the role groups assigned to the event. Each role group can appear on only one form."
+            ),
+        )
     )
-    intro_text = models.TextField(null=True, blank=True)
+    intro_text = models.TextField(
+        null=True,
+        blank=True,
+        help_text=_(
+            "Introduce the event to your applicants. You don't need to include dates or locations, because these are recorded on the event already. You can use Markdown to format this text."
+        ),
+    )
     requires_profile_fields: models.JSONField[list[str]] = models.JSONField(
-        default=list, blank=True
+        default=list,
+        blank=True,
+        help_text=_(
+            "You can accept standard fields from the user's profile without requiring them to re-type their information. You always receive the Derby Name field."
+        ),
     )
     invitation_email_template = models.ForeignKey(
         MessageTemplate,
@@ -1232,7 +1259,6 @@ class ApplicationForm(models.Model):
             "Choose Assign Only to contact applicants only once, when the schedule is finalized. Choose Confirm then Assign to send acceptance messages first, then follow with a schedule."
         ),
     )
-    # FIXME: copy these strings to the Template object
     application_availability_kind = models.IntegerField(
         choices=ApplicationAvailabilityKind.choices,
         null=False,
