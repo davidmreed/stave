@@ -460,23 +460,6 @@ class RoleGroupDeleteView(TenantedGenericDeleteView[models.RoleGroup]):
         return role_group
 
 
-## League User Permissions
-# FIXME
-
-
-class LeaguePermissionListView(
-    LoginRequiredMixin, TenantedObjectMixin, generic.ListView
-): ...
-
-
-class LeaguePermissionCreateView(LoginRequiredMixin, TenantedObjectMixin): ...
-
-
-class LeaguePermissionDeleteView(
-    TenantedGenericDeleteView[models.LeagueUserPermission]
-): ...
-
-
 ## Event Templates
 
 
