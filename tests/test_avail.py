@@ -26,27 +26,3 @@ def test_availability_manager__applications(tournament):
 
     # TODO: test exclusion by application status
     # TODO: test that prefetches cache
-
-
-def test_availability_manager__static_crews(): ...
-
-
-def test_availability_manager__event_crews(): ...
-
-
-def test_availability_manager__user_availability(): ...
-
-
-def test_availability_manager__user_event_availability(): ...
-
-
-def test_availability_manager__user_static_crew_availability(): ...
-
-
-def test_availability_manager__get_application_counts(): ...
-
-
-def test_availability_manager__get_all_applications(): ...
-
-
-def test_availability_manager__get_available_applications(): ...
