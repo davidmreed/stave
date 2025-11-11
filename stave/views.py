@@ -380,7 +380,7 @@ class MessageTemplateUpdateView(
         self,
     ) -> models.MessageTemplate | None:
         return get_object_or_404(
-            models.MessageTemplate.objects.filter(league=self.league),
+            self.league.message_templates.all(),
             id=self.kwargs.get("message_template_id"),
         )
 
@@ -421,11 +421,7 @@ class RoleGroupCreateUpdateView(
             return reverse("role-group-create", args=[league_slug])
 
     def get_form(self, **kwargs) -> forms.RoleGroupCreateUpdateForm:
-        league = get_object_or_404(
-            models.League.objects.manageable(self.request.user),
-            slug=self.kwargs.get("league_slug"),
-        )
-        return forms.RoleGroupCreateUpdateForm(league=league, **kwargs)
+        return forms.RoleGroupCreateUpdateForm(league=self.league, **kwargs)
 
     def get_object(
         self,
