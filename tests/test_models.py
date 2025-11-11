@@ -6,7 +6,10 @@ from .factories import (
     ApplicationFormFactory,
     GameFactory,
     RoleGroupFactory,
-    RoleFactory,
+    LeagueTemplateFactory,
+    EventTemplateFactory,
+    ApplicationFormTemplateFactory,
+    ApplicationFormTemplateAssignmentFactory,
 )
 
 
@@ -408,15 +411,16 @@ def test_application_query_set__pending(db):
     assert closed_application not in models.Application.objects.pending()
 
 
-def test_clone_league_template(db):
+def test_clone_templates(db):
     league_template = LeagueTemplateFactory()
-    event_template = EventTemplateFactory(league_template=league_template)
-    role_group_template = RoleGroupFactory(league_template=league_template)
-    message_template = MessageTemplateFactory(league_template=league_template)
-    application_form_template = ApplicationFormTemplateFactory(
-        league_template=league_template
+    event_template = EventTemplateFactory(two_day=True, league_template=league_template)
+    role_group_template = RoleGroupFactory(
+        with_league_template=True, league_template=league_template
     )
-    application_form_template_assignment = ApplicationFormTemplateAssignmentFactory(
+    application_form_template = ApplicationFormTemplateFactory(
+        with_league_template=True, league_template=league_template
+    )
+    ApplicationFormTemplateAssignmentFactory(
         application_form_template=application_form_template,
         event_template=event_template,
     )
@@ -433,3 +437,6 @@ def test_clone_league_template(db):
         ).count()
         == 1
     )
+    assert (
+        league.message_templates.count() == 3
+    )  # one per type for a single ApplicationFormTemplate

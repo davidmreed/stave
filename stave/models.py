@@ -1092,6 +1092,7 @@ class ApplicationFormTemplate(models.Model):
         new_object.rejected_email_template_id = email_template_map[
             new_object.rejected_email_template_id
         ]
+        new_object.save()
 
         for question in self.template_questions.all():
             new_question = copy.copy(question)
@@ -1100,7 +1101,6 @@ class ApplicationFormTemplate(models.Model):
             new_question.application_form_template = new_object
             new_question.save()
 
-        new_object.save()
         new_object.role_groups.set(
             [role_group_map.get(rg.id) for rg in self.role_groups.all()]
         )

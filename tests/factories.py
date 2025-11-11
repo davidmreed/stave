@@ -12,7 +12,7 @@ from stave.models import EventStatus
 from stave import models
 import random
 from zoneinfo import ZoneInfo
-from datetime import date, time, datetime, timedelta
+from datetime import time
 
 
 class RoleFactory(factory.django.DjangoModelFactory):
@@ -30,6 +30,11 @@ class RoleGroupFactory(factory.django.DjangoModelFactory):
         model = "stave.RoleGroup"
         skip_postgeneration_save = True
 
+    class Params:
+        with_league = factory.Trait(league_template=None)
+        with_league_template = factory.Trait(league=None)
+
+    with_league = True
     name = factory.Faker("sentence", nb_words=1)
     event_only = False
 
@@ -39,6 +44,7 @@ class RoleGroupFactory(factory.django.DjangoModelFactory):
         size=lambda: random.randint(1, 10),
     )
     league = factory.SubFactory("tests.factories.LeagueFactory")
+    league_template = factory.SubFactory("tests.factories.LeagueTemplateFactory")
 
 
 class LeagueFactory(factory.django.DjangoModelFactory):
@@ -145,10 +151,24 @@ class ApplicationFormFactory(factory.django.DjangoModelFactory):
     requires_profile_fields = factory.LazyAttribute(
         lambda _: models.User.ALLOWED_PROFILE_FIELDS[:]
     )
-    invitation_email_template = None
-    schedule_email_template = None
-    rejection_email_template = None
+    invitation_email_template = factory.SubFactory(
+        "tests.factories.MessageTemplateFactory",
+        league=factory.SelfAttribute("..event.league"),
+        league_template=None,
+    )
+    schedule_email_template = factory.SubFactory(
+        "tests.factories.MessageTemplateFactory",
+        league=factory.SelfAttribute("..event.league"),
+        league_template=None,
+    )
 
+    rejection_email_template = factory.SubFactory(
+        "tests.factories.MessageTemplateFactory",
+        league=factory.SelfAttribute("..event.league"),
+        league_template=None,
+    )
+
+    # TODO: applicationformtemplates
     questions = factory.RelatedFactoryList(
         "tests.factories.QuestionFactory",
         factory_related_name="application_form",
@@ -160,7 +180,15 @@ class QuestionFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "stave.Question"
 
+    class Params:
+        with_application_form = factory.Trait(application_form_template=None)
+        with_application_form_template = factory.Trait(application_form=None)
+
+    with_application_form = True
     application_form = factory.SubFactory(ApplicationFormFactory)
+    application_form_template = factory.SubFactory(
+        "tests.factories.ApplicationFormTemplateFactory"
+    )
     order_key = factory.Sequence(lambda n: n)
     content = factory.Faker("sentence", nb_words=5)
     kind = factory.fuzzy.FuzzyChoice(models.QuestionKind)
@@ -215,6 +243,7 @@ class LeagueTemplateFactory(factory.django.DjangoModelFactory):
 class EventTemplateFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "stave.EventTemplate"
+        skip_postgeneration_save = True
 
     class Params:
         single = factory.Trait(days=1, game_templates__per_day=1)
@@ -261,8 +290,69 @@ class GameTemplateFactory(factory.django.DjangoModelFactory):
 class ApplicationFormTemplateFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "stave.ApplicationFormTemplate"
+        skip_postgeneration_save = True
+
+    class Params:
+        with_league = factory.Trait(league_template=None)
+        with_league_template = factory.Trait(league=None)
+
+    with_league = True
+
+    league = factory.SubFactory(LeagueFactory)
+    league_template = factory.SubFactory(LeagueTemplateFactory)
+    name = factory.Faker("sentence", nb_words=2)
+
+    application_kind = factory.fuzzy.FuzzyChoice(models.ApplicationKind)
+    application_availability_kind = factory.fuzzy.FuzzyChoice(
+        models.ApplicationAvailabilityKind
+    )  # TODO: constrain
+    intro_text = factory.Faker("paragraph", nb_sentences=3)
+    requires_profile_fields = factory.LazyAttribute(
+        lambda _: models.User.ALLOWED_PROFILE_FIELDS[:]
+    )
+    invitation_email_template = factory.SubFactory(
+        "tests.factories.MessageTemplateFactory",
+        league_template=factory.SelfAttribute("..league_template"),
+        league=factory.SelfAttribute("..league"),
+    )
+    assigned_email_template = factory.SubFactory(
+        "tests.factories.MessageTemplateFactory",
+        league_template=factory.SelfAttribute("..league_template"),
+        league=factory.SelfAttribute("..league"),
+    )
+    rejected_email_template = factory.SubFactory(
+        "tests.factories.MessageTemplateFactory",
+        league_template=factory.SelfAttribute("..league_template"),
+        league=factory.SelfAttribute("..league"),
+    )
+
+    @factory.post_generation
+    def questions(obj, create, extracted, **kwargs):
+        for i in range(random.randint(1, 10)):
+            QuestionFactory(
+                with_application_form_template=True, application_form_template=obj
+            )
 
 
 class ApplicationFormTemplateAssignmentFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "stave.ApplicationFormTemplateAssignment"
+
+    application_form_template = factory.SubFactory(ApplicationFormTemplateFactory)
+    event_template = factory.SubFactory(EventTemplateFactory)
+
+
+class MessageTemplateFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "stave.MessageTemplate"
+
+    class Params:
+        with_league = factory.Trait(league_template=None)
+        with_league_template = factory.Trait(league=None)
+
+    with_league = True
+    league_template = factory.SubFactory(LeagueTemplateFactory)
+    league = factory.SubFactory(LeagueFactory)
+    subject = factory.Faker("sentence", nb_words=8)
+    content = factory.Faker("paragraph", nb_sentences=6)
+    name = factory.Faker("sentence", nb_words=2)
