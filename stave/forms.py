@@ -543,7 +543,8 @@ class QuestionForm(forms.ModelForm):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
-        if self.data.get(DELETION_FIELD_NAME):
+        if self.data.get(kwargs["prefix"] + "-" + DELETION_FIELD_NAME) == "on":
+            self.kind = None
             return
 
         if self.instance:
@@ -885,7 +886,7 @@ class EventTemplateCreateUpdateForm(ParentChildForm):
 class ApplicationFormTemplateCreateUpdateForm(ParentChildForm):
     parent_form_class = ApplicationFormTemplateForm
     child_form_class = QuestionForm
-    relation_name = "event_template"
+    relation_name = "application_form_template"
     reverse_name = "template_questions"
     league: models.League
 

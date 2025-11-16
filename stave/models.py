@@ -1094,6 +1094,7 @@ class ApplicationFormTemplate(models.Model):
             new_question.id = new_question.pk = None
             new_question._state.adding = True
             new_question.application_form = new_object
+            new_question.application_form_template = None
             new_question.save()
 
         return new_object

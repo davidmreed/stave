@@ -118,7 +118,9 @@ def commalist(d: Sequence[Any]) -> str:
     elif len(d) == 2:
         return " and ".join(str(a) for a in d)
     else:
-        return ", ".join(str(a) for a in d[:-1]) + " and " + str(d[-1])
+        # Querysets aren't negative-indexable
+        ds = list(d)
+        return ", ".join(str(a) for a in ds[:-1]) + " and " + str(ds[-1])
 
 
 @register.filter
