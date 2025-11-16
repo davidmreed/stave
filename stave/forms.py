@@ -174,9 +174,6 @@ class ParentChildForm(forms.Form):
         if "instance" in kwargs:
             # formsets do not want this kwarg
             del kwargs["instance"]
-        if "league" in kwargs:
-            # FIXME: encapsulation break
-            del kwargs["league"]
 
         formset_factory = forms.modelformset_factory(
             self.child_form_class.Meta.model,
@@ -803,7 +800,7 @@ class EventTemplateForm(forms.ModelForm):
             "location": forms.TextInput,
         }
 
-    def __init__(self, league: models.League | None = None, *args, **kwargs):
+    def __init__(self, *args, league: models.League | None = None, **kwargs):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
@@ -814,6 +811,19 @@ class EventTemplateForm(forms.ModelForm):
         self.fields[
             "application_form_templates"
         ].queryset = league.application_form_templates.all()
+
+    def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
+        if "league" in kwargs:
+            del kwargs["league"]
+
+        formset = super().get_child_formset(*args, **kwargs)
+
+        for form in formset:
+            form.fields["role_groups"].queryset = self.league.role_groups.filter(
+                event_only=False
+            )
+
+        return formset
 
 
 class GameTemplateForm(forms.ModelForm):
@@ -844,10 +854,7 @@ class GameTemplateForm(forms.ModelForm):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
-        self.league = league or self.instance.event_template.league
-        assert self.league
-
-        self.fields["role_groups"].queryset = self.league.role_groups.all()
+        # queryset on role_groups is set by our controlling ParentChildForm
 
 
 class EventTemplateCreateUpdateForm(ParentChildForm):
@@ -864,7 +871,20 @@ class EventTemplateCreateUpdateForm(ParentChildForm):
         **kwargs,
     ):
         self.league = league
-        super().__init__(*args, league=league, **kwargs)
+        super().__init__(*args, **kwargs)
+
+    def get_parent_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
+        return super().get_parent_formset(*args, league=self.league, **kwargs)
+
+    def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
+        formset = super().get_child_formset(*args, **kwargs)
+
+        for form in formset:
+            form.fields["role_groups"].queryset = self.league.role_groups.filter(
+                event_only=False
+            )
+
+        return formset
 
     def clean(self):
         super().clean()
@@ -897,7 +917,10 @@ class ApplicationFormTemplateCreateUpdateForm(ParentChildForm):
         **kwargs,
     ):
         self.league = league
-        super().__init__(*args, league=league, **kwargs)
+        super().__init__(*args, **kwargs)
+
+    def get_parent_formset(self, *args, **kwargs):
+        return super().get_parent_formset(*args, league=self.league, **kwargs)
 
     def clean(self):
         super().clean()
@@ -1055,7 +1078,7 @@ class RoleGroupCreateUpdateForm(ParentChildForm):
         **kwargs,
     ):
         self.league = league
-        super().__init__(*args, league=league, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def clean(self):
         super().clean()
@@ -1091,7 +1114,7 @@ class EventCreateUpdateForm(ParentChildForm):
     ):
         self.league = league
         self.template = template
-        super().__init__(*args, league=league, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def get_parent_formset(self, initial, *args, **kwargs) -> forms.ModelForm:
         if self.template:
@@ -1099,12 +1122,9 @@ class EventCreateUpdateForm(ParentChildForm):
                 initial = {}
             initial["template"] = self.template
 
-        return super().get_parent_formset(initial, *args, **kwargs)
+        return super().get_parent_formset(initial, *args, league=self.league, **kwargs)
 
     def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
-        if "league" in kwargs:
-            del kwargs["league"]
-
         formset = super().get_child_formset(*args, **kwargs)
 
         for form in formset:
