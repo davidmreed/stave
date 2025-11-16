@@ -19,7 +19,7 @@
         </div>
         <div>
             <dt>Application Form Templates</dt>
-            <dd>{{ event_template.application_form_templates.all|commalist }}</dd>
+            <dd>{% if event_template.application_form_templates.all %}{{ event_template.application_form_templates.all|commalist }}{% else %}None{% endif %}</dd>
         </div>
     </dl>
     </article>

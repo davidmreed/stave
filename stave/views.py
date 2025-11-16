@@ -278,6 +278,7 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
                     parent_name=self.form_class.parent_form_class._meta.model._meta.verbose_name,
                     child_name=self.form_class.child_form_class._meta.model._meta.verbose_name,
                     child_name_plural=self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
+                    child_variants=form.get_child_variants(),
                     allow_child_deletes=self.allow_child_deletes(),
                     time_zone=self.get_time_zone(),
                 )
@@ -292,7 +293,20 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
         match action:
             case "add":
                 # We requested to add a child object.
-                form.add_child_form()
+                variants_by_key = {
+                    each_variant[0]: each_variant
+                    for each_variant in form.get_child_variants()
+                }
+                if variants_by_key:
+                    variant = request.GET.get("variant")
+                    if variant in variants_by_key:
+                        form.add_child_form(variant=variant)
+                    else:
+                        return HttpResponseBadRequest(
+                            f"{variant} is not a legal parameter"
+                        )
+                else:
+                    form.add_child_form()
             case "delete":
                 # We requested to delete a child object.
                 if self.allow_child_deletes():
@@ -319,6 +333,7 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
                     parent_name=self.form_class.parent_form_class._meta.model._meta.verbose_name,
                     child_name=self.form_class.child_form_class._meta.model._meta.verbose_name,
                     child_name_plural=self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
+                    child_variants=form.get_child_variants(),
                     allow_child_deletes=self.allow_child_deletes(),
                     time_zone=self.get_time_zone(),
                 )
@@ -346,6 +361,19 @@ class MessageTemplateCreateView(
 ):
     template_name = "stave/message_template_edit.html"
     form_class = forms.MessageTemplateForm
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context["merge_fields"] = models.MergeContext(
+            models.Application(),
+            models.ApplicationForm(),
+            models.Event(),
+            models.League(),
+            models.User(),
+            models.User(),
+        ).get_merge_fields()
+
+        return context
 
     def form_valid(self, form: forms.MessageTemplateForm) -> HttpResponse:
         form.instance.league = self.league
@@ -409,7 +437,7 @@ class RoleGroupCreateUpdateView(
     LoginRequiredMixin, TenantedObjectMixin, ParentChildCreateUpdateFormView
 ):
     form_class = forms.RoleGroupCreateUpdateForm
-    role_group: models.RoleGroup | None
+    role_group: models.RoleGroup | None = None
 
     def get_view_url(self) -> str:
         league_slug = self.kwargs.get("league_slug")

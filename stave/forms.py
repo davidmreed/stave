@@ -1,4 +1,5 @@
 import copy
+from typing import Tuple
 import zoneinfo
 
 from django import forms
@@ -173,6 +174,9 @@ class ParentChildForm(forms.Form):
         if "instance" in kwargs:
             # formsets do not want this kwarg
             del kwargs["instance"]
+        if "league" in kwargs:
+            # FIXME: encapsulation break
+            del kwargs["league"]
 
         formset_factory = forms.modelformset_factory(
             self.child_form_class.Meta.model,
@@ -188,6 +192,9 @@ class ParentChildForm(forms.Form):
             initial=initial,
             **kwargs,
         )
+
+    def get_child_variants(self) -> list[Tuple[str, str, dict[str, str]]]:
+        return []
 
     def is_valid(self) -> bool:
         # We do this repetitive dance so that our subclasses'
@@ -205,12 +212,25 @@ class ParentChildForm(forms.Form):
 
         return True
 
-    def add_child_form(self, values: dict[str, str] | None = None):
+    def get_child_form_data_for_variant(self, variant: str) -> dict[str, str]:
+        return {}
+
+    def add_child_form(
+        self, values: dict[str, str] | None = None, variant: str | None = None
+    ):
         if "form-TOTAL_FORMS" in self.child_formset.data:
             try:
                 new_data = self.child_formset.data.copy()
                 count = int(new_data["form-TOTAL_FORMS"])
                 new_data[f"form-{count}-id"] = ""
+                values = values or {}
+                if variant:
+                    variants_by_key = {
+                        each_variant[0]: each_variant
+                        for each_variant in self.get_child_variants()
+                    }
+                    values.update(variants_by_key[variant][2])
+
                 if values:
                     for key, value in values.items():
                         new_data[f"form-{count}-{key}"] = value
@@ -523,6 +543,9 @@ class QuestionForm(forms.ModelForm):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
+        if self.data.get(DELETION_FIELD_NAME):
+            return
+
         if self.instance:
             self.kind = self.instance.kind
 
@@ -667,14 +690,22 @@ class ApplicationFormTemplateForm(forms.ModelForm):
         empty_value=None,
         choices=models.ApplicationKind,
         widget=forms.RadioSelect,
-        help_text=models.ApplicationForm._meta.get_field("application_kind").help_text,
+        label=models.ApplicationFormTemplate._meta.get_field(
+            "application_kind"
+        ).verbose_name,
+        help_text=models.ApplicationFormTemplate._meta.get_field(
+            "application_kind"
+        ).help_text,
         required=True,
     )
     application_availability_kind = forms.TypedChoiceField(
         empty_value=None,
         choices=models.ApplicationAvailabilityKind,
         widget=forms.RadioSelect,
-        help_text=models.ApplicationForm._meta.get_field(
+        label=models.ApplicationFormTemplate._meta.get_field(
+            "application_availability_kind"
+        ).verbose_name,
+        help_text=models.ApplicationFormTemplate._meta.get_field(
             "application_availability_kind"
         ).help_text,
         required=True,
@@ -686,7 +717,7 @@ class ApplicationFormTemplateForm(forms.ModelForm):
             for field in models.User.ALLOWED_PROFILE_FIELDS
         ],
         widget=forms.CheckboxSelectMultiple,
-        help_text=models.ApplicationForm._meta.get_field(
+        help_text=models.ApplicationFormTemplate._meta.get_field(
             "requires_profile_fields"
         ).help_text,
         required=False,
@@ -710,8 +741,10 @@ class ApplicationFormTemplateForm(forms.ModelForm):
     def __init__(self, league: models.League | None = None, *args, **kwargs):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
+
         league = league or self.instance.league
         assert league
+
         self.fields["role_groups"].queryset = league.role_groups.all()
         self.fields["invitation_email_template"].queryset = self.fields[
             "rejected_email_template"
@@ -773,18 +806,13 @@ class EventTemplateForm(forms.ModelForm):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
-        assert league or self.instance
+        league = league or self.instance.league
+        assert league
 
-        if self.instance:
-            self.fields["role_groups"].queryset = self.instance.league.role_groups.all()
-            self.fields[
-                "application_form_templates"
-            ].queryset = self.instance.league.application_form_templates.all()
-        else:
-            self.league = league
-            self.fields[
-                "application_form_templates"
-            ].queryset = self.league.application_form_templates.all()
+        self.fields["role_groups"].queryset = league.role_groups.all()
+        self.fields[
+            "application_form_templates"
+        ].queryset = league.application_form_templates.all()
 
 
 class GameTemplateForm(forms.ModelForm):
@@ -814,16 +842,11 @@ class GameTemplateForm(forms.ModelForm):
     def __init__(self, league: models.League | None = None, *args, **kwargs):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
-        assert league or self.instance
 
-        if self.instance:
-            # TODO: this is inelegant
-            self.fields[
-                "role_groups"
-            ].queryset = self.instance.event_template.league.role_groups.all()
-        else:
-            self.league = league
-            self.fields["role_groups"].queryset = self.league.role_groups.all()
+        self.league = league or self.instance.event_template.league
+        assert self.league
+
+        self.fields["role_groups"].queryset = self.league.role_groups.all()
 
 
 class EventTemplateCreateUpdateForm(ParentChildForm):
@@ -835,12 +858,12 @@ class EventTemplateCreateUpdateForm(ParentChildForm):
 
     def __init__(
         self,
-        league: models.League,
         *args,
+        league: models.League,
         **kwargs,
     ):
         self.league = league
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, league=league, **kwargs)
 
     def clean(self):
         super().clean()
@@ -868,12 +891,12 @@ class ApplicationFormTemplateCreateUpdateForm(ParentChildForm):
 
     def __init__(
         self,
-        league: models.League,
         *args,
+        league: models.League,
         **kwargs,
     ):
         self.league = league
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, league=league, **kwargs)
 
     def clean(self):
         super().clean()
@@ -890,6 +913,30 @@ class ApplicationFormTemplateCreateUpdateForm(ParentChildForm):
 
     def get_redirect_url(self) -> str:
         return reverse("application-form-template-list", args=[self.league.slug])
+
+    def get_child_variants(self) -> list[Tuple[str, str, dict[str, str]]]:
+        return [
+            (
+                str(models.QuestionKind.LONG_TEXT),
+                models.QuestionKind.LONG_TEXT.label,
+                {"kind": str(models.QuestionKind.LONG_TEXT)},
+            ),
+            (
+                str(models.QuestionKind.SHORT_TEXT),
+                models.QuestionKind.SHORT_TEXT.label,
+                {"kind": str(models.QuestionKind.SHORT_TEXT)},
+            ),
+            (
+                str(models.QuestionKind.SELECT_ONE),
+                models.QuestionKind.SELECT_ONE.label,
+                {"kind": str(models.QuestionKind.SELECT_ONE)},
+            ),
+            (
+                str(models.QuestionKind.SELECT_MANY),
+                models.QuestionKind.SELECT_MANY.label,
+                {"kind": str(models.QuestionKind.SELECT_MANY)},
+            ),
+        ]
 
 
 class MessageTemplateForm(forms.ModelForm):
@@ -941,14 +988,12 @@ class EventForm(forms.ModelForm):
     def __init__(self, *args, league: models.League | None = None, **kwargs):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
-        if league:
-            self.fields["role_groups"].queryset = league.role_groups.all()
-            self.fields["template"].queryset = league.event_templates.all()
-        elif self.instance:
-            self.fields["role_groups"].queryset = self.instance.league.role_groups.all()
-            self.fields[
-                "template"
-            ].queryset = self.instance.league.event_templates.all()
+
+        league = league or self.instance.league
+        assert league
+
+        self.fields["role_groups"].queryset = league.role_groups.all()
+        self.fields["template"].queryset = league.event_templates.all()
 
 
 class EventFromTemplateForm(forms.ModelForm):
@@ -1004,12 +1049,12 @@ class RoleGroupCreateUpdateForm(ParentChildForm):
 
     def __init__(
         self,
-        league: models.League,
         *args,
+        league: models.League,
         **kwargs,
     ):
         self.league = league
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, league=league, **kwargs)
 
     def clean(self):
         super().clean()
@@ -1038,9 +1083,9 @@ class EventCreateUpdateForm(ParentChildForm):
 
     def __init__(
         self,
+        *args,
         league: models.League,
         template: models.EventTemplate | None,
-        *args,
         **kwargs,
     ):
         self.league = league

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, fields
-from typing import Any
+from typing import Any, Tuple
 from uuid import UUID
 
 from django.contrib.auth.models import AnonymousUser
@@ -142,6 +142,7 @@ class ParentChildCreateUpdateInputs:
     child_name: str
     child_name_plural: str
     allow_child_deletes: bool
+    child_variants: list[Tuple[str, str, dict[str, str]]] | None = None
     time_zone: str | None = None
 
 

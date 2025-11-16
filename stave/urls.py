@@ -37,7 +37,7 @@ urlpatterns = [
         name="role-group-edit",
     ),
     path(
-        "_/<slug:league_slug>/role-groups/<uuid:role_group_id>/delete/",
+        "_/<slug:league_slug>/role-groups/<uuid:id>/delete/",
         view=views.RoleGroupDeleteView.as_view(),
         name="role-group-delete",
     ),
