@@ -825,6 +825,34 @@ class EventTemplateForm(forms.ModelForm):
 
         return formset
 
+    def clean(self, *args, **kwargs):
+        super().clean(*args, **kwargs)
+
+        # Validate that our own Role Groups are a superset of those
+        # assigned to our Application Form Templates
+        our_role_groups = self.cleaned_data["role_groups"]
+        form_template_role_groups = set()
+        missing_role_groups = set()
+        overlap_role_groups = set()
+
+        for application_form_template in self.cleaned_data[
+            "application_form_templates"
+        ]:
+            for role_group in application_form_template.role_groups.all():
+                if role_group not in our_role_groups:
+                    missing_role_groups.add(role_group)
+                if role_group in form_template_role_groups:
+                    overlap_role_groups.add(role_group)
+                else:
+                    form_template_role_groups.add(role_group)
+
+        if missing_role_groups or overlap_role_groups:
+            missing_role_group_names = ", ".join(rg.name for rg in missing_role_groups)
+            overlap_role_group_names = ", ".join(rg.name for rg in overlap_role_groups)
+            raise ValidationError(
+                f"Event Templates must be assigned any Role Groups that are used by Application Form Templates, and there can only be one Application Form Template per Role Group. Role groups that are not assigned to the Event Template: {missing_role_group_names}. Role groups with overlapping Application Form Templates: {overlap_role_group_names}."
+            )
+
 
 class GameTemplateForm(forms.ModelForm):
     league: models.League
@@ -1019,6 +1047,33 @@ class EventForm(forms.ModelForm):
         self.fields["role_groups"].queryset = league.role_groups.all()
         self.fields["template"].queryset = league.event_templates.all()
 
+    def clean(self, *args, **kwargs):
+        super().clean(*args, **kwargs)
+
+        # Validate that our own Role Groups are a superset of those
+        # assigned to our Application Forms
+        our_role_groups = self.cleaned_data["role_groups"]
+        form_role_groups = set()
+        missing_role_groups = set()
+        overlap_role_groups = set()
+
+        # What about uncreated ones that are going to get AFTs cloned?
+        for application_form in self.cleaned_data["application_forms"]:
+            for role_group in application_form_template.role_groups.all():
+                if role_group not in our_role_groups:
+                    missing_role_groups.add(role_group)
+                if role_group in form_template_role_groups:
+                    overlap_role_groups.add(role_group)
+                else:
+                    form_template_role_groups.add(role_group)
+
+        if missing_role_groups or overlap_role_groups:
+            missing_role_group_names = ", ".join(rg.name for rg in missing_role_groups)
+            overlap_role_group_names = ", ".join(rg.name for rg in overlap_role_groups)
+            raise ValidationError(
+                f"Events must be assigned any Role Groups that are used by Application Forms, and there can only be one Application Form per Role Group. Role groups that are not assigned to the Event: {missing_role_group_names}. Role groups with overlapping Application Forms: {overlap_role_group_names}."
+            )
+
 
 class EventFromTemplateForm(forms.ModelForm):
     class Meta:
@@ -1159,6 +1214,10 @@ class EventCreateUpdateForm(ParentChildForm):
                     "role_groups",
                     _("Role groups for Games must be included on the Event"),
                 )
+
+        # Validate that, if we're cloning a template, our role groups cover
+        # all of the role groups of associated Application Form Templates
+        # FIXME
 
         # Assign league.
         self.parent_form.instance.league = self.league
