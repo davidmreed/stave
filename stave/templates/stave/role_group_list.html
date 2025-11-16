@@ -14,7 +14,7 @@
         <a role="button" href="{% url 'role-group-delete' league.slug role_group.id %}">Delete</a>
         {% endif %}
     </header>
-    {{ role_group.roles.all|length }} roles.
+    {{ role_group.roles.all|length }} role{% if role_group.roles.all|length != 1 %}s{% endif %}.
     {% if not role_group.can_delete %}<small>This Role Group is in use. The Role Group and Roles cannot be deleted.</small>{% endif %}
 </article>
 {% endfor %}

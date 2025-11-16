@@ -467,7 +467,7 @@ class RoleGroupCreateUpdateView(
     def allow_child_deletes(self) -> bool:
         if self.role_group:
             return self.role_group.can_delete()
-        return False
+        return True
 
 
 class RoleGroupDeleteView(TenantedGenericDeleteView[models.RoleGroup]):
