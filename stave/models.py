@@ -1135,6 +1135,11 @@ class ApplicationFormTemplate(models.Model):
 
         return new_object
 
+    def save(self, **kwargs):
+        if "preferred_name" not in self.requires_profile_fields:
+            self.requires_profile_fields.insert(0, "preferred_name")
+        super().save(**kwargs)
+
     class Meta:
         constraints = [
             models.CheckConstraint(

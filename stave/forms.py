@@ -628,8 +628,11 @@ class ApplicationFormForm(forms.ModelForm):
     )
     requires_profile_fields = forms.TypedMultipleChoiceField(
         choices=[
-            # FIXME: this is not correct
-            (field, models.User._meta.get_field(field).verbose_name.capitalize())
+            (
+                field,
+                models.User._meta.get_field(field).verbose_name[0].upper()
+                + models.User._meta.get_field(field).verbose_name[1:],
+            )
             for field in models.User.ALLOWED_PROFILE_FIELDS
             if field != "preferred_name"
         ],
@@ -709,10 +712,14 @@ class ApplicationFormTemplateForm(forms.ModelForm):
         required=True,
     )
     requires_profile_fields = forms.TypedMultipleChoiceField(
-        empty_value=None,
         choices=[
-            (field, models.User._meta.get_field(field).verbose_name.title())
+            (
+                field,
+                models.User._meta.get_field(field).verbose_name[0].upper()
+                + models.User._meta.get_field(field).verbose_name[1:],
+            )
             for field in models.User.ALLOWED_PROFILE_FIELDS
+            if field != "preferred_name"
         ],
         widget=forms.CheckboxSelectMultiple,
         help_text=models.ApplicationFormTemplate._meta.get_field(
