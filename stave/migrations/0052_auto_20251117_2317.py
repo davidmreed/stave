@@ -15,8 +15,8 @@ class Migration(migrations.Migration):
         migrations.SeparateDatabaseAndState(
             database_operations=[
                 migrations.RunSQL(
-                    sql="ALTER TABLE stave_applicationformtemplate_event_templates RENAME TO stave_applicationformtemplateassignments",
-                    reverse_sql="ALTER TABLE stave_applicationformtemplateassignments RENAME TO stave_applicationfortemplate_event_templates",
+                    sql="ALTER TABLE stave_applicationformtemplate_event_templates RENAME TO stave_applicationformtemplateassignment",
+                    reverse_sql="ALTER TABLE stave_applicationformtemplateassignment RENAME TO stave_applicationfortemplate_event_templates",
                 ),
             ],
             state_operations=[
