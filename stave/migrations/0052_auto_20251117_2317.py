@@ -33,14 +33,14 @@ class Migration(migrations.Migration):
                             ),
                         ),
                         (
-                            "event_template",
+                            "eventtemplate",
                             models.ForeignKey(
                                 on_delete=django.db.models.deletion.DO_NOTHING,
                                 to="stave.EventTemplate",
                             ),
                         ),
                         (
-                            "application_form_template",
+                            "applicationformtemplate",
                             models.ForeignKey(
                                 on_delete=django.db.models.deletion.DO_NOTHING,
                                 to="stave.ApplicationFormTemplate",
@@ -50,7 +50,7 @@ class Migration(migrations.Migration):
                     options={
                         "constraints": [
                             models.UniqueConstraint(
-                                fields=["event_template", "application_form_template"],
+                                fields=["eventtemplate", "applicationformtemplate"],
                                 name="stave_applicationformtemplate_event_templates_applicationformtemplate_id_eventtemplate_id_f2fba8ea_uniq",
                             )
                         ],
