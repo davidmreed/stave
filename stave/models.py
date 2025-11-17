@@ -1053,14 +1053,14 @@ class ApplicationFormTemplateAssignment(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["event_template", "application_form_template"],
+                fields=["eventtemplate", "applicationformtemplate"],
                 name="stave_applicationformtemplate_event_templates_applicationformtemplate_id_eventtemplate_id_f2fba8ea_uniq",
             )
         ]
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    event_template = models.ForeignKey(EventTemplate, on_delete=models.DO_NOTHING)
-    application_form_template = models.ForeignKey(
+    id = models.AutoField(primary_key=True, editable=False)
+    eventtemplate = models.ForeignKey(EventTemplate, on_delete=models.DO_NOTHING)
+    applicationformtemplate = models.ForeignKey(
         ApplicationFormTemplate, on_delete=models.DO_NOTHING
     )
 
