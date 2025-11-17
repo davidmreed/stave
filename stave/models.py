@@ -958,7 +958,10 @@ class ApplicationFormTemplate(models.Model):
     event_templates: models.ManyToManyField[
         "ApplicationFormTemplate", EventTemplate
     ] = models.ManyToManyField(
-        EventTemplate, blank=True, related_name="application_form_templates"
+        EventTemplate,
+        blank=True,
+        related_name="application_form_templates",
+        through="ApplicationFormTemplateAssignment",
     )
 
     def __str__(self):
@@ -1044,6 +1047,22 @@ class ApplicationFormTemplate(models.Model):
                 name="either_league_or_league_template_app_form_template",
             )
         ]
+
+
+class ApplicationFormTemplateAssignment(models.Model):
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["event_template", "application_form_template"],
+                name="stave_applicationformtemplate_event_templates_applicationformtemplate_id_eventtemplate_id_f2fba8ea_uniq",
+            )
+        ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    event_template = models.ForeignKey(EventTemplate, on_delete=models.DO_NOTHING)
+    application_form_template = models.ForeignKey(
+        ApplicationFormTemplate, on_delete=models.DO_NOTHING
+    )
 
 
 class ApplicationFormQuerySet(models.QuerySet["ApplicationForm"]):
