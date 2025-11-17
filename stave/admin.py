@@ -25,14 +25,20 @@ class UserAdmin(admin.ModelAdmin):
 
 class GameTemplateInline(admin.TabularInline):
     model = models.GameTemplate
-    fields = ("name",)
+    fields = ("day",)
+    extra = 0
+
+
+class ApplicationFormTemplateInline(admin.TabularInline):
+    model = models.ApplicationFormTemplateAssignment
+    fields = ("application_form_template",)
     extra = 0
 
 
 @admin.register(models.EventTemplate)
 class EventTemplateAdmin(admin.ModelAdmin):
     list_display = ("name", "league", "league_template")
-    inlines = [GameTemplateInline]
+    inlines = [GameTemplateInline, ApplicationFormTemplateInline]
 
 
 @admin.register(models.ApplicationFormTemplate)
