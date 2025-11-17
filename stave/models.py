@@ -990,7 +990,7 @@ class ApplicationFormTemplate(models.Model):
         choices=ApplicationKind.choices,
         null=False,
         blank=False,
-        verbose_name=_("application process"),
+        verbose_name=_("Application process"),
         help_text=_(
             "Choose Assign Only to contact applicants only once, when the schedule is finalized. Choose Confirm then Assign to send acceptance messages first, then follow with a schedule."
         ),
@@ -999,7 +999,7 @@ class ApplicationFormTemplate(models.Model):
         choices=ApplicationAvailabilityKind.choices,
         null=False,
         blank=False,
-        verbose_name=_("availability type"),
+        verbose_name=_("Availability type"),
         help_text=_(
             "You can request availability at the level of the whole event, whole days, or by individual game. Single-game events must use Entire Event."
         ),
@@ -1255,7 +1255,7 @@ class ApplicationForm(models.Model):
         choices=ApplicationKind.choices,
         null=False,
         blank=False,
-        verbose_name=_("application process"),
+        verbose_name=_("Application process"),
         help_text=_(
             "Choose Assign Only to contact applicants only once, when the schedule is finalized. Choose Confirm then Assign to send acceptance messages first, then follow with a schedule."
         ),
@@ -1264,7 +1264,7 @@ class ApplicationForm(models.Model):
         choices=ApplicationAvailabilityKind.choices,
         null=False,
         blank=False,
-        verbose_name=_("availability type"),
+        verbose_name=_("Availability type"),
         help_text=_(
             "You can request availability at the level of the whole event, whole days, or by individual game. Single-game events must use Entire Event."
         ),
