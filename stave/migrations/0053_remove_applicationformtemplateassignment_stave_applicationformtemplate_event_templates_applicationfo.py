@@ -4,28 +4,30 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0052_auto_20251117_2317'),
+        ("stave", "0052_auto_20251117_2317"),
     ]
 
     operations = [
         migrations.RemoveConstraint(
-            model_name='applicationformtemplateassignment',
-            name='stave_applicationformtemplate_event_templates_applicationformtemplate_id_eventtemplate_id_f2fba8ea_uniq',
+            model_name="applicationformtemplateassignment",
+            name="stave_applicationformtemplate_event_templates_applicationformtemplate_id_eventtemplate_id_f2fba8ea_uniq",
         ),
         migrations.RenameField(
-            model_name='applicationformtemplateassignment',
-            old_name='applicationformtemplate',
-            new_name='application_form_template',
+            model_name="applicationformtemplateassignment",
+            old_name="applicationformtemplate",
+            new_name="application_form_template",
         ),
         migrations.RenameField(
-            model_name='applicationformtemplateassignment',
-            old_name='eventtemplate',
-            new_name='event_template',
+            model_name="applicationformtemplateassignment",
+            old_name="eventtemplate",
+            new_name="event_template",
         ),
         migrations.AddConstraint(
-            model_name='applicationformtemplateassignment',
-            constraint=models.UniqueConstraint(fields=('event_template', 'application_form_template'), name='unique_event_template_and_app_form_template'),
+            model_name="applicationformtemplateassignment",
+            constraint=models.UniqueConstraint(
+                fields=("event_template", "application_form_template"),
+                name="unique_event_template_and_app_form_template",
+            ),
         ),
     ]
