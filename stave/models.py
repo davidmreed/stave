@@ -366,9 +366,10 @@ class EventTemplate(models.Model):
     )  # TODO: validate that Role Groups are associated to the same
     # League or League Template we are.
     application_form_templates: models.ManyToManyField[
-        "EventTemplate", "ApplicationFormTemplate"
+        "ApplicationFormTemplate", "EventTemplate"
     ] = models.ManyToManyField(
         "ApplicationFormTemplate",
+        related_name="event_templates",
         blank=True,
         through="ApplicationFormTemplateAssignment",
     )
@@ -952,24 +953,6 @@ class ApplicationAvailabilityKind(models.IntegerChoices):
 # Single-game events require WHOLE_EVENT (the availability kind isn't meaningful)
 
 
-class ApplicationFormTemplateAssignment(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    event_template = models.ForeignKey(
-        EventTemplate,
-        blank=False,
-        null=False,
-        on_delete=models.CASCADE,
-        related_name="application_form_template_assignments",
-    )
-    application_form_template = models.ForeignKey(
-        "ApplicationFormTemplate",
-        blank=False,
-        null=False,
-        on_delete=models.CASCADE,
-        related_name="event_template_assignments",
-    )
-
-
 class ApplicationFormTemplate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     league = models.ForeignKey(
@@ -1046,22 +1029,6 @@ class ApplicationFormTemplate(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-    )
-    event_templates: models.ManyToManyField[
-        "ApplicationFormTemplate", "EventTemplate"
-    ] = models.ManyToManyField(
-        "EventTemplate",
-        blank=True,
-        through="ApplicationFormTemplateAssignment",
-    )
-
-    event_templates: models.ManyToManyField[
-        "ApplicationFormTemplate", EventTemplate
-    ] = models.ManyToManyField(
-        EventTemplate,
-        blank=True,
-        related_name="application_form_templates",
-        through="ApplicationFormTemplateAssignment",
     )
 
     def __str__(self):
@@ -1159,9 +1126,13 @@ class ApplicationFormTemplateAssignment(models.Model):
         ]
 
     id = models.AutoField(primary_key=True, editable=False)
-    event_template = models.ForeignKey(EventTemplate, on_delete=models.DO_NOTHING)
+    event_template = models.ForeignKey(
+        EventTemplate,
+        on_delete=models.DO_NOTHING,
+    )
     application_form_template = models.ForeignKey(
-        ApplicationFormTemplate, on_delete=models.DO_NOTHING
+        ApplicationFormTemplate,
+        on_delete=models.DO_NOTHING,
     )
 
 
