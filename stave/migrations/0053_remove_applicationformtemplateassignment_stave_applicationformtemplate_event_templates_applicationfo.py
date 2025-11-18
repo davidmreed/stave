@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RemoveConstraint(
             model_name="applicationformtemplateassignment",
-            name="stave_applicationformtemplate_event_templates_applicationformtemplate_id_eventtemplate_id_f2fba8ea_uniq",
+            name="stave_applicationformtem_applicationformtemplate__f2fba8ea_uniq",
         ),
         migrations.RenameField(
             model_name="applicationformtemplateassignment",

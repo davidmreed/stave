@@ -8,6 +8,9 @@ default:
 backup:
     pg_dump -U postgres -h $PGHOST_PROD -p $PGPORT_PROD -W -f backups/database-{{datetime("%F")}}.bak -F t railway
 
+psql:
+    psql -U postgres -h $PGHOST_PROD -p $PGPORT_PROD -t railway
+
 # Generate new migrations based on model changes
 makemigrations:
     uv run manage.py makemigrations
