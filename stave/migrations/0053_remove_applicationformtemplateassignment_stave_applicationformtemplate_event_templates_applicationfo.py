@@ -11,8 +11,9 @@ class Migration(migrations.Migration):
     operations = [
         migrations.SeparateDatabaseAndState(
             database_operations=[
+                # This is only for SQLite. On production Postgres, manually drop the index.
+                # SQLite does not support the ALTER TABLE DROP CONSTRAINT syntax we'd need for Postgres.
                 migrations.RunSQL("""
-                DROP INDEX IF EXISTS stave_applicationformtem_applicationformtemplate__f2fba8ea_uniq;
                 DROP INDEX IF EXISTS stave_applicationformtemplate_event_templates_applicationformtemplate_id_eventtemplate_id_f2fba8ea_uniq;
                 """)
             ],
