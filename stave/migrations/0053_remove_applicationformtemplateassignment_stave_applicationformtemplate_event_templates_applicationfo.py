@@ -9,10 +9,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveConstraint(
-            model_name="applicationformtemplateassignment",
-            name="stave_applicationformtem_applicationformtemplate__f2fba8ea_uniq",
-        ),
+        # migrations.RemoveConstraint(
+        #    model_name="applicationformtemplateassignment",
+        #    name="stave_applicationformtem_applicationformtemplate__f2fba8ea_uniq",
+        # ),
         migrations.RenameField(
             model_name="applicationformtemplateassignment",
             old_name="applicationformtemplate",
