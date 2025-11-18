@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load stave_tags %}
+
+{% block content %}
+<header>
+    <h1><a href="{{ league.get_absolute_url }}">{{ league }}</a>: Message Templates</h1>
+    <a role="button" href="{% url 'message-template-create' league.slug %}">Create</a>
+</header>
+{% for message_template in messagetemplate_list %}
+<article>
+    <header>
+        <h2>{{ message_template }}</h2>
+        <a role="button" href="{% url 'message-template-edit' league.slug message_template.id %}">Edit</a>
+        <a role="button" href="{% url 'message-template-delete' league.slug message_template.id %}">Delete</a>
+    </header>
+    <dl>
+        <div>
+            <dt>Application Form Templates</dt>
+            <dd>{% if message_template.application_form_templates.all %}{{ message_template.application_form_templates.all|commalist }}{% else %}None{% endif %}</dd>
+        </div>
+    </dl>
+</article>
+{% endfor %}
+
+{% endblock %}

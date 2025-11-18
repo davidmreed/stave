@@ -22,7 +22,9 @@
     {% for child_form in form.child_formset %}
     {% if not child_form|is_form_deleted %}
     {{ child_form }}
+    {% if allow_child_deletes %}
     <input type="submit" formaction="{{ request.path }}{% querystring action='delete' index=forloop.counter0 %}" value="Delete {{ child_name|title }}" formnovalidate>
+    {% endif %}
     <hr>
     {% else %}
     {{ child_form.DELETE }}
@@ -31,7 +33,13 @@
     {% empty %}
     This {{ parent_name|lower }} doesn't have any {{ child_name_plural|lower }} yet.
     {% endfor %}
+    {% if child_variants %}
+    {% for variant in child_variants %}
+    <input type="submit" formaction="{{ request.path }}{% querystring action='add' variant=variant.0 %}" value="Add {{ variant.1|title }} {{ child_name|title }}" formnovalidate>
+    {% endfor %}
+    {% else %}
     <input type="submit" formaction="{{ request.path }}{% querystring action='add' %}" value="Add {{ child_name|title }} to {{ parent_name|title }}" formnovalidate>
+    {% endif %}
     <hr>
     <input type="submit" value="Save">
 </form>

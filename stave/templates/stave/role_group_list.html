@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <h1><a href="{{ league.get_absolute_url}}">{{ league }}</a>: Role Groups</h1>
+    <a role="button" href="{% url 'role-group-create' league.slug %}">Create</a>
+</header>
+{% for role_group in rolegroup_list %}
+<article>
+    <header>
+        <h2>{{ role_group.name }}</h2>
+        <a role="button" href="{% url 'role-group-edit' league.slug role_group.id %}">Edit</a>
+        {% if role_group.can_delete %}
+        <a role="button" href="{% url 'role-group-delete' league.slug role_group.id %}">Delete</a>
+        {% endif %}
+    </header>
+    {{ role_group.roles.all|length }} role{% if role_group.roles.all|length != 1 %}s{% endif %}.
+    {% if not role_group.can_delete %}<small>This Role Group is in use. The Role Group and Roles cannot be deleted.</small>{% endif %}
+</article>
+{% endfor %}
+
+{% endblock %}

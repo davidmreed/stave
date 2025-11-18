@@ -23,15 +23,15 @@ class UserAdmin(admin.ModelAdmin):
     list_display = ("preferred_name", "email")
 
 
-class ApplicationFormTemplateInline(admin.TabularInline):
-    model = models.EventTemplate.application_form_templates.through
-    fields = ("name",)
+class GameTemplateInline(admin.TabularInline):
+    model = models.GameTemplate
+    fields = ("day",)
     extra = 0
 
 
-class GameTemplateInline(admin.TabularInline):
-    model = models.GameTemplate
-    fields = ("name",)
+class ApplicationFormTemplateInline(admin.TabularInline):
+    model = models.ApplicationFormTemplateAssignment
+    fields = ("application_form_template",)
     extra = 0
 
 

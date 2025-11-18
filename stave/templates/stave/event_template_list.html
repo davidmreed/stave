@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load stave_tags %}
+{% block content %}
+<header>
+    <h1><a href="{{ league.get_absolute_url}}">{{ league }}</a>: Event Templates</h1>
+    <a role="button" href="{% url 'event-template-create' league.slug %}">Create</a>
+</header>
+{% for event_template in eventtemplate_list %}
+<article>
+    <header>
+        <h2>{{ event_template }}</h2>
+        <a role="button" href="{% url 'event-template-edit' league.slug event_template.id %}">Edit</a>
+        <a role="button" href="{% url 'event-template-delete' league.slug event_template.id %}">Delete</a>
+    </header>
+    <dl>
+        <div>
+            <dt>Description</dt>
+            <dd>{{ event_template.description }}</dd>
+        </div>
+        <div>
+            <dt>Application Form Templates</dt>
+            <dd>{% if event_template.application_form_templates.all %}{{ event_template.application_form_templates.all|commalist }}{% else %}None{% endif %}</dd>
+        </div>
+    </dl>
+    </article>
+{% endfor %}
+
+{% endblock %}

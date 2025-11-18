@@ -110,9 +110,20 @@ class RoleGroup(models.Model):
         null=True,
         blank=True,
     )
-    event_only = models.BooleanField(default=False)
+    event_only = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Event-only Role Groups are used to assign Event-wide Roles. They cannot be applied to Games."
+        ),
+    )
 
     roles: models.Manager["Role"]
+
+    def can_delete(self) -> bool:
+        return not Event.objects.filter(
+            league=self.league,
+            role_groups=self,
+        ).exists()
 
     def __str__(self) -> str:
         return self.name
@@ -147,7 +158,12 @@ class Role(models.Model):
     )
     order_key = models.IntegerField()
     name = models.CharField(max_length=256)
-    nonexclusive = models.BooleanField(default=False)
+    nonexclusive = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Nonexclusive Roles can be held simultaneously with another Role in the same Role Group."
+        ),
+    )
 
     def __str__(self) -> str:
         return self.name
@@ -190,7 +206,10 @@ class LeagueQuerySet(models.QuerySet["League"]):
             user_permissions__user=user,
         ).distinct()
 
-    def manageable(self, user: User) -> models.QuerySet["League"]:
+    def manageable(self, user: User | AnonymousUser) -> models.QuerySet["League"]:
+        if isinstance(user, AnonymousUser):
+            return self.none()
+
         return self.filter(
             user_permissions__permission=UserPermission.LEAGUE_MANAGER,
             user_permissions__user=user,
@@ -301,9 +320,24 @@ class LeagueTemplate(models.Model):
             message_template_map[message_template.id] = new_message_template.id
 
         # Copy Application Form Templates
+        application_form_template_map = {}
         for application_form_template in self.application_form_templates.all():
-            application_form_template.clone_as_template(
-                league, message_template_map, event_template_map, role_group_map
+            new_application_form_template = application_form_template.clone_as_template(
+                league, message_template_map, role_group_map
+            )
+            application_form_template_map[application_form_template.id] = (
+                new_application_form_template.id
+            )
+
+        # Copy Application Form Template Assignments
+        for aft_assignment in ApplicationFormTemplateAssignment.objects.filter(
+            application_form_template__in=self.application_form_templates.all()
+        ):
+            ApplicationFormTemplateAssignment.objects.create(
+                event_template_id=event_template_map[aft_assignment.event_template_id],
+                application_form_template_id=application_form_template_map[
+                    aft_assignment.application_form_template_id
+                ],
             )
 
         return league
@@ -331,6 +365,14 @@ class EventTemplate(models.Model):
         models.ManyToManyField(RoleGroup, blank=True)
     )  # TODO: validate that Role Groups are associated to the same
     # League or League Template we are.
+    application_form_templates: models.ManyToManyField[
+        "ApplicationFormTemplate", "EventTemplate"
+    ] = models.ManyToManyField(
+        "ApplicationFormTemplate",
+        related_name="event_templates",
+        blank=True,
+        through="ApplicationFormTemplateAssignment",
+    )
     days = models.IntegerField()
     location = models.TextField(blank=True, null=True)
 
@@ -395,8 +437,12 @@ class EventTemplate(models.Model):
                 values.update(game_kwargs[i])
             game_template.clone(**values)
 
-        for application_form_template in self.application_form_templates.all():
-            application_form_template.clone(event=new_object)
+        for (
+            application_form_template_assignment
+        ) in self.application_form_template_assignments.all():
+            _ = application_form_template_assignment.application_form_template.clone(
+                event=new_object
+            )
 
         return new_object
 
@@ -842,6 +888,9 @@ class MessageTemplate(models.Model):
     content = models.TextField()
     name = models.CharField(max_length=256)
 
+    def __str__(self) -> str:
+        return self.name
+
     def clone_as_template(self, league: League) -> "MessageTemplate":
         new_object = copy.copy(self)
         new_object.id = new_object.pk = None
@@ -921,17 +970,44 @@ class ApplicationFormTemplate(models.Model):
     name = models.CharField(max_length=256)
 
     application_kind = models.IntegerField(
-        choices=ApplicationKind.choices, null=False, blank=False
+        choices=ApplicationKind.choices,
+        null=False,
+        blank=False,
+        verbose_name=_("Application process"),
+        help_text=_(
+            "Choose Assign Only to contact applicants only once, when the schedule is finalized. Choose Confirm then Assign to send acceptance messages first, then follow with a schedule."
+        ),
     )
     application_availability_kind = models.IntegerField(
-        choices=ApplicationAvailabilityKind.choices, null=False, blank=False
+        choices=ApplicationAvailabilityKind.choices,
+        null=False,
+        blank=False,
+        verbose_name=_("Availability type"),
+        help_text=_(
+            "You can request availability at the level of the whole event, whole days, or by individual game. Single-game events must use Entire Event."
+        ),
     )
     role_groups: models.ManyToManyField["ApplicationFormTemplate", RoleGroup] = (
-        models.ManyToManyField(RoleGroup)
+        models.ManyToManyField(
+            RoleGroup,
+            help_text=_(
+                "The role groups covered by this form. You can select any or all of the role groups assigned to the event. Each role group can appear on only one form."
+            ),
+        )
     )
-    intro_text = models.TextField(null=True, blank=True)
+    intro_text = models.TextField(
+        null=True,
+        blank=True,
+        help_text=_(
+            "Introduce the event to your applicants. You don't need to include dates or locations, because these are recorded on the event already. You can use Markdown to format this text."
+        ),
+    )
     requires_profile_fields: models.JSONField[list[str]] = models.JSONField(
-        default=list, blank=True
+        default=list,
+        blank=True,
+        help_text=_(
+            "You can accept standard fields from the user's profile without requiring them to re-type their information. You always receive the Derby Name field."
+        ),
     )
     invitation_email_template = models.ForeignKey(
         MessageTemplate,
@@ -955,14 +1031,8 @@ class ApplicationFormTemplate(models.Model):
         on_delete=models.SET_NULL,
     )
 
-    event_templates: models.ManyToManyField[
-        "ApplicationFormTemplate", EventTemplate
-    ] = models.ManyToManyField(
-        EventTemplate, blank=True, related_name="application_form_templates"
-    )
-
     def __str__(self):
-        return f"{self.name} ({self.league.name if self.league else self.league_template.name})"
+        return f"{self.name} ({self.get_application_kind_display()}, {self.get_application_availability_kind_display()})"
 
     def clone(self, event: Event, **kwargs) -> "ApplicationForm":
         values = {
@@ -991,6 +1061,7 @@ class ApplicationFormTemplate(models.Model):
             new_question.id = new_question.pk = None
             new_question._state.adding = True
             new_question.application_form = new_object
+            new_question.application_form_template = None
             new_question.save()
 
         return new_object
@@ -999,7 +1070,6 @@ class ApplicationFormTemplate(models.Model):
         self,
         league: League,
         email_template_map: dict[uuid.UUID, uuid.UUID],
-        event_template_map: dict[uuid.UUID, uuid.UUID],
         role_group_map: dict[uuid.UUID, uuid.UUID],
     ) -> "ApplicationFormTemplate":
         new_object = copy.copy(self)
@@ -1017,6 +1087,7 @@ class ApplicationFormTemplate(models.Model):
         new_object.rejected_email_template_id = email_template_map[
             new_object.rejected_email_template_id
         ]
+        new_object.save()
 
         for question in self.template_questions.all():
             new_question = copy.copy(question)
@@ -1025,17 +1096,16 @@ class ApplicationFormTemplate(models.Model):
             new_question.application_form_template = new_object
             new_question.save()
 
-        new_object.save()
-        new_event_template_ids = {
-            event_template_map[event_template.id]
-            for event_template in self.event_templates.all()
-        }
-        new_object.event_templates.set(new_event_template_ids)
         new_object.role_groups.set(
             [role_group_map.get(rg.id) for rg in self.role_groups.all()]
         )
 
         return new_object
+
+    def save(self, **kwargs):
+        if "preferred_name" not in self.requires_profile_fields:
+            self.requires_profile_fields.insert(0, "preferred_name")
+        super().save(**kwargs)
 
     class Meta:
         constraints = [
@@ -1044,6 +1114,28 @@ class ApplicationFormTemplate(models.Model):
                 name="either_league_or_league_template_app_form_template",
             )
         ]
+
+
+class ApplicationFormTemplateAssignment(models.Model):
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["event_template", "application_form_template"],
+                name="unique_event_template_and_app_form_template",
+            )
+        ]
+
+    id = models.AutoField(primary_key=True, editable=False)
+    event_template = models.ForeignKey(
+        EventTemplate,
+        on_delete=models.CASCADE,
+        related_name="application_form_template_assignments",
+    )
+    application_form_template = models.ForeignKey(
+        ApplicationFormTemplate,
+        on_delete=models.CASCADE,
+        related_name="application_form_template_assignments",
+    )
 
 
 class ApplicationFormQuerySet(models.QuerySet["ApplicationForm"]):
@@ -1141,7 +1233,7 @@ class ApplicationForm(models.Model):
         choices=ApplicationKind.choices,
         null=False,
         blank=False,
-        verbose_name=_("application process"),
+        verbose_name=_("Application process"),
         help_text=_(
             "Choose Assign Only to contact applicants only once, when the schedule is finalized. Choose Confirm then Assign to send acceptance messages first, then follow with a schedule."
         ),
@@ -1150,7 +1242,7 @@ class ApplicationForm(models.Model):
         choices=ApplicationAvailabilityKind.choices,
         null=False,
         blank=False,
-        verbose_name=_("availability type"),
+        verbose_name=_("Availability type"),
         help_text=_(
             "You can request availability at the level of the whole event, whole days, or by individual game. Single-game events must use Entire Event."
         ),

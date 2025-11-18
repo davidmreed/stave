@@ -1,4 +1,5 @@
 import copy
+from typing import Tuple
 import zoneinfo
 
 from django import forms
@@ -8,6 +9,8 @@ from django.db.models import QuerySet
 from django.forms.utils import ErrorDict
 from django.utils import formats, timezone
 from django.utils.translation import gettext_lazy as _
+from django.urls import reverse
+from django.forms.formsets import DELETION_FIELD_NAME
 
 from . import models
 
@@ -187,6 +190,9 @@ class ParentChildForm(forms.Form):
             **kwargs,
         )
 
+    def get_child_variants(self) -> list[Tuple[str, str, dict[str, str]]]:
+        return []
+
     def is_valid(self) -> bool:
         # We do this repetitive dance so that our subclasses'
         # clean() methods can add errors on their constituent forms,
@@ -203,12 +209,25 @@ class ParentChildForm(forms.Form):
 
         return True
 
-    def add_child_form(self, values: dict[str, str] | None = None):
+    def get_child_form_data_for_variant(self, variant: str) -> dict[str, str]:
+        return {}
+
+    def add_child_form(
+        self, values: dict[str, str] | None = None, variant: str | None = None
+    ):
         if "form-TOTAL_FORMS" in self.child_formset.data:
             try:
                 new_data = self.child_formset.data.copy()
                 count = int(new_data["form-TOTAL_FORMS"])
                 new_data[f"form-{count}-id"] = ""
+                values = values or {}
+                if variant:
+                    variants_by_key = {
+                        each_variant[0]: each_variant
+                        for each_variant in self.get_child_variants()
+                    }
+                    values.update(variants_by_key[variant][2])
+
                 if values:
                     for key, value in values.items():
                         new_data[f"form-{count}-{key}"] = value
@@ -234,11 +253,13 @@ class ParentChildForm(forms.Form):
 
             for child_form in self.child_formset.forms:
                 setattr(child_form.instance, self.relation_name, parent)
-
             self.child_formset.save_existing_objects()
             self.child_formset.save_new_objects()
 
             return parent
+
+    def get_redirect_url(self) -> str:
+        return self.parent_form.instance.get_absolute_url()
 
 
 class ApplicationForm(forms.Form):
@@ -519,6 +540,10 @@ class QuestionForm(forms.ModelForm):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
+        if self.data.get(kwargs["prefix"] + "-" + DELETION_FIELD_NAME) == "on":
+            self.kind = None
+            return
+
         if self.instance:
             self.kind = self.instance.kind
 
@@ -603,8 +628,11 @@ class ApplicationFormForm(forms.ModelForm):
     )
     requires_profile_fields = forms.TypedMultipleChoiceField(
         choices=[
-            # FIXME: this is not correct
-            (field, models.User._meta.get_field(field).verbose_name.capitalize())
+            (
+                field,
+                models.User._meta.get_field(field).verbose_name[0].upper()
+                + models.User._meta.get_field(field).verbose_name[1:],
+            )
             for field in models.User.ALLOWED_PROFILE_FIELDS
             if field != "preferred_name"
         ],
@@ -624,6 +652,9 @@ class ApplicationFormForm(forms.ModelForm):
             "application_availability_kind",
             "hidden",
             "intro_text",
+            "invitation_email_template",
+            "rejection_email_template",
+            "schedule_email_template",
             "requires_profile_fields",
         ]
         widgets = {"role_groups": forms.CheckboxSelectMultiple}
@@ -633,9 +664,19 @@ class ApplicationFormForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if event:
             self.fields["role_groups"].queryset = event.role_groups.all()
+            self.fields["invitation_email_template"].queryset = self.fields[
+                "rejection_email_template"
+            ].queryset = self.fields["schedule_email_template"].queryset = (
+                event.league.message_templates.all()
+            )
         elif self.instance:
             self.fields["role_groups"].queryset = self.instance.event.role_groups.all()
 
+            self.fields["invitation_email_template"].queryset = self.fields[
+                "rejection_email_template"
+            ].queryset = self.fields["schedule_email_template"].queryset = (
+                self.instance.event.league.message_templates.all()
+            )
         if self.instance and not self.instance.editable:
             # Our instance might not be editable due to receiving applications.
             # Block edits to fields that would cause issues.
@@ -645,10 +686,323 @@ class ApplicationFormForm(forms.ModelForm):
             self.fields["requires_profile_fields"].disabled = True
 
 
+class ApplicationFormTemplateForm(forms.ModelForm):
+    application_kind = forms.TypedChoiceField(
+        empty_value=None,
+        choices=models.ApplicationKind,
+        widget=forms.RadioSelect,
+        label=models.ApplicationFormTemplate._meta.get_field(
+            "application_kind"
+        ).verbose_name,
+        help_text=models.ApplicationFormTemplate._meta.get_field(
+            "application_kind"
+        ).help_text,
+        required=True,
+    )
+    application_availability_kind = forms.TypedChoiceField(
+        empty_value=None,
+        choices=models.ApplicationAvailabilityKind,
+        widget=forms.RadioSelect,
+        label=models.ApplicationFormTemplate._meta.get_field(
+            "application_availability_kind"
+        ).verbose_name,
+        help_text=models.ApplicationFormTemplate._meta.get_field(
+            "application_availability_kind"
+        ).help_text,
+        required=True,
+    )
+    requires_profile_fields = forms.TypedMultipleChoiceField(
+        choices=[
+            (
+                field,
+                models.User._meta.get_field(field).verbose_name[0].upper()
+                + models.User._meta.get_field(field).verbose_name[1:],
+            )
+            for field in models.User.ALLOWED_PROFILE_FIELDS
+            if field != "preferred_name"
+        ],
+        widget=forms.CheckboxSelectMultiple,
+        help_text=models.ApplicationFormTemplate._meta.get_field(
+            "requires_profile_fields"
+        ).help_text,
+        required=False,
+    )
+
+    class Meta:
+        model = models.ApplicationFormTemplate
+        fields = [
+            "name",
+            "role_groups",
+            "application_kind",
+            "application_availability_kind",
+            "intro_text",
+            "invitation_email_template",
+            "rejected_email_template",
+            "assigned_email_template",
+            "requires_profile_fields",
+        ]
+        widgets = {"role_groups": forms.CheckboxSelectMultiple}
+
+    def __init__(self, league: models.League | None = None, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
+        league = league or self.instance.league
+        assert league
+
+        self.fields["role_groups"].queryset = league.role_groups.all()
+        self.fields["invitation_email_template"].queryset = self.fields[
+            "rejected_email_template"
+        ].queryset = self.fields["assigned_email_template"].queryset = (
+            league.message_templates.all()
+        )
+
+
 class LeagueForm(forms.ModelForm):
     class Meta:
         model = models.League
         fields = ["name", "slug", "description", "logo", "website", "time_zone"]
+
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
+
+class RoleGroupForm(forms.ModelForm):
+    class Meta:
+        model = models.RoleGroup
+        fields = ["name", "event_only"]
+
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
+
+class RoleForm(forms.ModelForm):
+    class Meta:
+        model = models.Role
+        fields = ["name", "nonexclusive"]
+
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
+
+class EventTemplateForm(forms.ModelForm):
+    league: models.League | None
+
+    class Meta:
+        model = models.EventTemplate
+        fields = [
+            "name",
+            "description",
+            "location",
+            "days",
+            "role_groups",
+            "application_form_templates",
+        ]
+        widgets = {
+            "role_groups": forms.CheckboxSelectMultiple,
+            "application_form_templates": forms.CheckboxSelectMultiple,
+            "location": forms.TextInput,
+        }
+
+    def __init__(self, *args, league: models.League | None = None, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
+        league = league or self.instance.league
+        assert league
+
+        self.fields["role_groups"].queryset = league.role_groups.all()
+        self.fields[
+            "application_form_templates"
+        ].queryset = league.application_form_templates.all()
+
+    def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
+        if "league" in kwargs:
+            del kwargs["league"]
+
+        formset = super().get_child_formset(*args, **kwargs)
+
+        for form in formset:
+            form.fields["role_groups"].queryset = self.league.role_groups.filter(
+                event_only=False
+            )
+
+        return formset
+
+    def clean(self, *args, **kwargs):
+        super().clean(*args, **kwargs)
+
+        # Validate that our own Role Groups are a superset of those
+        # assigned to our Application Form Templates
+        our_role_groups = self.cleaned_data["role_groups"]
+        form_template_role_groups = set()
+        missing_role_groups = set()
+        overlap_role_groups = set()
+
+        for application_form_template in self.cleaned_data[
+            "application_form_templates"
+        ]:
+            for role_group in application_form_template.role_groups.all():
+                if role_group not in our_role_groups:
+                    missing_role_groups.add(role_group)
+                if role_group in form_template_role_groups:
+                    overlap_role_groups.add(role_group)
+                else:
+                    form_template_role_groups.add(role_group)
+
+        if missing_role_groups or overlap_role_groups:
+            missing_role_group_names = ", ".join(rg.name for rg in missing_role_groups)
+            overlap_role_group_names = ", ".join(rg.name for rg in overlap_role_groups)
+            raise ValidationError(
+                f"Event Templates must be assigned any Role Groups that are used by Application Form Templates, and there can only be one Application Form Template per Role Group. Role groups that are not assigned to the Event Template: {missing_role_group_names}. Role groups with overlapping Application Form Templates: {overlap_role_group_names}."
+            )
+
+
+class GameTemplateForm(forms.ModelForm):
+    league: models.League
+
+    class Meta:
+        model = models.GameTemplate
+        fields = [
+            "day",
+            "home_league",
+            "home_team",
+            "visiting_league",
+            "visiting_team",
+            "association",
+            "kind",
+            "start_time",
+            "end_time",
+            "role_groups",
+        ]
+
+        widgets = {
+            "start_time": forms.DateInput(attrs={"type": "time"}),
+            "end_time": forms.DateInput(attrs={"type": "time"}),
+            "role_groups": forms.CheckboxSelectMultiple,
+        }
+
+    def __init__(self, league: models.League | None = None, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
+        # queryset on role_groups is set by our controlling ParentChildForm
+
+
+class EventTemplateCreateUpdateForm(ParentChildForm):
+    parent_form_class = EventTemplateForm
+    child_form_class = GameTemplateForm
+    relation_name = "event_template"
+    reverse_name = "game_templates"
+    league: models.League
+
+    def __init__(
+        self,
+        *args,
+        league: models.League,
+        **kwargs,
+    ):
+        self.league = league
+        super().__init__(*args, **kwargs)
+
+    def get_parent_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
+        return super().get_parent_formset(*args, league=self.league, **kwargs)
+
+    def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
+        formset = super().get_child_formset(*args, **kwargs)
+
+        for form in formset:
+            form.fields["role_groups"].queryset = self.league.role_groups.filter(
+                event_only=False
+            )
+
+        return formset
+
+    def clean(self):
+        super().clean()
+        self.parent_form.instance.league = self.league
+
+        for index, child_form in enumerate(
+            [
+                child_form
+                for child_form in self.child_formset.forms
+                if child_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
+            ]
+        ):
+            child_form.instance.order_key = index + 1
+
+    def get_redirect_url(self) -> str:
+        return reverse("event-template-list", args=[self.league.slug])
+
+
+class ApplicationFormTemplateCreateUpdateForm(ParentChildForm):
+    parent_form_class = ApplicationFormTemplateForm
+    child_form_class = QuestionForm
+    relation_name = "application_form_template"
+    reverse_name = "template_questions"
+    league: models.League
+
+    def __init__(
+        self,
+        *args,
+        league: models.League,
+        **kwargs,
+    ):
+        self.league = league
+        super().__init__(*args, **kwargs)
+
+    def get_parent_formset(self, *args, **kwargs):
+        return super().get_parent_formset(*args, league=self.league, **kwargs)
+
+    def clean(self):
+        super().clean()
+        self.parent_form.instance.league = self.league
+
+        for index, child_form in enumerate(
+            [
+                child_form
+                for child_form in self.child_formset.forms
+                if child_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
+            ]
+        ):
+            child_form.instance.order_key = index + 1
+
+    def get_redirect_url(self) -> str:
+        return reverse("application-form-template-list", args=[self.league.slug])
+
+    def get_child_variants(self) -> list[Tuple[str, str, dict[str, str]]]:
+        return [
+            (
+                str(models.QuestionKind.LONG_TEXT),
+                models.QuestionKind.LONG_TEXT.label,
+                {"kind": str(models.QuestionKind.LONG_TEXT)},
+            ),
+            (
+                str(models.QuestionKind.SHORT_TEXT),
+                models.QuestionKind.SHORT_TEXT.label,
+                {"kind": str(models.QuestionKind.SHORT_TEXT)},
+            ),
+            (
+                str(models.QuestionKind.SELECT_ONE),
+                models.QuestionKind.SELECT_ONE.label,
+                {"kind": str(models.QuestionKind.SELECT_ONE)},
+            ),
+            (
+                str(models.QuestionKind.SELECT_MANY),
+                models.QuestionKind.SELECT_MANY.label,
+                {"kind": str(models.QuestionKind.SELECT_MANY)},
+            ),
+        ]
+
+
+class MessageTemplateForm(forms.ModelForm):
+    class Meta:
+        model = models.MessageTemplate
+        fields = ["name", "subject", "content"]
+        widgets = {"subject": forms.TextInput}
 
     def __init__(self, *args, **kwargs):
         kwargs["label_suffix"] = ""
@@ -693,14 +1047,12 @@ class EventForm(forms.ModelForm):
     def __init__(self, *args, league: models.League | None = None, **kwargs):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
-        if league:
-            self.fields["role_groups"].queryset = league.role_groups.all()
-            self.fields["template"].queryset = league.event_templates.all()
-        elif self.instance:
-            self.fields["role_groups"].queryset = self.instance.league.role_groups.all()
-            self.fields[
-                "template"
-            ].queryset = self.instance.league.event_templates.all()
+
+        league = league or self.instance.league
+        assert league
+
+        self.fields["role_groups"].queryset = league.role_groups.all()
+        self.fields["template"].queryset = league.event_templates.all()
 
 
 class EventFromTemplateForm(forms.ModelForm):
@@ -747,6 +1099,39 @@ class GameForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
 
+class RoleGroupCreateUpdateForm(ParentChildForm):
+    parent_form_class = RoleGroupForm
+    child_form_class = RoleForm
+    relation_name = "role_group"
+    reverse_name = "roles"
+    league: models.League
+
+    def __init__(
+        self,
+        *args,
+        league: models.League,
+        **kwargs,
+    ):
+        self.league = league
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        self.parent_form.instance.league = self.league
+
+        for index, child_form in enumerate(
+            [
+                child_form
+                for child_form in self.child_formset.forms
+                if child_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
+            ]
+        ):
+            child_form.instance.order_key = index + 1
+
+    def get_redirect_url(self) -> str:
+        return reverse("role-group-list", args=[self.league.slug])
+
+
 class EventCreateUpdateForm(ParentChildForm):
     parent_form_class = EventForm
     child_form_class = GameForm
@@ -757,14 +1142,14 @@ class EventCreateUpdateForm(ParentChildForm):
 
     def __init__(
         self,
+        *args,
         league: models.League,
         template: models.EventTemplate | None,
-        *args,
         **kwargs,
     ):
         self.league = league
         self.template = template
-        super().__init__(*args, league=league, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def get_parent_formset(self, initial, *args, **kwargs) -> forms.ModelForm:
         if self.template:
@@ -772,12 +1157,9 @@ class EventCreateUpdateForm(ParentChildForm):
                 initial = {}
             initial["template"] = self.template
 
-        return super().get_parent_formset(initial, *args, **kwargs)
+        return super().get_parent_formset(initial, *args, league=self.league, **kwargs)
 
     def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
-        if "league" in kwargs:
-            del kwargs["league"]
-
         formset = super().get_child_formset(*args, **kwargs)
 
         for form in formset:
@@ -813,6 +1195,76 @@ class EventCreateUpdateForm(ParentChildForm):
                     _("Role groups for Games must be included on the Event"),
                 )
 
+        our_role_groups = self.parent_form.cleaned_data["role_groups"]
+        missing_role_groups = set()
+        overlap_role_groups = set()
+
+        # Validate that, if we're cloning a template, our role groups cover
+        # all of the role groups of associated Application Form Templates
+        if self.template:
+            form_template_role_groups = set()
+            for (
+                application_form_template
+            ) in self.template.application_form_templates.all():
+                for role_group in application_form_template.role_groups.all():
+                    if role_group not in our_role_groups:
+                        missing_role_groups.add(role_group)
+                    if role_group in form_template_role_groups:
+                        overlap_role_groups.add(role_group)
+                    else:
+                        form_template_role_groups.add(role_group)
+
+            if missing_role_groups:
+                missing_role_group_names = ", ".join(
+                    rg.name for rg in missing_role_groups
+                )
+                self.parent_form.add_error(
+                    "role_groups",
+                    "Events must be assigned any Role Groups that are used by Application Form Templates. "
+                    f"Required Role Groups that are not assigned to the Event: {missing_role_group_names}.",
+                )
+            if overlap_role_groups:
+                overlap_role_group_names = ", ".join(
+                    rg.name for rg in overlap_role_groups
+                )
+                self.parent_form.add_error(
+                    "role_groups",
+                    "There can only be one Application Form per Role Group. "
+                    f"Role Groups with overlapping Application Form Templates: {overlap_role_group_names}.",
+                )
+        elif self.parent_form.instance.id:
+            # Validate that our own Role Groups are a superset of those
+            # assigned to our Application Forms
+            form_role_groups = set()
+
+            for application_form in self.parent_form.instance.application_forms.all():
+                for role_group in application_form.role_groups.all():
+                    if role_group not in our_role_groups:
+                        missing_role_groups.add(role_group)
+                    if role_group in form_role_groups:
+                        overlap_role_groups.add(role_group)
+                    else:
+                        form_role_groups.add(role_group)
+
+            if missing_role_groups:
+                missing_role_group_names = ", ".join(
+                    rg.name for rg in missing_role_groups
+                )
+                self.parent_form.add_error(
+                    "role_groups",
+                    "Events must be assigned any Role Groups that are used by Application Forms. "
+                    f"Required Role Groups that are not assigned to the Event: {missing_role_group_names}.",
+                )
+            if overlap_role_groups:
+                overlap_role_group_names = ", ".join(
+                    rg.name for rg in overlap_role_groups
+                )
+                self.parent_form.add_error(
+                    "role_groups",
+                    "There can only be one Application Form per Role Group. "
+                    f"Role Groups with overlapping Application Forms: {overlap_role_group_names}.",
+                )
+
         # Assign league.
         self.parent_form.instance.league = self.league
 
@@ -821,7 +1273,7 @@ class EventCreateUpdateForm(ParentChildForm):
             [
                 game_form
                 for game_form in self.child_formset.forms
-                if not game_form.cleaned_data.get("DELETE", False)
+                if game_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
             ]
         ):
             new_order_key = index + 1
