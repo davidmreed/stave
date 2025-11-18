@@ -1128,11 +1128,13 @@ class ApplicationFormTemplateAssignment(models.Model):
     id = models.AutoField(primary_key=True, editable=False)
     event_template = models.ForeignKey(
         EventTemplate,
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
+        related_name="application_form_template_assignments",
     )
     application_form_template = models.ForeignKey(
         ApplicationFormTemplate,
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
+        related_name="application_form_template_assignments",
     )
 
 
