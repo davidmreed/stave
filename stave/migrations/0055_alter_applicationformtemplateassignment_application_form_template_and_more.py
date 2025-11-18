@@ -5,20 +5,27 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0054_remove_applicationformtemplate_event_templates_and_more'),
+        ("stave", "0054_remove_applicationformtemplate_event_templates_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='applicationformtemplateassignment',
-            name='application_form_template',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='application_form_template_assignments', to='stave.applicationformtemplate'),
+            model_name="applicationformtemplateassignment",
+            name="application_form_template",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="application_form_template_assignments",
+                to="stave.applicationformtemplate",
+            ),
         ),
         migrations.AlterField(
-            model_name='applicationformtemplateassignment',
-            name='event_template',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='application_form_template_assignments', to='stave.eventtemplate'),
+            model_name="applicationformtemplateassignment",
+            name="event_template",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="application_form_template_assignments",
+                to="stave.eventtemplate",
+            ),
         ),
     ]
