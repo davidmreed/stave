@@ -2060,7 +2060,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         ]  # TODO: efficiency!
 
         game_counts = {
-            a.user.id: am.get_game_count_for_user(a.user) for a in applications
+            a.user.id: am.get_game_count_for_user(a.user) for a in all_applications
         }
 
         # TODO: get the Game from AM to reduce queries.
@@ -2117,7 +2117,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         else:
             applications = []
 
-        # Delete existing assignment, if present
+        # Delete existing assignment in the target role, if present
         if assignment := models.CrewAssignment.objects.filter(
             role=role,
             crew=crew,
@@ -2156,6 +2156,26 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
 
         # Add a new assignment, if requested
         if applications:
+            # If the newly-selected user is already assigned to
+            # an exclusive role, AND that assignment is within
+            # one of this form's Role Groups, clear that assignment.
+
+            # FIXME: we're deleting exclusive assignments when
+            # adding nonexclusive ones.
+            # FIXME: we aren't distinguishing between this form assignments
+            # and other-form assignments.
+            # FIXME: what if the user is on a static crew? We cannot override
+            # a static crew assignment to None
+            # TODO: display current assignment on crew builder detail
+            # TODO: show users who are time-available but not role-available
+            if assignments := models.CrewAssignment.objects.filter(
+                user=applications[0].user,
+                role__nonexclusive=False,
+                role__role_group__in=application_form.role_groups.all(),
+                crew__event=application_form.event,
+            ):
+                assignments.delete()
+
             models.CrewAssignment.objects.create(
                 role=role, crew=crew, user=applications[0].user
             )
