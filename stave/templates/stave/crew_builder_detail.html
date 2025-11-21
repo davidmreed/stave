@@ -37,9 +37,10 @@
     </tbody>
 </table>
 </div>
+{% if unavail_applications %}
 <div style="overflow-x: auto;">
 <details>
-    <summary>Show {{ unavail_applications|length }} unavailable applicants</summary>
+        <summary>Show {{ unavail_applications|length }} unavailable applicant{% if unavail_applications|length != 1 %}s{% endif %}</summary>
 <table>
     {% include 'stave/partials/application_table_header.html' with form=form only %}
     <tbody>
@@ -50,8 +51,8 @@
                     {% csrf_token %}
                     <input type="hidden" value="{{ crew.id }}" id="crew_id" name="crew_id">
                     <input type="hidden" value="{{ application.id }}" id="application_id" name="application_id">
-                        <input type="submit" value="Select">
-                        <a role="button" href="{% url 'view-application' application.id %}">View</a>
+                    <input type="submit" value="Move Here">
+                    <a role="button" href="{% url 'view-application' application.id %}">View</a>
                 </form>
             </td>
             {% with game_count=game_counts|get:application.user_id %}
@@ -63,5 +64,5 @@
 </table>
 </details>
 </div>
-
+{% endif %}
 {% endblock %}
