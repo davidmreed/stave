@@ -319,6 +319,13 @@ class AvailabilityManager:
         return self._filter_for_basic_availability(potential_applications, crew, game)
 
     @functools.cache
+    def get_swappable_applications(self, crew: models.Crew, game: models.Game | None, role: models.Role) -> list[models.Application]:
+        """To be swappable, all overlapping assignments have to be in Role Groups managed on the same
+        Application Form, and cannot be part of a static crew. If we swapped out of a static crew,
+        we'd have no way to mark the slot empty."""
+        ...
+
+    @functools.cache
     def get_available_applications(
         self, crew: models.Crew, game: models.Game | None, role: models.Role
     ) -> list[models.Application]:
