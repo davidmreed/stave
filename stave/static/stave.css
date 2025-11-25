@@ -10,6 +10,13 @@ header h1, h2, h3, h4, h5, h6 {
     flex: 1;
 }
 
+td {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
 header nav {
     display: flex;
     flex-direction: row;
