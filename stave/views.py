@@ -1142,12 +1142,18 @@ class FormApplicationsView(
         if not form:
             raise Http404()
 
+        am = AvailabilityManager.with_application_form(form)
         return contexts.FormApplicationsInputs(
             form=form,
-            applications_action=form.applications.open(),
-            applications_inprogress=form.applications.in_progress(),
-            applications_staffed=form.applications.staffed(),
-            applications_closed=form.applications.closed(),
+            applications_action=am.get_applications_in_statuses(models.OPEN_STATUSES),
+            applications_inprogress=am.get_applications_in_statuses(
+                models.IN_PROGRESS_STATUSES
+            ),
+            applications_staffed=am.get_applications_in_statuses(
+                models.STAFFED_STATUSES
+            ),
+            applications_closed=am.get_applications_in_statuses(models.CLOSED_STATUSES),
+            game_counts=am.game_counts_by_user,
             ApplicationStatus=models.ApplicationStatus,
         )
 
@@ -1506,6 +1512,9 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         else:
             game = None
         applications = am.get_available_applications(crew, game, role)
+        game_counts = {
+            a.user.id: am.get_game_count_for_user(a.user) for a in applications
+        }
 
         # TODO: get the Game from AM to reduce queries.
         return render(
@@ -1518,6 +1527,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                     game=game,
                     event=am.application_form.event,
                     role=role,
+                    game_counts=game_counts,
                 )
             ),
         )

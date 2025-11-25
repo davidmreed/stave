@@ -868,6 +868,29 @@ class ApplicationStatus(models.IntegerChoices):
     WITHDRAWN = 6, _("Withdrawn")
 
 
+# These are tuples so that they're immutable and hashable
+# (i.e., we can functools.cache them)
+OPEN_STATUSES = (ApplicationStatus.APPLIED,)
+IN_PROGRESS_STATUSES = (
+    ApplicationStatus.ASSIGNMENT_PENDING,
+    ApplicationStatus.INVITATION_PENDING,
+    ApplicationStatus.INVITED,
+    ApplicationStatus.CONFIRMED,
+)
+STAFFED_STATUSES = (ApplicationStatus.ASSIGNED,)
+CLOSED_STATUSES = (
+    ApplicationStatus.REJECTED,
+    ApplicationStatus.REJECTION_PENDING,
+    ApplicationStatus.DECLINED,
+    ApplicationStatus.WITHDRAWN,
+)
+PENDING_STATUSES = (
+    ApplicationStatus.INVITATION_PENDING,
+    ApplicationStatus.REJECTION_PENDING,
+    ApplicationStatus.ASSIGNMENT_PENDING,
+)
+
+
 class MessageTemplate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     league = models.ForeignKey(
@@ -1511,43 +1534,19 @@ class ApplicationQuerySet(models.QuerySet["Application"]):
         )
 
     def open(self):
-        return self.filter(
-            status__in=[
-                ApplicationStatus.APPLIED,
-            ]
-        )
+        return self.filter(status__in=OPEN_STATUSES)
 
     def in_progress(self):
-        return self.filter(
-            status__in=[
-                ApplicationStatus.ASSIGNMENT_PENDING,
-                ApplicationStatus.INVITATION_PENDING,
-                ApplicationStatus.INVITED,
-                ApplicationStatus.CONFIRMED,
-            ]
-        )
+        return self.filter(status__in=IN_PROGRESS_STATUSES)
 
     def staffed(self):
-        return self.filter(status=ApplicationStatus.ASSIGNED)
+        return self.filter(status__in=STAFFED_STATUSES)
 
     def closed(self):
-        return self.filter(
-            status__in=[
-                ApplicationStatus.REJECTED,
-                ApplicationStatus.REJECTION_PENDING,
-                ApplicationStatus.DECLINED,
-                ApplicationStatus.WITHDRAWN,
-            ]
-        )
+        return self.filter(status__in=CLOSED_STATUSES)
 
     def pending(self):
-        return self.filter(
-            status__in=[
-                ApplicationStatus.INVITATION_PENDING,
-                ApplicationStatus.REJECTION_PENDING,
-                ApplicationStatus.ASSIGNMENT_PENDING,
-            ]
-        )
+        return self.filter(status__in=PENDING_STATUSES)
 
 
 class Application(models.Model):

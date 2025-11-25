@@ -1,6 +1,7 @@
 {% load stave_tags %}
 {% inputs 'ApplicationTableRowInputs' %}
 <td><small>{{ application.get_status_display }}</small></td>
+<td><small>{{ game_count }}</small></td>
 {# Profile fields #}
 {% for field in application.form.requires_profile_fields %}
 <td><small>{{ application.get_user_data|get:field }}</small></td>

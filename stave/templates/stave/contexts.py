@@ -32,6 +32,7 @@ class ApplicationTableInputs:
 class ApplicationTableRowInputs:
     form: models.ApplicationForm
     application: models.Application
+    game_count: int
 
 
 @dataclass
@@ -52,6 +53,7 @@ class CrewBuilderDetailInputs:
     role: models.Role
     game: models.Game | None
     applications: list[models.Application]
+    game_counts: dict[UUID, int]
 
 
 @dataclass
@@ -90,6 +92,7 @@ class FormApplicationsInputs:
     applications_inprogress: QuerySet[models.Application]
     applications_staffed: QuerySet[models.Application]
     applications_closed: QuerySet[models.Application]
+    game_counts: dict[UUID, int]
     ApplicationStatus: type
 
 
