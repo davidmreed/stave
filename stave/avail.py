@@ -197,16 +197,15 @@ class AvailabilityManager:
 
         return apps
 
-    # TODO: can't functools-cache because list is unhashable
+    @functools.cache
     def get_applications_in_statuses(
-        self, statuses: list[models.ApplicationStatus]
+        self, statuses: tuple[models.ApplicationStatus]
     ) -> list[models.Application]:
         apps = []
         for status in statuses:
             apps.extend(self.applications_by_status.get(status, []))
 
-        # TODO: not sorted
-        return apps
+        return sorted(apps, key=lambda a: a.user.preferred_name)
 
     @property
     @functools.cache
@@ -263,7 +262,16 @@ class AvailabilityManager:
         return user_assigned_times_map
 
     def get_game_count_for_user(self, user: models.User) -> int:
-        return len(self.user_availability.get(user.id, []))
+        # Note that user_availability only includes game crew assignments.
+
+        # This expression ensures that multiple assignments in the same
+        # time window get coalesced.
+        return len(
+            set(
+                (a.start_time, a.end_time)
+                for a in self.user_availability.get(user.id, [])
+            )
+        )
 
     @property
     @functools.cache

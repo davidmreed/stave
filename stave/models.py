@@ -868,25 +868,27 @@ class ApplicationStatus(models.IntegerChoices):
     WITHDRAWN = 6, _("Withdrawn")
 
 
-OPEN_STATUSES = [ApplicationStatus.APPLIED]
-IN_PROGRESS_STATUSES = [
+# These are tuples so that they're immutable and hashable
+# (i.e., we can functools.cache them)
+OPEN_STATUSES = (ApplicationStatus.APPLIED,)
+IN_PROGRESS_STATUSES = (
     ApplicationStatus.ASSIGNMENT_PENDING,
     ApplicationStatus.INVITATION_PENDING,
     ApplicationStatus.INVITED,
     ApplicationStatus.CONFIRMED,
-]
-STAFFED_STATUSES = [ApplicationStatus.ASSIGNED]
-CLOSED_STATUSES = [
+)
+STAFFED_STATUSES = (ApplicationStatus.ASSIGNED,)
+CLOSED_STATUSES = (
     ApplicationStatus.REJECTED,
     ApplicationStatus.REJECTION_PENDING,
     ApplicationStatus.DECLINED,
     ApplicationStatus.WITHDRAWN,
-]
-PENDING_STATUSES = [
+)
+PENDING_STATUSES = (
     ApplicationStatus.INVITATION_PENDING,
     ApplicationStatus.REJECTION_PENDING,
     ApplicationStatus.ASSIGNMENT_PENDING,
-]
+)
 
 
 class MessageTemplate(models.Model):
