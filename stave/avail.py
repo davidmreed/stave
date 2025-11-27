@@ -4,11 +4,16 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterable
 from uuid import UUID
+import enum
 
 from django.db.models import Prefetch, QuerySet
 
 from . import models
 
+class ConflictKind(enum.Enum):
+    NONE = 1
+    NON_SWAPPABLE_CONFLICT = 2
+    SWAPPABLE_CONFLICT = 3
 
 @dataclass
 class UserAvailabilityEntry:
@@ -19,22 +24,35 @@ class UserAvailabilityEntry:
     end_time: datetime | None
     exclusive: bool
 
-    def overlaps(self, other: "UserAvailabilityEntry") -> bool:
+    def overlaps(self, other: "UserAvailabilityEntry", swappable_role_groups: set[models.RoleGroup]) -> ConflictKind:
         if self.crew.kind != other.crew.kind:
-            return False
+            return ConflictKind.NONE
 
         if self.crew.id == other.crew.id:
-            return self.exclusive and other.exclusive
+            if self.exclusive and other.exclusive:
+                return ConflictKind.SWAPPABLE_CONFLICT
 
         match self.crew.kind:
             case models.CrewKind.OVERRIDE_CREW:
                 time_overlap = (self.start_time < other.end_time) and (
                     self.end_time > other.start_time
                 )
-                return time_overlap
-            case models.CrewKind.GAME_CREW | models.CrewKind.EVENT_CREW:
-                return True
+                if time_overlap:
+                    if self.crew.role_group in swappable_role_groups:
+                        return ConflictKind.SWAPPABLE_CONFLICT
+                    else:
+                        return ConflictKind.NON_SWAPPABLE_CONFLICT
 
+            case models.CrewKind.GAME_CREW | models.CrewKind.EVENT_CREW:
+                return ConflictKind.SWAPPABLE_CONFLICT
+
+        return ConflictKind.NONE
+
+@dataclass
+class AvailabilitySet:
+    available: list[models.Application]
+    swappable: list[models.Application]
+    unavailable: list[models.Application]
 
 class ScheduleManager:
     event: models.Event
@@ -224,6 +242,11 @@ class AvailabilityManager:
 
     @property
     @functools.cache
+    def role_groups(self) -> set[models.RoleGroup]:
+        return set(self.application_form.role_groups.all())
+
+    @property
+    @functools.cache
     def static_crews(self) -> list[models.Crew]:
         return [
             crew
@@ -253,14 +276,15 @@ class AvailabilityManager:
                     # as part of the override crew. This ensures we
                     # catch conflicts between the assigned static crew
                     # and the overrides.
-                    user_assigned_times_map[assignment.user_id].append(
-                        UserAvailabilityEntry(
-                            crew=rgca.crew_overrides,
-                            start_time=game.start_time,
-                            end_time=game.end_time,
-                            exclusive=not assignment.role.nonexclusive,
+                    if assignment.user_id:
+                        user_assigned_times_map[assignment.user_id].append(
+                            UserAvailabilityEntry(
+                                crew=rgca.crew_overrides,
+                                start_time=game.start_time,
+                                end_time=game.end_time,
+                                exclusive=not assignment.role.nonexclusive,
+                            )
                         )
-                    )
 
         return user_assigned_times_map
 
@@ -334,24 +358,61 @@ class AvailabilityManager:
         )
 
     @functools.cache
-    def get_swappable_applications(self, crew: models.Crew, game: models.Game | None, role: models.Role) -> list[models.Application]:
-        """To be swappable, all overlapping assignments have to be in Role Groups managed on the same
-        Application Form, and cannot be part of a static crew. If we swapped out of a static crew,
-        we'd have no way to mark the slot empty."""
-        ...
+    def get_applications_by_avail(self, crew: models.Crew, game: models.Game | None, role: models.Role) -> AvailabilitySet:
+        apps = self.get_all_applications(crew, game, role)
+        avail = self._get_avail_data_for_crew_kind(crew.kind)
+        avail_set = AvailabilitySet()
+        for app in applications:
+            overlaps = set(
+                t.overlaps(entry, self.role_groups) for t in avail[app.user_id]
+            )
+            if ConflictKind.NON_SWAPPABLE_CONFLICT in overlaps:
+                avail_set.unavailable.append(app)
+            elif ConflictKind.SWAPPABLE_CONFLICT in overlaps:
+                avail_set.swappable.append(app)
+            else:
+                avail_set.available.append(app)
+
+        return avail_set
+
 
     @functools.cache
-    def get_available_applications(
+    def get_swappable_assignments(
         self, crew: models.Crew, game: models.Game | None, role: models.Role
-    ) -> list[models.Application]:
-        return self._filter_for_already_assigned_users(
-            self.get_all_applications(crew, game, role),
+    ) -> list[models.CrewAssignment]:
+        avail = self._get_avail_data_for_crew_kind(crew.kind)
+
+        entry = UserAvailabilityEntry(
             crew,
-            game,
-            role,
+            game.start_time if game else None,
+            game.end_time if game else None,
+            not role.nonexclusive,
         )
 
+        # TODO: go from apps to crew assignments
+        return list(
+            filter(
+                lambda app: all(
+                    t.overlaps(entry, self.role_groups) in [ConflictKind.SWAPPABLE_CONFLICT, ConflictKind.NONE]
+                    for t in self._get_avail_data_for_crew_kind(crew.kind)[app.user_id]
+                ),
+                applications,
+            )
+        )
+
+
     # Filter methods MUST NOT hit the database - use only cached data
+
+    def _get_avail_data_for_crew_kind(self, kind: models.CrewKind) -> dict[UUID, list[UserAvailabilityEntry]]:
+        match kind:
+            case models.CrewKind.OVERRIDE_CREW:
+                return self.user_availability
+            case models.CrewKind.EVENT_CREW:
+                return self.user_event_availability
+            case models.CrewKind.GAME_CREW:
+                return self.user_static_crew_availability
+
+
     def _filter_for_basic_availability(
         self,
         applications: Iterable[models.Application],
@@ -390,6 +451,7 @@ class AvailabilityManager:
         crew: models.Crew,
         game: models.Game | None,
         role: models.Role,
+        allowed_conflict_kinds: set[ConflictKind]
     ) -> Iterable[models.Application]:
         entry = UserAvailabilityEntry(
             crew,
@@ -397,18 +459,14 @@ class AvailabilityManager:
             game.end_time if game else None,
             not role.nonexclusive,
         )
-
-        match crew.kind:
-            case models.CrewKind.OVERRIDE_CREW:
-                avail = self.user_availability
-            case models.CrewKind.EVENT_CREW:
-                avail = self.user_event_availability
-            case models.CrewKind.GAME_CREW:
-                avail = self.user_static_crew_availability
-
-        return list(
+        avail = self._get_avail_data_for_crew_kind(crew.kind)
+        for app in applications:
+            overlaps = set(
+                t.overlaps(entry, self.role_groups) for t in avail[app.user_id]
+            )
             filter(
-                lambda app: not any(t.overlaps(entry) for t in avail[app.user_id]),
+                lambda app: all(
+                                    ),
                 applications,
             )
         )
