@@ -40,7 +40,9 @@
         </a>
             <input type="hidden" value="{{ crew.id }}" id="crew_id" name="crew_id">
             <input type="hidden" value="" id="application_id" name="application_id">
+            {% if assignment %}
             <input type="submit" class="icon-button" value="❌" title="Clear">
+            {% endif %}
             {% csrf_token %}
         </form>
         {% endwith %}

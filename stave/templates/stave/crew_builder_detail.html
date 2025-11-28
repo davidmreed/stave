@@ -14,20 +14,18 @@
 <table>
     {% include 'stave/partials/application_table_header.html' with form=form only %}
     <tbody>
-        {% for application in applications %}
+        {% for entry in applications %}
         <tr>
             <td>
                 <form class="inline" method="POST" action="{{ request.path }}">
                     {% csrf_token %}
                     <input type="hidden" value="{{ crew.id }}" id="crew_id" name="crew_id">
-                    <input type="hidden" value="{{ application.id }}" id="application_id" name="application_id">
+                    <input type="hidden" value="{{ entry.application.id }}" id="application_id" name="application_id">
                         <input type="submit" value="Select">
-                        <a role="button" href="{% url 'view-application' application.id %}">View</a>
+                        <a role="button" href="{% url 'view-application' entry.application.id %}">View</a>
                 </form>
             </td>
-            {% with game_count=game_counts|get:application.user_id %}
-            {% include 'stave/partials/application_table_row.html' with form=form application=application game_count=game_count only %}
-            {% endwith %}
+            {% include 'stave/partials/application_table_row.html' with form=form entry=entry only %}
         </tr>
         {% empty %}
         <caption>
@@ -44,20 +42,18 @@
 <table>
     {% include 'stave/partials/application_table_header.html' with form=form only %}
     <tbody>
-        {% for application in unavail_applications %}
+        {% for entry in unavail_applications %}
         <tr>
             <td>
                 <form class="inline" method="POST" action="{{ request.path }}">
                     {% csrf_token %}
                     <input type="hidden" value="{{ crew.id }}" id="crew_id" name="crew_id">
-                    <input type="hidden" value="{{ application.id }}" id="application_id" name="application_id">
+                    <input type="hidden" value="{{ entry.application.id }}" id="application_id" name="application_id">
                     <input type="submit" value="Move Here">
-                    <a role="button" href="{% url 'view-application' application.id %}">View</a>
+                    <a role="button" href="{% url 'view-application' entry.application.id %}">View</a>
                 </form>
             </td>
-            {% with game_count=game_counts|get:application.user_id %}
-            {% include 'stave/partials/application_table_row.html' with form=form application=application game_count=game_count only %}
-            {% endwith %}
+            {% include 'stave/partials/application_table_row.html' with form=form entry=entry only %}
         </tr>
         {% endfor %}
     </tbody>

@@ -6,8 +6,7 @@ from django.core.paginator import Page
 from django.db.models import QuerySet
 from django.http import HttpRequest
 
-from stave import forms, models
-
+from stave import forms, models, avail
 
 def to_dict(obj) -> dict:
     return {field.name: getattr(obj, field.name) for field in fields(obj)}
@@ -31,8 +30,7 @@ class ApplicationTableInputs:
 @dataclass
 class ApplicationTableRowInputs:
     form: models.ApplicationForm
-    application: models.Application
-    game_count: int
+    entry: avail.ApplicationEntry
 
 
 @dataclass
@@ -52,9 +50,7 @@ class CrewBuilderDetailInputs:
     form: models.ApplicationForm
     role: models.Role
     game: models.Game | None
-    applications: list[models.Application]
-    unavail_applications: list[models.Application]
-    game_counts: dict[UUID, int]
+    applications: list[avail.ApplicationEntry]
 
 
 @dataclass
