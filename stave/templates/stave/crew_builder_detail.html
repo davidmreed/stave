@@ -15,18 +15,24 @@
     {% include 'stave/partials/application_table_header.html' with form=form only %}
     <tbody>
         {% for entry in applications %}
+        {% if entry.availability_status != ConflictKind.NON_SWAPPABLE_CONFLICT %}
         <tr>
             <td>
                 <form class="inline" method="POST" action="{{ request.path }}">
                     {% csrf_token %}
                     <input type="hidden" value="{{ crew.id }}" id="crew_id" name="crew_id">
                     <input type="hidden" value="{{ entry.application.id }}" id="application_id" name="application_id">
+                    {% if entry.availability_status == ConflictKind.NONE %}
                         <input type="submit" value="Select">
-                        <a role="button" href="{% url 'view-application' entry.application.id %}">View</a>
+                    {% else %}
+                        <input type="submit" value="Move Here">
+                    {% endif %}
+                    <a role="button" href="{% url 'view-application' entry.application.id %}">View</a>
                 </form>
             </td>
             {% include 'stave/partials/application_table_row.html' with form=form entry=entry only %}
         </tr>
+        {% endif %}
         {% empty %}
         <caption>
             No applicants are available.
@@ -42,19 +48,15 @@
 <table>
     {% include 'stave/partials/application_table_header.html' with form=form only %}
     <tbody>
-        {% for entry in unavail_applications %}
+        {% for entry in applications %}
+        {% if entry.availability_status == ConflictStatus.NON_SWAPPABLE_CONFLICT %}
         <tr>
             <td>
-                <form class="inline" method="POST" action="{{ request.path }}">
-                    {% csrf_token %}
-                    <input type="hidden" value="{{ crew.id }}" id="crew_id" name="crew_id">
-                    <input type="hidden" value="{{ entry.application.id }}" id="application_id" name="application_id">
-                    <input type="submit" value="Move Here">
-                    <a role="button" href="{% url 'view-application' entry.application.id %}">View</a>
-                </form>
+                <a role="button" href="{% url 'view-application' entry.application.id %}">View</a>
             </td>
             {% include 'stave/partials/application_table_row.html' with form=form entry=entry only %}
         </tr>
+        {% endif %}
         {% endfor %}
     </tbody>
 </table>

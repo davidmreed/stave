@@ -15,6 +15,8 @@ class ConflictKind(enum.Enum):
     NON_SWAPPABLE_CONFLICT = 2
     SWAPPABLE_CONFLICT = 3
 
+ConflictKind.do_not_call_in_templates = True
+
 @dataclass
 class ApplicationEntry:
     application: models.Application
