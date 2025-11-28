@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import logging
 from collections import defaultdict
 import csv
 from dataclasses import is_dataclass
@@ -38,7 +39,7 @@ import allauth
 from stave.templates.stave import contexts
 
 from . import forms, models, settings
-from .avail import AvailabilityManager, ScheduleManager
+from .avail import AvailabilityManager, ScheduleManager, ConflictKind
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
@@ -1893,6 +1894,7 @@ class ScheduleView(LoginRequiredMixin, views.View):
         for crew in sm.event.crews.all():
             for role in crew.role_group.roles.all():
                 counts[crew.role_group.id][crew.id][role.name] = (0, 0)
+                # FIXME: ??
 
         return render(
             request,
@@ -2056,6 +2058,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             game = None
         applications = am.get_application_entries(crew, game, role)
 
+        print(f"{ConflictKind}, {applications}")
         # TODO: get the Game from AM to reduce queries.
         return render(
             request,
@@ -2067,6 +2070,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                     game=game,
                     event=am.application_form.event,
                     role=role,
+                    ConflictKind=ConflictKind
                 )
             ),
         )
