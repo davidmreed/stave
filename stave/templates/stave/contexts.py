@@ -51,6 +51,7 @@ class CrewBuilderDetailInputs:
     role: models.Role
     game: models.Game | None
     applications: list[avail.ApplicationEntry]
+    ConflictKind: type = avail.ConflictKind
 
 
 @dataclass
