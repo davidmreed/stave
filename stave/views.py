@@ -1672,6 +1672,7 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         )
 
 
+
 class CrewBuilderDetailView(LoginRequiredMixin, views.View):
     """A view rendering the Crew Builder with a list of applications for a given position.
     On GET, renders the view.
@@ -1712,15 +1713,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             game = crew.get_context()
         else:
             game = None
-        applications = am.get_available_applications(crew, game, role)
-        all_applications = am.get_all_applications(crew, game, role)
-        unavail_applications = [
-            a for a in all_applications if a not in applications
-        ]  # TODO: efficiency!
-
-        game_counts = {
-            a.user.id: am.get_game_count_for_user(a.user) for a in all_applications
-        }
+        applications = am.get_application_entries(crew, game, role)
 
         # TODO: get the Game from AM to reduce queries.
         return render(
@@ -1730,11 +1723,9 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                 contexts.CrewBuilderDetailInputs(
                     form=application_form,
                     applications=applications,
-                    unavail_applications=unavail_applications,
                     game=game,
                     event=am.application_form.event,
                     role=role,
-                    game_counts=game_counts,
                 )
             ),
         )
@@ -1820,21 +1811,34 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                 # an exclusive role, AND that assignment is within
                 # one of this form's Role Groups, clear that assignment.
 
-                # We need to assess any existing assignments for this user.
-                # If there are nonconflicting assignments, we'll ignore them.
-                # If there are "swappable" assignments, we'll delete them.
-                # If there are "non-swappable" assignments, we'll return an error.
-
-                # An assignment is nonconflicting if it and this assignment are in
-                # the same role group and one of them is nonexclusive.
-                # An assignment is swappable if it is in one of the other role groups
-                # managed by this form (including this role group) and is conflicting.
-
                 # TODO: display current assignment on crew builder detail
                 # TODO: show users who are time-available but not role-available
 
-                old_assignments = am.get_swappable_assignments(crew, crew.get_context(), role)
-                old_assignments.delete()
+                old_availability_entries = am.get_swappable_assignments(applications[0].user, crew, crew.get_context(), role)
+                for avail_entry in old_availability_entries:
+                    # This UserAvailabilityEntry might come from a direct assignment
+                    # or from a static crew assignment; there are different ways
+                    # to override those.
+                    match avail_entry.crew.kind:
+                        case models.CrewKind.GAME_CREW | models.CrewKind.EVENT_CREW:
+                            # Add an overriding CrewAssignment to blank for each assignment
+                            # of this user in the crew.
+                            # FIXME: ensure that we do not allow this CrewAssignment to be deleted
+                            for ca in models.CrewAssignment.objects.filter(
+                                crew = avail_entry.crew,
+                                user=applications[0].user
+                            ):
+                                models.CrewAssignment.objects.create(
+                                    role=ca.role,
+                                    crew=crew,
+                                    user=None
+                                )
+                        case models.CrewKind.OVERRIDE_CREW:
+                            # Just query for and delete the CrewAssignment
+                            models.CrewAssignment.objects.filter(
+                                user=applications[0].user,
+
+                            )
 
                 # Finally, add the new assignment.
 
