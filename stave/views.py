@@ -1717,7 +1717,6 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             game = None
         applications = am.get_application_entries(crew, game, role)
 
-        print(f"{ConflictKind}, {applications}")
         # TODO: get the Game from AM to reduce queries.
         return render(
             request,
@@ -1809,6 +1808,8 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                     user=None
                 )
 
+            breakpoint()
+
             # Add a new assignment, if requested
             if applications:
                 # If the newly-selected user is already assigned to
@@ -1819,15 +1820,19 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                 # TODO: show users who are time-available but not role-available
 
                 old_availability_entries = am.get_swappable_assignments(applications[0].user, crew, crew.get_context(), role)
+                print(f"Entries: {old_availability_entries}")
                 for avail_entry in old_availability_entries:
                     # This UserAvailabilityEntry might come from a direct assignment
                     # or from a static crew assignment; there are different ways
                     # to override those.
+                    print(f"Crew is {avail_entry.crew}, context {avail_entry.crew.get_context()}, {avail_entry.crew.kind}")
+                    # FIXME: problem is that all Availability Entries are clamped to show as part of override crew
                     match avail_entry.crew.kind:
                         case models.CrewKind.GAME_CREW | models.CrewKind.EVENT_CREW:
                             # Add an overriding CrewAssignment to blank for each assignment
                             # of this user in the crew.
                             # FIXME: ensure that we do not allow this CrewAssignment to be deleted
+                            # FIXME: ensure that we handle nonexclusive roles
                             for ca in models.CrewAssignment.objects.filter(
                                 crew = avail_entry.crew,
                                 user=applications[0].user
@@ -1838,11 +1843,18 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                                     user=None
                                 )
                         case models.CrewKind.OVERRIDE_CREW:
-                            # Just query for and delete the CrewAssignment
-                            models.CrewAssignment.objects.filter(
+                            # Just query for and delete the relevant CrewAssignments
+                            # If we're reassigning within the same crew,
+                            # just remove exclusive roles; otherwise, all roles.
+                            cas = models.CrewAssignment.objects.filter(
                                 user=applications[0].user,
-
+                                crew=avail_entry.crew
                             )
+                            if crew == avail_entry.crew:
+                                cas = cas.filter(role__nonexclusive=False)
+
+                            print(f"About to delete {cas}")
+                            cas.delete()
 
                 # Finally, add the new assignment.
 
