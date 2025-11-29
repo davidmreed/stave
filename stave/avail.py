@@ -33,30 +33,41 @@ class UserAvailabilityEntry:
     exclusive: bool
 
     def overlaps(self, other: "UserAvailabilityEntry", swappable_role_groups: set[models.RoleGroup]) -> ConflictKind:
-        if self.crew.kind != other.crew.kind:
-            return ConflictKind.NONE
-
-        if self.crew.id == other.crew.id:
+        if self.crew.role_group_id == other.crew.role_group_id:
             if self.exclusive and other.exclusive:
                 return ConflictKind.SWAPPABLE_CONFLICT
             else:
                 return ConflictKind.NONE
 
-        match self.crew.kind:
-            case models.CrewKind.OVERRIDE_CREW:
+        has_times = None not in (self.start_time, self.end_time, other.start_time, other.end_time)
+
+        match (self.crew.kind, other.crew.kind, has_times):
+            case (models.CrewKind.OVERRIDE_CREW, models.CrewKind.OVERRIDE_CREW, _) | (models.CrewKind.GAME_CREW, models.CrewKind.OVERRIDE_CREW, True):
+                # This is a comparison between two override crews, which always
+                # have defined start and end times, or between two assigned static crews
+                # or an assigned static crew and an override crew, which will
+                # also have times.
                 time_overlap = (self.start_time < other.end_time) and (
                     self.end_time > other.start_time
                 )
                 if time_overlap:
-                    if self.crew.role_group in swappable_role_groups:
+                    if other.crew.role_group in swappable_role_groups:
                         return ConflictKind.SWAPPABLE_CONFLICT
                     else:
                         return ConflictKind.NON_SWAPPABLE_CONFLICT
 
-            case models.CrewKind.GAME_CREW | models.CrewKind.EVENT_CREW:
-                return ConflictKind.SWAPPABLE_CONFLICT
-
-        return ConflictKind.NONE
+            case (
+                (models.CrewKind.EVENT_CREW, models.CrewKind.EVENT_CREW, False)
+                | (models.CrewKind.GAME_CREW, models.CrewKind.GAME_CREW, False)
+            ):
+                # This comparison is between static crews _without_ assignments
+                # or between event crews. No times involved.
+                if other.crew.role_group in swappable_role_groups:
+                    return ConflictKind.SWAPPABLE_CONFLICT
+                else:
+                    return ConflictKind.NON_SWAPPABLE_CONFLICT
+            case _:
+                return ConflictKind.NONE
 
 
 class ScheduleManager:
@@ -284,7 +295,7 @@ class AvailabilityManager:
                     if assignment.user_id:
                         user_assigned_times_map[assignment.user_id].append(
                             UserAvailabilityEntry(
-                                crew=rgca.crew_overrides,
+                                crew=assignment.crew,
                                 start_time=game.start_time,
                                 end_time=game.end_time,
                                 exclusive=not assignment.role.nonexclusive,
