@@ -69,6 +69,10 @@ class UserAvailabilityEntry:
             case _:
                 return ConflictKind.NONE
 
+# FIXME: when we remove a static crew assignment (RGCA), also remove all null-user overrides.
+# FIXME: when we do an override to none on a static crew ,then change it to  user, I believe the override-to-none is sticking around.
+# This might be an issue where removing an override needs to add an override-to-none to prevent a conflict
+# FIXME: doing a swap out from a static crew slot to the same crew removes nonexclusive roles
 
 class ScheduleManager:
     event: models.Event
