@@ -521,7 +521,7 @@ class Command(BaseCommand):
         )
         app.availability_by_game.set(doubleheader.games.all())
 
-        app.roles.set([role_hnso, role_jt, role_plt, role_pbm])
+        app.roles.set([role_hnso, role_jt, role_plt, role_pbm, role_hr])
         app = models.Application.objects.create(
             form=doubleheader_app_form,
             user=drummer,
