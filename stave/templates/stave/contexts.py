@@ -8,6 +8,7 @@ from django.http import HttpRequest
 
 from stave import forms, models, avail
 
+
 def to_dict(obj) -> dict:
     return {field.name: getattr(obj, field.name) for field in fields(obj)}
 

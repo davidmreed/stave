@@ -1815,10 +1815,7 @@ class Application(models.Model):
         if not self.has_assignments():
             # Reset its status appropriately.
             if self.status == ApplicationStatus.ASSIGNMENT_PENDING:
-                if (
-                    self.form.application_kind
-                    == ApplicationKind.CONFIRM_THEN_ASSIGN
-                ):
+                if self.form.application_kind == ApplicationKind.CONFIRM_THEN_ASSIGN:
                     self.status = ApplicationStatus.CONFIRMED
                 else:
                     self.status = ApplicationStatus.APPLIED
