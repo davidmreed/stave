@@ -15,8 +15,8 @@
     <td>{{ role.name }}</td>
     {% with crew_assignments|get:role.id as assignment %}
     <td
-        {% if role.id not in crew_assignments %}class="highlighted-cell"{% endif %}
-        {% if assignment and assignment.user_id == focus_user_id %}class="highlighted-cell-user"{% endif %}
+        {% if not assignment or not assignment.user_id %}class="highlighted-cell"{% endif %}
+        {% if assignment and focus_user_id and assignment.user_id == focus_user_id %}class="highlighted-cell-user"{% endif %}
         >
         {% if assignment and assignment.user %}
         {{ assignment.user.preferred_name }}
