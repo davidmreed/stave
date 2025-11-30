@@ -1420,6 +1420,7 @@ class SetGameCrewView(LoginRequiredMixin, views.View):
         crew_id: UUID | None = None,
     ) -> HttpResponse:
         with transaction.atomic():
+            # FIXME: check availability for all crew members.
             game: models.Game = get_object_or_404(
                 models.Game.objects.manageable(request.user),
                 pk=game_id,
