@@ -1448,7 +1448,7 @@ class SetGameCrewView(LoginRequiredMixin, views.View):
                     user=None,
                     crew__kind=models.CrewKind.OVERRIDE_CREW,
                     crew__role_group_override_assignments__game=game,
-                    crew__role_group_id=role_group_id
+                    crew__role_group_id=role_group_id,
                 ).delete()
 
         redirect_url = request.POST.get("redirect_url")
@@ -1685,7 +1685,6 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         )
 
 
-
 class CrewBuilderDetailView(LoginRequiredMixin, views.View):
     """A view rendering the Crew Builder with a list of applications for a given position.
     On GET, renders the view.
@@ -1739,7 +1738,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                     game=game,
                     event=am.application_form.event,
                     role=role,
-                    ConflictKind=ConflictKind
+                    ConflictKind=ConflictKind,
                 )
             ),
         )
@@ -1809,18 +1808,13 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
 
             # If we are removing one user from a static-crew assignment, add a blank assignment.
             rgca = models.RoleGroupCrewAssignment.objects.filter(
-                role_group=role.role_group,
-                game=crew.get_context()
-                ).first()
+                role_group=role.role_group, game=crew.get_context()
+            ).first()
 
             if rgca and rgca.crew and not assignment and not applications:
                 # rgca.crew is a static crew.
                 # Override with a blank in the override crew.
-                models.CrewAssignment.objects.create(
-                    role=role,
-                    crew=crew,
-                    user=None
-                )
+                models.CrewAssignment.objects.create(role=role, crew=crew, user=None)
 
             if applications:
                 # If the newly-selected user is already assigned to
@@ -1830,7 +1824,9 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                 # TODO: display current assignment on crew builder detail
                 # TODO: show users who are time-available but not role-available
 
-                old_availability_entries = am.get_swappable_assignments(applications[0].user, crew, crew.get_context(), role)
+                old_availability_entries = am.get_swappable_assignments(
+                    applications[0].user, crew, crew.get_context(), role
+                )
                 for avail_entry in old_availability_entries:
                     # This UserAvailabilityEntry might come from a direct assignment
                     # or from a static crew assignment; there are different ways
@@ -1848,25 +1844,21 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                                 or avail_entry.crew.get_context() == crew.get_context()
                             )
                             cas = models.CrewAssignment.objects.filter(
-                                crew = avail_entry.crew,
-                                user=applications[0].user
+                                crew=avail_entry.crew, user=applications[0].user
                             )
                             if keep_nonexclusive:
                                 cas = cas.exclude(role__nonexclusive=True)
 
                             for ca in cas:
                                 models.CrewAssignment.objects.create(
-                                    role=ca.role,
-                                    crew=crew,
-                                    user=None
+                                    role=ca.role, crew=crew, user=None
                                 )
                         case models.CrewKind.OVERRIDE_CREW:
                             # Just query for and delete the relevant CrewAssignments
                             # If we're reassigning within the same crew,
                             # just remove exclusive roles; otherwise, all roles.
                             cas = models.CrewAssignment.objects.filter(
-                                user=applications[0].user,
-                                crew=avail_entry.crew
+                                user=applications[0].user, crew=avail_entry.crew
                             )
                             if crew == avail_entry.crew:
                                 cas = cas.exclude(role__nonexclusive=True)
