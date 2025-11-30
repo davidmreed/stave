@@ -1419,25 +1419,36 @@ class SetGameCrewView(LoginRequiredMixin, views.View):
         role_group_id: UUID,
         crew_id: UUID | None = None,
     ) -> HttpResponse:
-        game: models.Game = get_object_or_404(
-            models.Game.objects.manageable(request.user),
-            pk=game_id,
-        )
-        rgca: models.RoleGroupCrewAssignment = get_object_or_404(
-            game.role_group_crew_assignments.all(), role_group_id=role_group_id
-        )
-        if crew_id:
-            crew = get_object_or_404(
-                models.Crew.objects.filter(
-                    event=game.event, kind=models.CrewKind.GAME_CREW
-                ),
-                pk=crew_id,
+        with transaction.atomic():
+            game: models.Game = get_object_or_404(
+                models.Game.objects.manageable(request.user),
+                pk=game_id,
             )
-        else:
-            crew = None
+            rgca: models.RoleGroupCrewAssignment = get_object_or_404(
+                game.role_group_crew_assignments.all(), role_group_id=role_group_id
+            )
+            if crew_id:
+                crew = get_object_or_404(
+                    models.Crew.objects.filter(
+                        event=game.event, kind=models.CrewKind.GAME_CREW
+                    ),
+                    pk=crew_id,
+                )
+            else:
+                crew = None
 
-        rgca.crew = crew
-        rgca.save()
+            rgca.crew = crew
+            rgca.save()
+
+            if not rgca.crew:
+                # Remove any CrewAssignments we used to
+                # set a static crew member to a blank.
+                models.CrewAssignment.objects.filter(
+                    user=None,
+                    crew__kind=models.CrewKind.OVERRIDE_CREW,
+                    crew__role_group_override_assignments__game=game,
+                    crew__role_group_id=role_group_id
+                ).delete()
 
         redirect_url = request.POST.get("redirect_url")
         if redirect_url and url_has_allowed_host_and_scheme(
@@ -1553,7 +1564,6 @@ class ScheduleView(LoginRequiredMixin, views.View):
         for crew in sm.event.crews.all():
             for role in crew.role_group.roles.all():
                 counts[crew.role_group.id][crew.id][role.name] = (0, 0)
-                # FIXME: ??
 
         return render(
             request,
@@ -1773,7 +1783,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                 applications = []
 
             # Delete existing assignment in the target role, if present
-            # `crew` is an override crew here. (RIGHT?? FIXME)
+            # `crew` is an override crew here.
             if assignment := models.CrewAssignment.objects.filter(
                 role=role,
                 crew=crew,
@@ -1789,17 +1799,20 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                     .exclude(status=models.ApplicationStatus.WITHDRAWN)
                     .first()
                 )
-                # There should be exactly one.
+                # There should be one or zero.
                 if existing_application:
                     existing_application.move_status_backwards_for_unassignment()
+
+                # FIXME: if we have a static crew assigned and the underlying user
+                # is not available, add a None override.
 
             # If we are removing one user from a static-crew assignment, add a blank assignment.
             rgca = models.RoleGroupCrewAssignment.objects.filter(
                 role_group=role.role_group,
-                game=crew.get_context() # I think this is right?
+                game=crew.get_context()
                 ).first()
 
-            if rgca and rgca.crew and not applications:
+            if rgca and rgca.crew and not assignment and not applications:
                 # rgca.crew is a static crew.
                 # Override with a blank in the override crew.
                 models.CrewAssignment.objects.create(
@@ -1808,9 +1821,6 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                     user=None
                 )
 
-            breakpoint()
-
-            # Add a new assignment, if requested
             if applications:
                 # If the newly-selected user is already assigned to
                 # an exclusive role, AND that assignment is within
@@ -1820,23 +1830,30 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                 # TODO: show users who are time-available but not role-available
 
                 old_availability_entries = am.get_swappable_assignments(applications[0].user, crew, crew.get_context(), role)
-                print(f"Entries: {old_availability_entries}")
                 for avail_entry in old_availability_entries:
                     # This UserAvailabilityEntry might come from a direct assignment
                     # or from a static crew assignment; there are different ways
                     # to override those.
-                    print(f"Crew is {avail_entry.crew}, context {avail_entry.crew.get_context()}, {avail_entry.crew.kind}")
-                    # FIXME: problem is that all Availability Entries are clamped to show as part of override crew
                     match avail_entry.crew.kind:
                         case models.CrewKind.GAME_CREW | models.CrewKind.EVENT_CREW:
                             # Add an overriding CrewAssignment to blank for each assignment
-                            # of this user in the crew.
+                            # of this user in the crew, unless we're assigning to the same
+                            # game, in which case we keep nonexclusive assignments.
                             # FIXME: ensure that we do not allow this CrewAssignment to be deleted
-                            # FIXME: ensure that we handle nonexclusive roles
-                            for ca in models.CrewAssignment.objects.filter(
+                            keep_nonexclusive = (
+                                # Swap within a crew
+                                avail_entry.crew == crew
+                                # Swap from a static crew to an override crew in the same context
+                                or avail_entry.crew.get_context() == crew.get_context()
+                            )
+                            cas = models.CrewAssignment.objects.filter(
                                 crew = avail_entry.crew,
                                 user=applications[0].user
-                            ):
+                            )
+                            if keep_nonexclusive:
+                                cas = cas.exclude(role__nonexclusive=True)
+
+                            for ca in cas:
                                 models.CrewAssignment.objects.create(
                                     role=ca.role,
                                     crew=crew,
@@ -1851,9 +1868,8 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                                 crew=avail_entry.crew
                             )
                             if crew == avail_entry.crew:
-                                cas = cas.filter(role__nonexclusive=False)
+                                cas = cas.exclude(role__nonexclusive=True)
 
-                            print(f"About to delete {cas}")
                             cas.delete()
 
                 # Finally, add the new assignment.
