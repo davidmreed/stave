@@ -61,10 +61,12 @@ class TenantedObjectMixin:
 
     def setup(self, request: HttpRequest, *args, **kwargs):
         super().setup(request, *args, **kwargs)
-        self.league = get_object_or_404(
-            models.League.objects.manageable(self.request.user),
-            slug=self.kwargs.get("league_slug"),
-        )
+
+        if isinstance(self.request.user, models.User):
+            self.league = get_object_or_404(
+                models.League.objects.manageable(self.request.user),
+                slug=self.kwargs.get("league_slug"),
+            )
 
     def get_context_data(self, *args, **kwargs) -> dict:
         base = super().get_context_data(*args, **kwargs)
@@ -705,10 +707,11 @@ class EventCreateView(
     def setup(self, request: HttpRequest, *args, **kwargs) -> None:
         super().setup(request, *args, **kwargs)
 
-        self.league = get_object_or_404(
-            models.League.objects.event_manageable(self.request.user),
-            slug=self.kwargs.get("league_slug"),
-        )
+        if isinstance(self.request.user, models.User):
+            self.league = get_object_or_404(
+                models.League.objects.event_manageable(self.request.user),
+                slug=self.kwargs.get("league_slug"),
+            )
 
     def get_form_class(self) -> type:
         return forms.EventFromTemplateForm
