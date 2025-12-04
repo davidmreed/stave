@@ -306,10 +306,6 @@ class AvailabilityManager:
             for rgca in game.role_group_crew_assignments.all():
                 effective_crew = rgca.effective_crew_by_role_id().values()
                 for assignment in effective_crew:
-                    # We squash all effective game assignments to appear
-                    # as part of the override crew. This ensures we
-                    # catch conflicts between the assigned static crew
-                    # and the overrides.
                     if assignment.user_id:
                         user_assigned_times_map[assignment.user_id].append(
                             UserAvailabilityEntry(

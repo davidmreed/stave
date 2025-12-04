@@ -277,3 +277,46 @@ def test_availability_manager__applications(tournament):
 
     # TODO: test exclusion by application status
     # TODO: test that prefetches cache
+    #
+
+    def test_availability_manager__applications_by_status(db):
+        application_form = ApplicationFormFactory()
+        for status in models.ApplicationStatus:
+            for _ in range(3):
+                ApplicationFactory(application_form=application_form, status=status)
+
+        am = AvailabilityManager.with_application_form(application_form)
+        by_status = am.applications_by_status()
+
+        assert keys(by_status) == list(models.ApplicationStatus)
+        assert all(len(v) == 3 for v in by_status.values())
+
+    def test_availability_manager__get_applications_in_statuses(db):
+        application_form = ApplicationFormFactory()
+        for status in models.ApplicationStatus:
+            for i in range(3):
+                ApplicationFactory(user__preferred_name="CBA"[i], application_form=application_form, status=status)
+
+        am = AvailabilityManager.with_application_form(application_form)
+        in_statuses = am.get_applications_in_statuses((models.ApplicationStatus.APPLIED, models.ApplicationStatus.ASSIGNED))
+
+        assert len(in_statuses) == 6
+        assert in_statuses == sorted(in_statuses, key=lambda a: a.user.preferred_name)
+
+    def test_availability_manager__static_crews(db):
+        application_form = ApplicationFormFactory()
+        crew = CrewFactory(event=application_form.event, kind=models.CrewKind.GAME_CREW)
+        CrewFactory(event=application_form.event, kind=models.CrewKind.EVENT_CREW)
+        CrewFactory(kind=models.CrewKind.GAME_CREW)
+        am = AvailabilityManager.with_application_form(application_form)
+
+        assert am.static_crews == [crew]
+
+    def test_availability_manager__event_crews(db):
+        application_form = ApplicationFormFactory()
+        crew = CrewFactory(event=application_form.event, kind=models.CrewKind.EVENT_CREW)
+        CrewFactory(event=application_form.event, kind=models.CrewKind.GAME_CREW)
+        CrewFactory(kind=models.CrewKind.EVENT_CREW)
+        am = AvailabilityManager.with_application_form(application_form)
+
+        assert am.event_crews == [crew]
