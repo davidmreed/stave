@@ -50,6 +50,33 @@ def test_user_availability_entry__full_overlap_same_crew_exclusive(existing_entr
         == ConflictKind.SWAPPABLE_CONFLICT
     )
 
+def test_user_availability_entry__abutting_left_same_crew_exclusive(existing_entry):
+    assert (
+        existing_entry.overlaps(
+            UserAvailabilityEntry(
+                crew=existing_entry.crew,
+                start_time=existing_entry.end_time,
+                end_time=existing_entry.end_time + timedelta(hours=2),
+                exclusive=True,
+            ),
+            set(),
+        )
+        == ConflictKind.NONE
+    )
+
+def test_user_availability_entry__abutting_right_same_crew_exclusive(existing_entry):
+    assert (
+        existing_entry.overlaps(
+            UserAvailabilityEntry(
+                crew=existing_entry.crew,
+                start_time=existing_entry.start_time - timedelta(hours=2),
+                end_time=existing_entry.start_time,
+                exclusive=True,
+            ),
+            set(),
+        )
+        == ConflictKind.NONE
+    )
 
 def test_user_availability_entry__full_overlap_same_crew_nonexclusive(existing_entry):
     assert (

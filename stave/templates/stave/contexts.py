@@ -87,11 +87,10 @@ class ViewApplicationContext:
 @dataclass
 class FormApplicationsInputs:
     form: models.ApplicationForm
-    applications_action: QuerySet[models.Application]
-    applications_inprogress: QuerySet[models.Application]
-    applications_staffed: QuerySet[models.Application]
-    applications_closed: QuerySet[models.Application]
-    game_counts: dict[UUID, int]
+    applications_action: list[avail.ApplicationEntry]
+    applications_inprogress: list[avail.ApplicationEntry]
+    applications_staffed: list[avail.ApplicationEntry]
+    applications_closed: list[avail.ApplicationEntry]
     ApplicationStatus: type
 
 
