@@ -15,10 +15,10 @@
     <td>{{ role.name }}</td>
     {% with crew_assignments|get:role.id as assignment %}
     <td
-        {% if role.id not in crew_assignments %}class="highlighted-cell"{% endif %}
-        {% if assignment and assignment.user_id == focus_user_id %}class="highlighted-cell-user"{% endif %}
+        {% if not assignment or not assignment.user_id %}class="highlighted-cell"{% endif %}
+        {% if assignment and focus_user_id and assignment.user_id == focus_user_id %}class="highlighted-cell-user"{% endif %}
         >
-        {% if assignment %}
+        {% if assignment and assignment.user %}
         {{ assignment.user.preferred_name }}
         {% else %}
         {% if editable %}
@@ -33,23 +33,26 @@
     <td class="inline">
         <small>
         {% with assignment=crew_assignments|get:role.id %}
-        {# You cannot clear an assignment if it's provided by an assigned crew #}
-        {% if assignment and assignment.crew.id == crew.id %}
         <form action="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug crew.id role.id %}"
               method="POST">
         <a class="icon-button" role="button" href="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug crew.id role.id %}">
-            {% if assignment %}{% if assignment.crew.id == crew.id %}<abbr title="Reassign">🔄</abbr>{% else %}Override{% endif %}{% else %}<abbr title="Assign">🔍</abbr>{% endif %}
+            {% if assignment and assignment.user %}
+            {% if assignment.crew.id == crew.id %}
+            <abbr title="Reassign">🔄</abbr>
+            {% else %}
+            <abbr title="Override">⬇️</abbr>
+            {% endif %}
+            {% else %}
+            <abbr title="Assign">🔍</abbr>
+            {% endif %}
         </a>
             <input type="hidden" value="{{ crew.id }}" id="crew_id" name="crew_id">
-            <input type="hidden" value="" id="application_id" name="application_id">
+            <input type="hidden" value="" id="user_id" name="user_id">
+            {% if assignment and assignment.user %}
             <input type="submit" class="icon-button" value="❌" title="Clear">
+            {% endif %}
             {% csrf_token %}
         </form>
-        {% else %}
-        <a role="button" class="icon-button" href="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug crew.id role.id %}">
-            {% if assignment %}{% if assignment.crew.id == crew.id %}<abbr title="Reassign">🔄</abbr>{% else %}<abbr title="Override">⬇️</abbr>{% endif %}{% else %}<abbr title="Assign">🔍</abbr>{% endif %}
-        </a>
-        {% endif %}
         {% endwith %}
         </small>
     </td>
