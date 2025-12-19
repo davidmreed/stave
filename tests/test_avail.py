@@ -304,19 +304,27 @@ def test_availability_manager__get_applications_in_statuses(db):
     assert in_statuses == sorted(in_statuses, key=lambda a: a.user.preferred_name)
 
 def test_availability_manager__static_crews(db):
-    application_form = ApplicationFormFactory()
-    crew = CrewFactory(event=application_form.event, kind=models.CrewKind.GAME_CREW)
-    CrewFactory(event=application_form.event, kind=models.CrewKind.EVENT_CREW)
-    CrewFactory(kind=models.CrewKind.GAME_CREW)
-    am = AvailabilityManager.with_application_form(application_form)
+        application_form = ApplicationFormFactory()
+        crew = CrewFactory(event=application_form.event, kind=models.CrewKind.GAME_CREW)
+        CrewFactory(event=application_form.event, kind=models.CrewKind.EVENT_CREW)
+        CrewFactory(kind=models.CrewKind.GAME_CREW)
+        am = AvailabilityManager.with_application_form(application_form)
 
-    assert am.static_crews == [crew]
+        assert am.static_crews == [crew]
 
 def test_availability_manager__event_crews(db):
+        application_form = ApplicationFormFactory()
+        crew = CrewFactory(event=application_form.event, kind=models.CrewKind.EVENT_CREW)
+        CrewFactory(event=application_form.event, kind=models.CrewKind.GAME_CREW)
+        CrewFactory(kind=models.CrewKind.EVENT_CREW)
+        am = AvailabilityManager.with_application_form(application_form)
+
+        assert am.event_crews == [crew]
+
+def test_set_assignment__override_crew_ex_nihilo(db):
     application_form = ApplicationFormFactory()
-    crew = CrewFactory(event=application_form.event, kind=models.CrewKind.EVENT_CREW)
-    CrewFactory(event=application_form.event, kind=models.CrewKind.GAME_CREW)
-    CrewFactory(kind=models.CrewKind.EVENT_CREW)
+    application_form.role_groups.set(application_form.event.league.role_groups.all())
+
     am = AvailabilityManager.with_application_form(application_form)
 
-    assert am.event_crews == [crew]
+    am.set_assignment(role, crew, user)
