@@ -169,6 +169,7 @@ class ApplicationFormFactory(factory.django.DjangoModelFactory):
     )
 
     # TODO: applicationformtemplates
+    # TODO: role groups
     questions = factory.RelatedFactoryList(
         "tests.factories.QuestionFactory",
         factory_related_name="application_form",

@@ -6,6 +6,7 @@ from typing import Iterable,Generator, Tuple
 from uuid import UUID
 import enum
 
+from django.db import transaction
 from django.db.models import Prefetch, QuerySet
 
 from . import models
@@ -62,7 +63,6 @@ class UserAvailabilityEntry:
                 return ConflictKind.SWAPPABLE_CONFLICT
             else:
                 return ConflictKind.NONE
-
         elif has_times:
                 # This is a comparison between two override crews, which always
                 # have defined start and end times, or between two assigned static crews
@@ -552,76 +552,76 @@ class AvailabilityManager:
         crew: models.Crew,
         user: models.User | None,
     ):
-        # Regardless of the "to" side of this assignment,
-        # we need to remove any existing assignment.
-        existing_assignment = self.get_assignment(role, crew)
-        if existing_assignment:
-            application = self.get_application_for_assignment(existing_assignment)
-            existing_assignment.delete()
-            if application:
-                application.move_status_backwards_for_unassignment()
+        with transaction.atomic():
+            # Regardless of the "to" side of this assignment,
+            # we need to remove any existing assignment.
+            existing_assignment = self.get_assignment(role, crew)
+            if existing_assignment:
+                application = self.get_application_for_assignment(existing_assignment)
+                existing_assignment.delete()
+                if application:
+                    application.move_status_backwards_for_unassignment()
 
-        # If necessary, swap the new user out of their existing assignments.
-        if user:
-            application = self.get_application_for_user(user)
-            if application:
-                application.move_status_forwards_for_assignment()
-            else:
-                raise UserNotAvailableException("There is no application for user")
+            # If necessary, swap the new user out of their existing assignments.
+            if user:
+                application = self.get_application_for_user(user)
+                if application:
+                    application.move_status_forwards_for_assignment()
+                else:
+                    raise UserNotAvailableException("There is no application for user")
 
-            old_availability_entries = self.get_swappable_assignments(
-                user, crew, crew.get_context(), role
-            )
-            for avail_entry in old_availability_entries:
-                # This UserAvailabilityEntry might come from a direct assignment
-                # or from a static crew assignment; there are different ways
-                # to replace those.
-                # FIXME: could we get back a static crew entry when we are blanking
-                # an override?
-                match avail_entry.crew.kind:
-                    case models.CrewKind.GAME_CREW | models.CrewKind.EVENT_CREW:
-                        keep_nonexclusive = (
-                            # Swap within a crew
-                            avail_entry.crew == crew
-                            # Swap from a static crew to an override crew in the same context
-                            or avail_entry.crew.get_context() == crew.get_context()
+                old_availability_entries = self.get_swappable_assignments(
+                    user, crew, crew.get_context(), role
+                )
+                for avail_entry in old_availability_entries:
+                    # This UserAvailabilityEntry might come from a direct assignment
+                    # or from a static crew assignment; there are different ways
+                    # to replace those.
+                    # FIXME: could we get back a static crew entry when we are blanking
+                    # an override?
+                    match avail_entry.crew.kind:
+                        case models.CrewKind.GAME_CREW | models.CrewKind.EVENT_CREW:
+                            keep_nonexclusive = (
+                                # Swap within a crew
+                                avail_entry.crew == crew
+                                # Swap from a static crew to an override crew in the same context
+                                or avail_entry.crew.get_context() == crew.get_context()
+                            )
+                        case models.CrewKind.OVERRIDE_CREW:
+                            # If we're reassigning within the same crew,
+                            # just remove exclusive roles; otherwise, all roles.
+                            keep_nonexclusive = avail_entry.crew == crew
+
+                    # This is a set, not a list, because when we're overriding a static crew
+                    # assignment, we'll get back a CrewAssignment for every game that the
+                    # static crew is assigned to from game_crew_assignments
+                    cas = {
+                        ca
+                        for (_, ca) in self.game_crew_assignments
+                        if (
+                            ca.crew == avail_entry.crew
+                            and ca.user == user
                         )
-                    case models.CrewKind.OVERRIDE_CREW:
-                        # If we're reassigning within the same crew,
-                        # just remove exclusive roles; otherwise, all roles.
-                        keep_nonexclusive = avail_entry.crew == crew
+                    }
+                    if keep_nonexclusive:
+                        cas = {ca for ca in cas if not ca.role.nonexclusive}
 
-                # This is a set, not a list, because when we're overriding a static crew
-                # assignment, we'll get back a CrewAssignment for every game that the
-                # static crew is assigned to from game_crew_assignments
-                cas = {
-                    ca
-                    for (_, ca) in self.game_crew_assignments
-                    if (
-                        ca.crew == avail_entry.crew
-                        and ca.user == user
-                    )
-                }
-                if keep_nonexclusive:
-                    cas = {ca for ca in cas if not ca.role.nonexclusive}
-
-                # Add an overriding CrewAssignment to blank for each relevant
-                # assignment. This ensures that, if we are removing an override
-                # crew assignment, any underlying static crew member is not
-                # silently re-staffed into this role.
-                # If this is an override crew, also delete the original CrewAssignment.
-                #
-                # Note that `crew` is not necessarily `avail_entry.crew`.
-                # If the latter is a static crew, the former is an override crew.
-                breakpoint()
-                for ca in cas:
-                    if avail_entry.crew.kind == models.CrewKind.OVERRIDE_CREW:
-                        ca.delete()
-                    models.CrewAssignment.objects.create(
-                        role=ca.role, crew=crew, user=None
-                    )
-                # FIXME: we could then detect if we're assigning user X
-                # when a static crew would assign X, and do nothing.
+                    # Add an overriding CrewAssignment to blank for each relevant
+                    # assignment. This ensures that, if we are removing an override
+                    # crew assignment, any underlying static crew member is not
+                    # silently re-staffed into this role.
+                    # If this is an override crew, also delete the original CrewAssignment.
+                    #
+                    # Note that `crew` is not necessarily `avail_entry.crew`.
+                    # If the latter is a static crew, the former is an override crew.
+                    for ca in cas:
+                        if avail_entry.crew.kind == models.CrewKind.OVERRIDE_CREW:
+                            ca.delete()
+                        models.CrewAssignment.objects.create(
+                            role=ca.role, crew=crew, user=None
+                        )
+                    # FIXME: we could then detect if we're assigning user X
+                    # when a static crew would assign X, and do nothing.
 
         # Finally, add the new entry.
         # Note that this might be a null override on top of a static crew,
