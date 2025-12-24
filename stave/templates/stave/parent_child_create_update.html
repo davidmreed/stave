@@ -5,45 +5,14 @@
 {% inputs 'ParentChildCreateUpdateInputs' %}
 
 {% block content %}
+
 {% timezone time_zone %}
 
 <header>
-    <h1>{% if object %}{{ object }}{% else %}New {{ parent_name|title }}{% endif %}</h1>
+    <h1>{% if form.instance %}{{ form.instance }}{% else %}New {{ parent_name|title }}{% endif %}</h1>
 </header>
 
-<form action="{{ request.path }}" enctype="multipart/form-data" method="POST">
-    {% csrf_token %}
-
-    {{ form.parent_form }}
-
-    <h2>{{ child_name_plural|title }} </h2>
-    {{ form.child_formset.management_form }}
-
-    {% for child_form in form.child_formset %}
-    {% if not child_form|is_form_deleted %}
-    {{ child_form }}
-    {% if allow_child_deletes %}
-    <input type="submit" formaction="{{ request.path }}{% querystring action='delete' index=forloop.counter0 %}" value="Delete {{ child_name|title }}" formnovalidate>
-    {% endif %}
-    <hr>
-    {% else %}
-    {{ child_form.DELETE }}
-    {{ child_form.id }}
-    {% endif %}
-    {% empty %}
-    This {{ parent_name|lower }} doesn't have any {{ child_name_plural|lower }} yet.
-    {% endfor %}
-    {% if child_variants %}
-    {% for variant in child_variants %}
-    <input type="submit" formaction="{{ request.path }}{% querystring action='add' variant=variant.0 %}" value="Add {{ variant.1|title }} {{ child_name|title }}" formnovalidate>
-    {% endfor %}
-    {% else %}
-    <input type="submit" formaction="{{ request.path }}{% querystring action='add' %}" value="Add {{ child_name|title }} to {{ parent_name|title }}" formnovalidate>
-    {% endif %}
-    <hr>
-    <input type="submit" value="Save">
-</form>
+{% include 'stave/partials/parent_child_form.html' %}
 
 {% endtimezone %}
-
 {% endblock %}

@@ -128,12 +128,12 @@ urlpatterns = [
     ),
     path(
         "_/<slug:league_slug>/events/<slug:event_slug>/create-form/<int:kind>/",
-        views.FormCreateUpdateView.as_view(),
+        views.ApplicationFormCreateUpdateView.as_view(),
         name="form-create-question",
     ),
     path(
         "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/edit/",
-        views.FormCreateUpdateView.as_view(),
+        views.ApplicationFormCreateUpdateView.as_view(),
         name="form-update",
     ),
     path(
@@ -153,12 +153,12 @@ urlpatterns = [
     ),
     path(
         "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:form_slug>/edit/<int:kind>/",
-        views.FormCreateUpdateView.as_view(),
+        views.ApplicationFormCreateUpdateView.as_view(),
         name="form-update-question",
     ),
     path(
         "_/<slug:league_slug>/events/<slug:event_slug>/create-form/",
-        views.FormCreateUpdateView.as_view(),
+        views.ApplicationFormCreateUpdateView.as_view(),
         name="form-create",
     ),
     path(

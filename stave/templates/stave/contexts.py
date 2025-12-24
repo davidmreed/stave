@@ -139,15 +139,21 @@ class EventCardInputs(EventDetailInputs):
 
 @dataclass
 class ParentChildCreateUpdateInputs:
-    object: Any
     form: forms.ParentChildForm
     parent_name: str
     child_name: str
     child_name_plural: str
+    allow_child_adds: bool
     allow_child_deletes: bool
-    child_variants: list[Tuple[str, str, dict[str, str]]] | None = None
-    time_zone: str | None = None
+    child_variants: list[Tuple[str, str, dict[str, str]]] | None
 
+@dataclass
+class EventCreateUpdateInputs(ParentChildCreateUpdateInputs):
+    time_zone: str
+
+@dataclass
+class ApplicationFormCreateUpdateInputs(EventCreateUpdateInputs):
+    event: models.Event
 
 @dataclass
 class StaffListInputs:
