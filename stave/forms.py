@@ -977,12 +977,14 @@ class BaseApplicationFormCreateUpdateForm(ParentChildForm):
             ),
         ]
 
+
 class ApplicationFormTemplateCreateUpdateForm(BaseApplicationFormCreateUpdateForm):
     parent_form_class = ApplicationFormTemplateForm
     relation_name = "application_form_template"
     reverse_name = "template_questions"
 
     league: models.League
+
     def __init__(
         self,
         *args,
@@ -1001,6 +1003,7 @@ class ApplicationFormTemplateCreateUpdateForm(BaseApplicationFormCreateUpdateFor
 
     def get_redirect_url(self) -> str:
         return reverse("application-form-template-list", args=[self.league.slug])
+
 
 class ApplicationFormCreateUpdateForm(BaseApplicationFormCreateUpdateForm):
     parent_form_class = ApplicationFormForm
@@ -1026,6 +1029,7 @@ class ApplicationFormCreateUpdateForm(BaseApplicationFormCreateUpdateForm):
 
     def get_redirect_url(self) -> str:
         return self.event.get_absolute_url()
+
 
 class MessageTemplateForm(forms.ModelForm):
     class Meta:

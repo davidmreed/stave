@@ -46,11 +46,10 @@ def inputs(context: template.Context, model_name: str) -> str:
         try:
             type_(**input_values)
             return ""
-        except Exception as e:
+        except Exception:
             pass
 
     raise TemplateValidationException()
-
 
 
 @register.filter

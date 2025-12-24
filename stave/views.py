@@ -29,7 +29,6 @@ from django.utils.dateparse import parse_date
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.utils.translation import gettext, gettext_lazy
 from django.views import generic
-from django.forms.formsets import DELETION_FIELD_NAME
 from meta.views import Meta
 
 from stave.templates.stave import contexts
@@ -265,14 +264,14 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
 
     def get_context(self) -> contexts.ParentChildCreateUpdateInputs:
         return contexts.ParentChildCreateUpdateInputs(
-                    form=self.form,
-                    parent_name=self.form_class.parent_form_class._meta.model._meta.verbose_name,
-                    child_name=self.form_class.child_form_class._meta.model._meta.verbose_name,
-                    child_name_plural=self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
-                    child_variants=self.form.get_child_variants(),
-                    allow_child_adds=self.allow_child_adds(),
-                    allow_child_deletes=self.allow_child_deletes(),
-                )
+            form=self.form,
+            parent_name=self.form_class.parent_form_class._meta.model._meta.verbose_name,
+            child_name=self.form_class.child_form_class._meta.model._meta.verbose_name,
+            child_name_plural=self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
+            child_variants=self.form.get_child_variants(),
+            allow_child_adds=self.allow_child_adds(),
+            allow_child_deletes=self.allow_child_deletes(),
+        )
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         object_ = self.get_object(request, **kwargs)
@@ -292,14 +291,18 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
 
     def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         object_ = self.get_object(request, **kwargs)
-        self.form = self.get_form(instance=object_, data=request.POST, files=request.FILES)
+        self.form = self.get_form(
+            instance=object_, data=request.POST, files=request.FILES
+        )
 
         action = request.GET.get("action")
         match action:
             case "add":
                 # We requested to add a child object.
                 if not self.allow_child_adds():
-                    return HttpResponseBadRequest("The form does not allow adding child records.")
+                    return HttpResponseBadRequest(
+                        "The form does not allow adding child records."
+                    )
                 variants_by_key = {
                     each_variant[0]: each_variant
                     for each_variant in self.form.get_child_variants()
@@ -595,16 +598,12 @@ class ApplicationFormTemplateDeleteView(
 # Non-Management Views
 
 
-class EventCreateUpdateView(
-    LoginRequiredMixin,
-    ParentChildCreateUpdateFormView
-):
+class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView):
     form_class = forms.EventCreateUpdateForm
 
     def get_context(self) -> contexts.EventCreateUpdateInputs:
         return contexts.EventCreateUpdateInputs(
-            time_zone=self.get_time_zone(),
-            **contexts.to_dict(super().get_context())
+            time_zone=self.get_time_zone(), **contexts.to_dict(super().get_context())
         )
 
     def get_form(self, **kwargs) -> forms.EventCreateUpdateForm:
@@ -883,7 +882,9 @@ class EventListView(generic.ListView):
 
 
 class ApplicationFormCreateUpdateView(
-    LoginRequiredMixin, TenantedObjectMixin,  ParentChildCreateUpdateFormView,
+    LoginRequiredMixin,
+    TenantedObjectMixin,
+    ParentChildCreateUpdateFormView,
 ):
     form_class = forms.ApplicationFormCreateUpdateForm
     event: models.Event
@@ -896,13 +897,10 @@ class ApplicationFormCreateUpdateView(
         self.event = get_object_or_404(
             models.Event.objects.manageable(request.user),
             league__slug=self.league.slug,
-            slug=kwargs.get("event_slug")
+            slug=kwargs.get("event_slug"),
         )
         if slug := kwargs.get("form_slug"):
-            self.form = get_object_or_404(
-                self.event.application_forms.all(),
-                slug=slug
-            )
+            self.form = get_object_or_404(self.event.application_forms.all(), slug=slug)
 
     def get_view_url(self) -> str:
         league_slug = self.league.slug
@@ -910,14 +908,14 @@ class ApplicationFormCreateUpdateView(
         slug = self.kwargs.get("form_slug")
 
         if slug:
-            return reverse("application-form-edit", args=[league_slug, event_slug, slug])
+            return reverse(
+                "application-form-edit", args=[league_slug, event_slug, slug]
+            )
         else:
             return reverse("application-form-create", args=[league_slug, event_slug])
 
     def get_form(self, **kwargs) -> forms.ApplicationFormCreateUpdateForm:
-        return forms.ApplicationFormCreateUpdateForm(
-            event=self.event, **kwargs
-        )
+        return forms.ApplicationFormCreateUpdateForm(event=self.event, **kwargs)
 
     def get_context(self) -> contexts.ApplicationFormCreateUpdateInputs:
         return contexts.ApplicationFormCreateUpdateInputs(
