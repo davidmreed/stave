@@ -940,11 +940,9 @@ class EventTemplateCreateUpdateForm(ParentChildForm):
 
 class BaseApplicationFormCreateUpdateForm(ParentChildForm):
     child_form_class = QuestionForm
-    event: models.Event
 
     def clean(self):
         super().clean()
-        self.parent_form.instance.event = self.event
 
         for index, child_form in enumerate(
             [
@@ -1018,6 +1016,10 @@ class ApplicationFormCreateUpdateForm(BaseApplicationFormCreateUpdateForm):
     ):
         self.event = event
         super().__init__(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        self.parent_form.instance.event = self.event
 
     def get_parent_formset(self, *args, **kwargs):
         return super().get_parent_formset(*args, event=self.event, **kwargs)

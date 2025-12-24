@@ -907,7 +907,7 @@ class ApplicationFormCreateUpdateView(
     def get_view_url(self) -> str:
         league_slug = self.league.slug
         event_slug = self.event.slug
-        slug = self.kwargs.get("slug")
+        slug = self.kwargs.get("form_slug")
 
         if slug:
             return reverse("application-form-edit", args=[league_slug, event_slug, slug])
