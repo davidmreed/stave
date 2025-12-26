@@ -55,6 +55,7 @@ class TypedContextMixin[T: dict[str, Any] | DataclassInstance]:
         return context
 
 
+# FIXME: any class that incorporates this mixin requires the full League Manager perm.
 class TenantedObjectMixin:
     league: models.League
 
@@ -342,6 +343,19 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
         )
 
 
+class ParentChildCreateUpdateFormTimezoneView(ParentChildCreateUpdateFormView, ABC):
+    template_name: str = "stave/parent_child_create_update_timezone.html"
+
+    def get_context(self) -> contexts.ParentChildCreateUpdateTimezoneInputs:
+        return contexts.ParentChildCreateUpdateTimezoneInputs(
+            time_zone=self.get_time_zone(),
+            **contexts.to_dict(super().get_context())
+        )
+
+    @abstractmethod
+    def get_time_zone(self) -> str:
+        ...
+
 # League management views
 
 ## Message Templates
@@ -497,7 +511,7 @@ class EventTemplateListView(LoginRequiredMixin, TenantedObjectMixin, generic.Lis
 
 
 class EventTemplateCreateUpdateView(
-    LoginRequiredMixin, TenantedObjectMixin, ParentChildCreateUpdateFormView
+    LoginRequiredMixin, TenantedObjectMixin, ParentChildCreateUpdateFormTimezoneView
 ):
     form_class = forms.EventTemplateCreateUpdateForm
     event_template: models.EventTemplate | None
@@ -513,6 +527,9 @@ class EventTemplateCreateUpdateView(
 
     def get_form(self, **kwargs) -> forms.EventTemplateCreateUpdateForm:
         return forms.EventTemplateCreateUpdateForm(league=self.league, **kwargs)
+
+    def get_time_zone(self) -> str:
+        return self.league.time_zone
 
     def get_object(
         self,
@@ -598,13 +615,8 @@ class ApplicationFormTemplateDeleteView(
 # Non-Management Views
 
 
-class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView):
+class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormTimezoneView):
     form_class = forms.EventCreateUpdateForm
-
-    def get_context(self) -> contexts.EventCreateUpdateInputs:
-        return contexts.EventCreateUpdateInputs(
-            time_zone=self.get_time_zone(), **contexts.to_dict(super().get_context())
-        )
 
     def get_form(self, **kwargs) -> forms.EventCreateUpdateForm:
         league = get_object_or_404(
@@ -692,7 +704,7 @@ class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView)
                 slug=event_slug,
             )
 
-    def get_time_zone(self) -> str | None:
+    def get_time_zone(self) -> str:
         league = get_object_or_404(
             models.League.objects.event_manageable(self.request.user),
             slug=self.kwargs.get("league_slug"),
@@ -883,8 +895,7 @@ class EventListView(generic.ListView):
 
 class ApplicationFormCreateUpdateView(
     LoginRequiredMixin,
-    TenantedObjectMixin,
-    ParentChildCreateUpdateFormView,
+    ParentChildCreateUpdateFormTimezoneView,
 ):
     form_class = forms.ApplicationFormCreateUpdateForm
     event: models.Event
@@ -896,7 +907,7 @@ class ApplicationFormCreateUpdateView(
 
         self.event = get_object_or_404(
             models.Event.objects.manageable(request.user),
-            league__slug=self.league.slug,
+            league__slug=kwargs.get("league_slug"),
             slug=kwargs.get("event_slug"),
         )
         if slug := kwargs.get("form_slug"):
@@ -917,10 +928,12 @@ class ApplicationFormCreateUpdateView(
     def get_form(self, **kwargs) -> forms.ApplicationFormCreateUpdateForm:
         return forms.ApplicationFormCreateUpdateForm(event=self.event, **kwargs)
 
+    def get_time_zone(self) -> str:
+        return self.event.league.time_zone
+
     def get_context(self) -> contexts.ApplicationFormCreateUpdateInputs:
         return contexts.ApplicationFormCreateUpdateInputs(
             event=self.event,
-            time_zone=self.event.league.time_zone,
             **contexts.to_dict(super().get_context()),
         )
 

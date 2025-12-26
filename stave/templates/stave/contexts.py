@@ -147,14 +147,13 @@ class ParentChildCreateUpdateInputs:
     allow_child_deletes: bool
     child_variants: list[Tuple[str, str, dict[str, str]]] | None
 
-
 @dataclass
-class EventCreateUpdateInputs(ParentChildCreateUpdateInputs):
+class ParentChildCreateUpdateTimezoneInputs(ParentChildCreateUpdateInputs):
     time_zone: str
 
 
 @dataclass
-class ApplicationFormCreateUpdateInputs(EventCreateUpdateInputs):
+class ApplicationFormCreateUpdateInputs(ParentChildCreateUpdateTimezoneInputs):
     event: models.Event
 
 

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 
 from django import forms, template
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Model
 from django.utils.timezone import get_current_timezone
 
 from stave.templates.stave import contexts
@@ -17,6 +17,9 @@ register = template.Library()
 class TemplateValidationException(Exception):
     pass
 
+@register.filter
+def is_saved(model: Model):
+    return not model._state.adding
 
 @register.filter
 def tzname(date: datetime) -> str:

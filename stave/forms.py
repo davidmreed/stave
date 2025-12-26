@@ -637,6 +637,9 @@ class ApplicationFormForm(forms.ModelForm):
             if field != "preferred_name"
         ],
         widget=forms.CheckboxSelectMultiple,
+        label=models.ApplicationForm._meta.get_field(
+            "requires_profile_fields"
+        ).verbose_name.capitalize(),
         help_text=models.ApplicationForm._meta.get_field(
             "requires_profile_fields"
         ).help_text,
@@ -661,6 +664,14 @@ class ApplicationFormForm(forms.ModelForm):
 
     def __init__(self, event: models.Event | None = None, *args, **kwargs):
         kwargs["label_suffix"] = ""
+        if instance := kwargs.get("instance"):
+            # preferred_name is always selected, and is added by save()
+            # in the model class. We don't display it on the frontend.
+            # This has to happen before calling super. Yes, it's gross.
+            instance.requires_profile_fields = [
+                f for f in instance.requires_profile_fields
+                if f != "preferred_name"
+            ]
         super().__init__(*args, **kwargs)
         if event:
             self.fields["role_groups"].queryset = event.role_groups.all()
@@ -677,6 +688,7 @@ class ApplicationFormForm(forms.ModelForm):
             ].queryset = self.fields["schedule_email_template"].queryset = (
                 self.instance.event.league.message_templates.all()
             )
+
         if self.instance and not self.instance.editable:
             # Our instance might not be editable due to receiving applications.
             # Block edits to fields that would cause issues.
@@ -684,6 +696,7 @@ class ApplicationFormForm(forms.ModelForm):
             self.fields["application_kind"].disabled = True
             self.fields["application_availability_kind"].disabled = True
             self.fields["requires_profile_fields"].disabled = True
+
 
 
 class ApplicationFormTemplateForm(forms.ModelForm):
@@ -722,6 +735,9 @@ class ApplicationFormTemplateForm(forms.ModelForm):
             if field != "preferred_name"
         ],
         widget=forms.CheckboxSelectMultiple,
+        label=models.ApplicationFormTemplate._meta.get_field(
+            "requires_profile_fields"
+        ).verbose_name.capitalize(),
         help_text=models.ApplicationFormTemplate._meta.get_field(
             "requires_profile_fields"
         ).help_text,
@@ -745,6 +761,14 @@ class ApplicationFormTemplateForm(forms.ModelForm):
 
     def __init__(self, league: models.League | None = None, *args, **kwargs):
         kwargs["label_suffix"] = ""
+        if instance := kwargs.get("instance"):
+            # preferred_name is always selected, and is added by save()
+            # in the model class. We don't display it on the frontend.
+            # This has to happen before calling super. Yes, it's gross.
+            instance.requires_profile_fields = [
+                f for f in instance.requires_profile_fields
+                if f != "preferred_name"
+            ]
         super().__init__(*args, **kwargs)
 
         league = league or self.instance.league
@@ -951,7 +975,9 @@ class BaseApplicationFormCreateUpdateForm(ParentChildForm):
                 if child_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
             ]
         ):
-            child_form.instance.order_key = index + 1
+            if child_form.instance.order_key != index + 1:
+                child_form.instance.order_key = index + 1
+                child_form.has_changed = lambda: True
 
     def get_child_variants(self) -> list[Tuple[str, str, dict[str, str]]]:
         return [
@@ -1007,7 +1033,7 @@ class ApplicationFormTemplateCreateUpdateForm(BaseApplicationFormCreateUpdateFor
 
 class ApplicationFormCreateUpdateForm(BaseApplicationFormCreateUpdateForm):
     parent_form_class = ApplicationFormForm
-    relation_name = "application_form_template"
+    relation_name = "application_form"
     reverse_name = "form_questions"
     event: models.Event
 
