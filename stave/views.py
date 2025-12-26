@@ -55,7 +55,6 @@ class TypedContextMixin[T: dict[str, Any] | DataclassInstance]:
         return context
 
 
-# FIXME: any class that incorporates this mixin requires the full League Manager perm.
 class TenantedObjectMixin:
     league: models.League
 
