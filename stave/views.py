@@ -348,13 +348,12 @@ class ParentChildCreateUpdateFormTimezoneView(ParentChildCreateUpdateFormView, A
 
     def get_context(self) -> contexts.ParentChildCreateUpdateTimezoneInputs:
         return contexts.ParentChildCreateUpdateTimezoneInputs(
-            time_zone=self.get_time_zone(),
-            **contexts.to_dict(super().get_context())
+            time_zone=self.get_time_zone(), **contexts.to_dict(super().get_context())
         )
 
     @abstractmethod
-    def get_time_zone(self) -> str:
-        ...
+    def get_time_zone(self) -> str: ...
+
 
 # League management views
 
@@ -615,7 +614,9 @@ class ApplicationFormTemplateDeleteView(
 # Non-Management Views
 
 
-class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormTimezoneView):
+class EventCreateUpdateView(
+    LoginRequiredMixin, ParentChildCreateUpdateFormTimezoneView
+):
     form_class = forms.EventCreateUpdateForm
 
     def get_form(self, **kwargs) -> forms.EventCreateUpdateForm:

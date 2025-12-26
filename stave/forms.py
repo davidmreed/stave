@@ -669,8 +669,7 @@ class ApplicationFormForm(forms.ModelForm):
             # in the model class. We don't display it on the frontend.
             # This has to happen before calling super. Yes, it's gross.
             instance.requires_profile_fields = [
-                f for f in instance.requires_profile_fields
-                if f != "preferred_name"
+                f for f in instance.requires_profile_fields if f != "preferred_name"
             ]
         super().__init__(*args, **kwargs)
         if event:
@@ -696,7 +695,6 @@ class ApplicationFormForm(forms.ModelForm):
             self.fields["application_kind"].disabled = True
             self.fields["application_availability_kind"].disabled = True
             self.fields["requires_profile_fields"].disabled = True
-
 
 
 class ApplicationFormTemplateForm(forms.ModelForm):
@@ -766,8 +764,7 @@ class ApplicationFormTemplateForm(forms.ModelForm):
             # in the model class. We don't display it on the frontend.
             # This has to happen before calling super. Yes, it's gross.
             instance.requires_profile_fields = [
-                f for f in instance.requires_profile_fields
-                if f != "preferred_name"
+                f for f in instance.requires_profile_fields if f != "preferred_name"
             ]
         super().__init__(*args, **kwargs)
 

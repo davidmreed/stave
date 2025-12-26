@@ -147,6 +147,7 @@ class ParentChildCreateUpdateInputs:
     allow_child_deletes: bool
     child_variants: list[Tuple[str, str, dict[str, str]]] | None
 
+
 @dataclass
 class ParentChildCreateUpdateTimezoneInputs(ParentChildCreateUpdateInputs):
     time_zone: str

@@ -17,9 +17,11 @@ register = template.Library()
 class TemplateValidationException(Exception):
     pass
 
+
 @register.filter
 def is_saved(model: Model):
     return not model._state.adding
+
 
 @register.filter
 def tzname(date: datetime) -> str:
