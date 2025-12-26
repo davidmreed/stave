@@ -1,40 +1,19 @@
 {% extends "base.html" %}
 
+{% load stave_tags %}
+{% inputs 'ApplicationFormCreateUpdateInputs' %}
+
 {% block content %}
-{% if form.instance %}
-{% include 'stave/partials/staffing_header.html' with form=form.instance request=request only %}
+{% if form.parent_form.instance %}
+{% include 'stave/partials/staffing_header.html' with form=form.parent_form.instance request=request only %}
 {% endif %}
 <header>
     <h1>Application Form for {{ event }}</h1>
 </header>
-{% if form.instance and not form.instance.editable %}
+{% if form.parent_form.instance and not form.parent_form.instance.editable %}
 <p class="disabled-warning">
 This form has already received applications. You can only edit some elements of the form.
 </p>
 {% endif %}
-<form method="post" action="{{ url_base }}">
-    {% csrf_token %}
-    {{ form }}
-    <hr>
-    {{ question_formset.management_form }}
-    {% for question_form in question_formset %}
-    <div>
-        <fieldset>
-            <legend><strong>{{ question_form.get_kind_display }} Question</strong></legend>
-        {{ question_form }}
-        </fieldset>
-    </div>
-    <hr>
-    {% endfor %}
-    {% if not form.instance or form.instance.editable %}
-    <div>
-        <input type="submit" formaction="{{ url_base }}{{ QuestionKind.SHORT_TEXT }}/" formnovalidate value="Add Short Text">
-        <input type="submit" formaction="{{ url_base }}{{ QuestionKind.LONG_TEXT }}/" formnovalidate value="Add Long Text">
-        <input type="submit" formaction="{{ url_base }}{{ QuestionKind.SELECT_ONE }}/" formnovalidate value="Add Single Choice">
-        <input type="submit" formaction="{{ url_base }}{{ QuestionKind.SELECT_MANY }}/" formnovalidate value="Add Multiple Choice">
-    </div>
-    <hr>
-    {% endif %}
-    <input type="submit" value="Save" method="POST">
-</form>
+{% include 'stave/partials/parent_child_form.html' %}
 {% endblock %}

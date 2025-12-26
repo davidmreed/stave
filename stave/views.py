@@ -29,7 +29,6 @@ from django.utils.dateparse import parse_date
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.utils.translation import gettext, gettext_lazy
 from django.views import generic
-from django.forms.formsets import DELETION_FIELD_NAME
 from meta.views import Meta
 
 from stave.templates.stave import contexts
@@ -249,18 +248,30 @@ class EventDetailView(
 class ParentChildCreateUpdateFormView(views.View, ABC):
     template_name: str = "stave/parent_child_create_update.html"
     form_class: type[forms.ParentChildForm]
+    form: forms.ParentChildForm | None
 
     @abstractmethod
     def get_object(self, request: HttpRequest, **kwargs) -> Any | None: ...
 
+    def allow_child_adds(self) -> bool:
+        return True
+
     def allow_child_deletes(self) -> bool:
         return True
 
-    def get_time_zone(self) -> str | None:
-        return None
-
     def get_form(self, **kwargs) -> forms.ParentChildForm:
         return self.form_class(**kwargs)
+
+    def get_context(self) -> contexts.ParentChildCreateUpdateInputs:
+        return contexts.ParentChildCreateUpdateInputs(
+            form=self.form,
+            parent_name=self.form_class.parent_form_class._meta.model._meta.verbose_name,
+            child_name=self.form_class.child_form_class._meta.model._meta.verbose_name,
+            child_name_plural=self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
+            child_variants=self.form.get_child_variants(),
+            allow_child_adds=self.allow_child_adds(),
+            allow_child_deletes=self.allow_child_deletes(),
+        )
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         object_ = self.get_object(request, **kwargs)
@@ -270,45 +281,42 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
         if request.GET.get("action") == "add":
             form.add_child_form()
 
+        self.form = form
+
         return render(
             request,
             template_name=self.template_name,
-            context=contexts.to_dict(
-                contexts.ParentChildCreateUpdateInputs(
-                    object=object_,
-                    form=form,
-                    parent_name=self.form_class.parent_form_class._meta.model._meta.verbose_name,
-                    child_name=self.form_class.child_form_class._meta.model._meta.verbose_name,
-                    child_name_plural=self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
-                    child_variants=form.get_child_variants(),
-                    allow_child_deletes=self.allow_child_deletes(),
-                    time_zone=self.get_time_zone(),
-                )
-            ),
+            context=contexts.to_dict(self.get_context()),
         )
 
     def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         object_ = self.get_object(request, **kwargs)
-        form = self.get_form(instance=object_, data=request.POST, files=request.FILES)
+        self.form = self.get_form(
+            instance=object_, data=request.POST, files=request.FILES
+        )
 
         action = request.GET.get("action")
         match action:
             case "add":
                 # We requested to add a child object.
+                if not self.allow_child_adds():
+                    return HttpResponseBadRequest(
+                        "The form does not allow adding child records."
+                    )
                 variants_by_key = {
                     each_variant[0]: each_variant
-                    for each_variant in form.get_child_variants()
+                    for each_variant in self.form.get_child_variants()
                 }
                 if variants_by_key:
                     variant = request.GET.get("variant")
                     if variant in variants_by_key:
-                        form.add_child_form(variant=variant)
+                        self.form.add_child_form(variant=variant)
                     else:
                         return HttpResponseBadRequest(
                             f"{variant} is not a legal parameter"
                         )
                 else:
-                    form.add_child_form()
+                    self.form.add_child_form()
             case "delete":
                 # We requested to delete a child object.
                 if self.allow_child_deletes():
@@ -317,30 +325,33 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
                         try:
                             index = int(index)
                             # Index validation is done by the form.
-                            form.delete_child_form(index)
+                            self.form.delete_child_form(index)
                         except ValueError:
                             pass
             case _:
-                if form.is_valid():
-                    object_ = form.save()
-                    return HttpResponseRedirect(form.get_redirect_url())
+                if self.form.is_valid():
+                    object_ = self.form.save()
+                    return HttpResponseRedirect(self.form.get_redirect_url())
 
         return render(
             request,
             template_name=self.template_name,
             context=contexts.to_dict(
-                contexts.ParentChildCreateUpdateInputs(
-                    object=object_,
-                    form=form,
-                    parent_name=self.form_class.parent_form_class._meta.model._meta.verbose_name,
-                    child_name=self.form_class.child_form_class._meta.model._meta.verbose_name,
-                    child_name_plural=self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
-                    child_variants=form.get_child_variants(),
-                    allow_child_deletes=self.allow_child_deletes(),
-                    time_zone=self.get_time_zone(),
-                )
+                self.get_context(),
             ),
         )
+
+
+class ParentChildCreateUpdateFormTimezoneView(ParentChildCreateUpdateFormView, ABC):
+    template_name: str = "stave/parent_child_create_update_timezone.html"
+
+    def get_context(self) -> contexts.ParentChildCreateUpdateTimezoneInputs:
+        return contexts.ParentChildCreateUpdateTimezoneInputs(
+            time_zone=self.get_time_zone(), **contexts.to_dict(super().get_context())
+        )
+
+    @abstractmethod
+    def get_time_zone(self) -> str: ...
 
 
 # League management views
@@ -498,7 +509,7 @@ class EventTemplateListView(LoginRequiredMixin, TenantedObjectMixin, generic.Lis
 
 
 class EventTemplateCreateUpdateView(
-    LoginRequiredMixin, TenantedObjectMixin, ParentChildCreateUpdateFormView
+    LoginRequiredMixin, TenantedObjectMixin, ParentChildCreateUpdateFormTimezoneView
 ):
     form_class = forms.EventTemplateCreateUpdateForm
     event_template: models.EventTemplate | None
@@ -514,6 +525,9 @@ class EventTemplateCreateUpdateView(
 
     def get_form(self, **kwargs) -> forms.EventTemplateCreateUpdateForm:
         return forms.EventTemplateCreateUpdateForm(league=self.league, **kwargs)
+
+    def get_time_zone(self) -> str:
+        return self.league.time_zone
 
     def get_object(
         self,
@@ -599,7 +613,9 @@ class ApplicationFormTemplateDeleteView(
 # Non-Management Views
 
 
-class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView):
+class EventCreateUpdateView(
+    LoginRequiredMixin, ParentChildCreateUpdateFormTimezoneView
+):
     form_class = forms.EventCreateUpdateForm
 
     def get_form(self, **kwargs) -> forms.EventCreateUpdateForm:
@@ -688,7 +704,7 @@ class EventCreateUpdateView(LoginRequiredMixin, ParentChildCreateUpdateFormView)
                 slug=event_slug,
             )
 
-    def get_time_zone(self) -> str | None:
+    def get_time_zone(self) -> str:
         league = get_object_or_404(
             models.League.objects.event_manageable(self.request.user),
             slug=self.kwargs.get("league_slug"),
@@ -877,137 +893,64 @@ class EventListView(generic.ListView):
         return models.Event.objects.listed(self.request.user)
 
 
-class FormCreateUpdateView(LoginRequiredMixin, views.View):
-    # TODO: add TypedContextMixin
-    # TODO: use ParentChildCreateUpdateView
-    def get(
+class ApplicationFormCreateUpdateView(
+    LoginRequiredMixin,
+    ParentChildCreateUpdateFormTimezoneView,
+):
+    form_class = forms.ApplicationFormCreateUpdateForm
+    event: models.Event
+    form: models.ApplicationForm | None = None
+    template_name = "stave/form_edit.html"
+
+    def setup(self, request: HttpRequest, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+
+        self.event = get_object_or_404(
+            models.Event.objects.manageable(request.user),
+            league__slug=kwargs.get("league_slug"),
+            slug=kwargs.get("event_slug"),
+        )
+        if slug := kwargs.get("form_slug"):
+            self.form = get_object_or_404(self.event.application_forms.all(), slug=slug)
+
+    def get_view_url(self) -> str:
+        league_slug = self.league.slug
+        event_slug = self.event.slug
+        slug = self.kwargs.get("form_slug")
+
+        if slug:
+            return reverse(
+                "application-form-edit", args=[league_slug, event_slug, slug]
+            )
+        else:
+            return reverse("application-form-create", args=[league_slug, event_slug])
+
+    def get_form(self, **kwargs) -> forms.ApplicationFormCreateUpdateForm:
+        return forms.ApplicationFormCreateUpdateForm(event=self.event, **kwargs)
+
+    def get_time_zone(self) -> str:
+        return self.event.league.time_zone
+
+    def get_context(self) -> contexts.ApplicationFormCreateUpdateInputs:
+        return contexts.ApplicationFormCreateUpdateInputs(
+            event=self.event,
+            **contexts.to_dict(super().get_context()),
+        )
+
+    def get_object(
         self,
         request: HttpRequest,
         league_slug: str,
-        event_slug: str,
-        form_slug: str | None = None,
-    ) -> HttpResponse:
-        event = get_object_or_404(
-            models.Event.objects.manageable(request.user),
-            league__slug=league_slug,
-            slug=event_slug,
-        )
+        slug: str | None = None,
+        **kwargs,
+    ) -> models.ApplicationForm | None:
+        return self.form
 
-        form = None
-        question_queryset = models.Question.objects.none()
-        if form_slug:
-            form = get_object_or_404(
-                event.application_forms.manageable(request.user),
-                slug=form_slug,
-            )
-            question_queryset = form.form_questions.all()
+    def allow_child_adds(self) -> bool:
+        return self.form.parent_form.instance.editable
 
-        app_form_form = forms.ApplicationFormForm(event=event, instance=form)
-        question_formset = forms.QuestionFormSet(queryset=question_queryset)
-
-        return render(
-            request,
-            "stave/form_edit.html",
-            context={
-                "form": app_form_form,
-                "event": event,
-                "question_formset": question_formset,
-                "QuestionKind": models.QuestionKind,
-                "url_base": request.path,
-            },
-        )
-
-    def post(
-        self,
-        request: HttpRequest,
-        league_slug: str,
-        event_slug: str,
-        form_slug: str | None = None,
-        kind: models.QuestionKind | None = None,
-    ) -> HttpResponse:
-        # TODO: status
-        event: models.Event = get_object_or_404(
-            models.Event.objects.manageable(request.user),
-            league__slug=league_slug,
-            slug=event_slug,
-        )
-
-        form: models.ApplicationForm | None = None
-        question_queryset = models.Question.objects.none()
-        url_base = reverse("form-create", args=[league_slug, event_slug])
-        if form_slug:
-            form: models.ApplicationForm = get_object_or_404(
-                models.ApplicationForm.objects.manageable(request.user),
-                slug=form_slug,
-                event__slug=event_slug,
-                event__league__slug=league_slug,
-            )
-            question_queryset = form.form_questions.all()
-            url_base = reverse("form-update", args=[league_slug, event_slug, form_slug])
-
-        app_form_form = forms.ApplicationFormForm(
-            event=event, data=request.POST, instance=form
-        )
-        question_formset = forms.QuestionFormSet(
-            request.POST, queryset=question_queryset
-        )
-
-        if kind:
-            # The user asked to add a question.
-            if kind in models.QuestionKind.values:
-                new_data = question_formset.data.copy()
-                try:
-                    count = int(new_data["form-TOTAL_FORMS"])
-                    new_data[f"form-{count}-id"] = ""
-                    new_data[f"form-{count}-kind"] = str(kind)
-                    new_data[f"form-{count}-options"] = "[]"
-
-                    count += 1
-                    new_data["form-TOTAL_FORMS"] = str(count)
-                except (KeyError, ValueError):
-                    return HttpResponseBadRequest("invalid question data")
-
-                question_formset = forms.QuestionFormSet(
-                    data=new_data, queryset=question_queryset
-                )
-                # TODO: make the question forms not have errors when they're first created.
-        elif app_form_form.is_valid() and question_formset.is_valid():
-            # We did a save action, _without_ adding a question.
-            # Commit the forms.
-            with transaction.atomic():
-                app_form_form.instance.event = event
-                app_form = app_form_form.save()
-
-                index = 0
-                for question_form in question_formset.forms:
-                    question_form.instance.application_form = app_form
-                    if not question_form.cleaned_data.get(
-                        DELETION_FIELD_NAME,
-                        False,
-                    ):
-                        if question_form.instance.order_key != index:
-                            question_form.instance.order_key = index
-                            # force the formset to save this instance
-                            question_form.has_changed = lambda: True
-                            index += 1
-
-                question_formset.save_existing_objects()
-                question_formset.save_new_objects()
-
-            return HttpResponseRedirect(app_form.get_absolute_url())
-
-        # We either did a question add, or we had invalid forms. Re-render.
-        return render(
-            request,
-            "stave/form_edit.html",
-            context={
-                "form": app_form_form,
-                "event": event,
-                "question_formset": question_formset,
-                "QuestionKind": models.QuestionKind,
-                "url_base": url_base,
-            },
-        )
+    def allow_child_deletes(self) -> bool:
+        return self.form.parent_form.instance.editable
 
 
 class FormDeleteView(LoginRequiredMixin, generic.edit.DeleteView):

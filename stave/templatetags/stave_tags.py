@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 
 from django import forms, template
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Model
 from django.utils.timezone import get_current_timezone
 
 from stave.templates.stave import contexts
@@ -16,6 +16,11 @@ register = template.Library()
 
 class TemplateValidationException(Exception):
     pass
+
+
+@register.filter
+def is_saved(model: Model):
+    return not model._state.adding
 
 
 @register.filter
@@ -32,18 +37,24 @@ def is_form_deleted(form: forms.BaseForm) -> bool:
 def inputs(context: template.Context, model_name: str) -> str:
     type_: type = getattr(contexts, model_name)
 
-    input_values = copy.copy(context.dicts[-1])
-    if "csrf_token" in input_values:
-        del input_values["csrf_token"]
-    if "meta" in input_values:
-        del input_values["meta"]
+    for i in range(len(context.dicts)):
+        input_values = copy.copy(context.dicts[i])
 
-    try:
-        type_(**input_values)
-    except Exception as e:
-        raise TemplateValidationException from e
+        # FIXME: This is really fragile.
+        if "csrf_token" in input_values:
+            del input_values["csrf_token"]
+        if "meta" in input_values:
+            del input_values["meta"]
+        if "sentry_trace_meta" in input_values:
+            del input_values["sentry_trace_meta"]
 
-    return ""
+        try:
+            type_(**input_values)
+            return ""
+        except Exception:
+            pass
+
+    raise TemplateValidationException()
 
 
 @register.filter

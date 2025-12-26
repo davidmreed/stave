@@ -1,5 +1,5 @@
 from dataclasses import dataclass, fields
-from typing import Any, Tuple
+from typing import Tuple
 from uuid import UUID
 
 from django.contrib.auth.models import AnonymousUser
@@ -139,14 +139,23 @@ class EventCardInputs(EventDetailInputs):
 
 @dataclass
 class ParentChildCreateUpdateInputs:
-    object: Any
     form: forms.ParentChildForm
     parent_name: str
     child_name: str
     child_name_plural: str
+    allow_child_adds: bool
     allow_child_deletes: bool
-    child_variants: list[Tuple[str, str, dict[str, str]]] | None = None
-    time_zone: str | None = None
+    child_variants: list[Tuple[str, str, dict[str, str]]] | None
+
+
+@dataclass
+class ParentChildCreateUpdateTimezoneInputs(ParentChildCreateUpdateInputs):
+    time_zone: str
+
+
+@dataclass
+class ApplicationFormCreateUpdateInputs(ParentChildCreateUpdateTimezoneInputs):
+    event: models.Event
 
 
 @dataclass

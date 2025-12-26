@@ -637,6 +637,9 @@ class ApplicationFormForm(forms.ModelForm):
             if field != "preferred_name"
         ],
         widget=forms.CheckboxSelectMultiple,
+        label=models.ApplicationForm._meta.get_field(
+            "requires_profile_fields"
+        ).verbose_name.capitalize(),
         help_text=models.ApplicationForm._meta.get_field(
             "requires_profile_fields"
         ).help_text,
@@ -661,6 +664,13 @@ class ApplicationFormForm(forms.ModelForm):
 
     def __init__(self, event: models.Event | None = None, *args, **kwargs):
         kwargs["label_suffix"] = ""
+        if instance := kwargs.get("instance"):
+            # preferred_name is always selected, and is added by save()
+            # in the model class. We don't display it on the frontend.
+            # This has to happen before calling super. Yes, it's gross.
+            instance.requires_profile_fields = [
+                f for f in instance.requires_profile_fields if f != "preferred_name"
+            ]
         super().__init__(*args, **kwargs)
         if event:
             self.fields["role_groups"].queryset = event.role_groups.all()
@@ -677,6 +687,7 @@ class ApplicationFormForm(forms.ModelForm):
             ].queryset = self.fields["schedule_email_template"].queryset = (
                 self.instance.event.league.message_templates.all()
             )
+
         if self.instance and not self.instance.editable:
             # Our instance might not be editable due to receiving applications.
             # Block edits to fields that would cause issues.
@@ -722,6 +733,9 @@ class ApplicationFormTemplateForm(forms.ModelForm):
             if field != "preferred_name"
         ],
         widget=forms.CheckboxSelectMultiple,
+        label=models.ApplicationFormTemplate._meta.get_field(
+            "requires_profile_fields"
+        ).verbose_name.capitalize(),
         help_text=models.ApplicationFormTemplate._meta.get_field(
             "requires_profile_fields"
         ).help_text,
@@ -745,6 +759,13 @@ class ApplicationFormTemplateForm(forms.ModelForm):
 
     def __init__(self, league: models.League | None = None, *args, **kwargs):
         kwargs["label_suffix"] = ""
+        if instance := kwargs.get("instance"):
+            # preferred_name is always selected, and is added by save()
+            # in the model class. We don't display it on the frontend.
+            # This has to happen before calling super. Yes, it's gross.
+            instance.requires_profile_fields = [
+                f for f in instance.requires_profile_fields if f != "preferred_name"
+            ]
         super().__init__(*args, **kwargs)
 
         league = league or self.instance.league
@@ -938,28 +959,11 @@ class EventTemplateCreateUpdateForm(ParentChildForm):
         return reverse("event-template-list", args=[self.league.slug])
 
 
-class ApplicationFormTemplateCreateUpdateForm(ParentChildForm):
-    parent_form_class = ApplicationFormTemplateForm
+class BaseApplicationFormCreateUpdateForm(ParentChildForm):
     child_form_class = QuestionForm
-    relation_name = "application_form_template"
-    reverse_name = "template_questions"
-    league: models.League
-
-    def __init__(
-        self,
-        *args,
-        league: models.League,
-        **kwargs,
-    ):
-        self.league = league
-        super().__init__(*args, **kwargs)
-
-    def get_parent_formset(self, *args, **kwargs):
-        return super().get_parent_formset(*args, league=self.league, **kwargs)
 
     def clean(self):
         super().clean()
-        self.parent_form.instance.league = self.league
 
         for index, child_form in enumerate(
             [
@@ -968,10 +972,9 @@ class ApplicationFormTemplateCreateUpdateForm(ParentChildForm):
                 if child_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
             ]
         ):
-            child_form.instance.order_key = index + 1
-
-    def get_redirect_url(self) -> str:
-        return reverse("application-form-template-list", args=[self.league.slug])
+            if child_form.instance.order_key != index + 1:
+                child_form.instance.order_key = index + 1
+                child_form.has_changed = lambda: True
 
     def get_child_variants(self) -> list[Tuple[str, str, dict[str, str]]]:
         return [
@@ -996,6 +999,59 @@ class ApplicationFormTemplateCreateUpdateForm(ParentChildForm):
                 {"kind": str(models.QuestionKind.SELECT_MANY)},
             ),
         ]
+
+
+class ApplicationFormTemplateCreateUpdateForm(BaseApplicationFormCreateUpdateForm):
+    parent_form_class = ApplicationFormTemplateForm
+    relation_name = "application_form_template"
+    reverse_name = "template_questions"
+
+    league: models.League
+
+    def __init__(
+        self,
+        *args,
+        league: models.League,
+        **kwargs,
+    ):
+        self.league = league
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        self.parent_form.instance.league = self.league
+
+    def get_parent_formset(self, *args, **kwargs):
+        return super().get_parent_formset(*args, league=self.league, **kwargs)
+
+    def get_redirect_url(self) -> str:
+        return reverse("application-form-template-list", args=[self.league.slug])
+
+
+class ApplicationFormCreateUpdateForm(BaseApplicationFormCreateUpdateForm):
+    parent_form_class = ApplicationFormForm
+    relation_name = "application_form"
+    reverse_name = "form_questions"
+    event: models.Event
+
+    def __init__(
+        self,
+        *args,
+        event: models.Event,
+        **kwargs,
+    ):
+        self.event = event
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        self.parent_form.instance.event = self.event
+
+    def get_parent_formset(self, *args, **kwargs):
+        return super().get_parent_formset(*args, event=self.event, **kwargs)
+
+    def get_redirect_url(self) -> str:
+        return self.event.get_absolute_url()
 
 
 class MessageTemplateForm(forms.ModelForm):
