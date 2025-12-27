@@ -16,7 +16,8 @@
 # Policies
 
 - [Privacy Policy](./privacy_policy.md)
-- [Governance](./governance.md)
+- [Code of Conduct](./code_of_conduct.md)
+- [Age Restrictions](./age_restrictions.md)
 - [Funding and Support](./funding_and_support.md)
 - [License](./license.md)
 
