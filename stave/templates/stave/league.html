@@ -7,6 +7,11 @@
 {% if user|can_manage_league:item %}
 <a role="button" href="{% url 'league-edit' item.slug %}">Edit</a>
 {% endif %}
+{% if user|is_subscribed:league %}
+<a role="button" href="{% url 'league-subscribe' league.slug %}">Subscribe</a>
+{% else %}
+<a role="button" href="{% url 'league-unsubscribe' league.slug %}">Unsubscribe</a>
+{% endif %}
 {% endblock %}
 
 {% block description %}

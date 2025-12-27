@@ -1824,6 +1824,53 @@ class ApplicationResponse(models.Model):
         ]
 
 
+class LeagueGroupQuerySet(models.QuerySet["LeagueGroup"]):
+    def visible(self, user: User | AnonymousUser) -> "LeagueGroupQuerySet":
+        visible = self.filter(private=False)
+        if isinstance(user, User):
+            visible = visible | self.filter(owner=user)
+
+        return visible
+
+    def owned(self, user: User) -> "LeagueGroupQuerySet":
+        return self.filter(owner=user)
+
+
+class LeagueGroup(models.Model):
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(fields=["slug"], name="slug-must-be-unique")
+        ]
+
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+    name = models.CharField(max_length=256)
+    description = models.TextField(null=True, blank=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    private = models.BooleanField(default=True)
+    slug = models.SlugField(null=True, blank=True)
+
+    objects = LeagueGroupQuerySet.as_manager()
+
+class LeagueGroupMember(models.Model):
+    class Meta:
+        ordering = ["league__name"]
+        constraints = [
+            models.UniqueConstraint(fields=["league", "group"], name="leagues_appear_once_per_group")
+        ]
+
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+    league = models.ForeignKey(League, on_delete=models.CASCADE)
+    group = models.ForeignKey(LeagueGroup, on_delete=models.CASCADE)
+
+class LeagueGroupSubscription(models.Model):
+    class Meta:
+        pass
+
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    league_group = models.ForeignKey(LeagueGroup, on_delete=models.CASCADE)
+
 class GameHistory:
     game: Game
     user: User
