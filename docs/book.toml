@@ -1,0 +1,5 @@
+[book]
+authors = ["David Reed"]
+language = "en"
+src = "src"
+title = "Stave"

@@ -1,0 +1,4 @@
+:{$PORT}
+
+root * /web
+file_server
