@@ -8,6 +8,9 @@ If you use your email address and set a password, Stave will send you an email w
 
 Once your account is confirmed, you can log in to Stave and apply to Events.
 
+> [!IMPORTANT]
+> Stave is only available to users who are age 13 and older, even in the context of JRDA leagues. See our [Age Restrictions](./age_restrictions.md) for more information.
+
 ## The Stave Profile
 
 Stave stores common application information in your profile so that you don't need to retype it every time. When you complete an application, your profile data will be pre-filled, and any changes you make will automatically be saved in your profile for next time. Profile data is always the first section in an application.

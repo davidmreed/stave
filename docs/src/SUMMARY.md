@@ -7,16 +7,18 @@
 
 - [Signing Up and Logging In](./sign_up.md)
 - [Applying for Events](./applying.md)
+- [Calendars](./calendars.md)
 
 # League Guide
 
-- [Staffing Events](./staffing.md)
-- [League Management](./league_management.md)
+- [Getting Started](./league_getting_started.md)
+- [Building Events and Forms](./build_events_and_forms.md)
+- [Staffing](./staffing.md)
+- [Templates & League Management](./league_management.md)
 
 # Policies
 
 - [Privacy Policy](./privacy_policy.md)
-- [Code of Conduct](./code_of_conduct.md)
 - [Age Restrictions](./age_restrictions.md)
 - [Funding and Support](./funding_and_support.md)
 - [License](./license.md)

@@ -1,9 +1,10 @@
 # Staffing Events
 
-## Scheduling Events
+> [!NOTE]
+> This section is coming soon.
 
-## Building Application Forms
+## Viewing Applications
 
-## Staffing
+## Crew Builder
 
-## Communications
+## Sending Communications
