@@ -18,7 +18,7 @@ indent_size = unset
 [*.{yml,yaml}]
 indent_size = 2
 
-[{LICENSE,flake.*}]
+[{LICENSE,flake.*,license.md}]
 # These files are either templated or auto-generated, so we don't want to
 # enforce any particular indentation style
 indent_size = unset
