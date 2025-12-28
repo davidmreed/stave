@@ -9,7 +9,7 @@ If you use your email address and set a password, Stave will send you an email w
 Once your account is confirmed, you can log in to Stave and apply to Events.
 
 > [!IMPORTANT]
-> Stave is only available to users who are age 13 and older, even in the context of JRDA leagues. See our [Age Restrictions](./age_restrictions.md) for more information.
+> Stave is only available to users who are age 13 and older, even in the context of JRDA leagues. See our [Age Restrictions](./age-restrictions.md) for more information.
 
 ## The Stave Profile
 

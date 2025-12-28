@@ -1,12 +1,12 @@
 # Building Events and Forms
 
-Stave gives you a lot of freedom to create, share, and staff your events your way. See the [Key Concepts](./key_concepts.md) section to learn more about the relationship between Events, Games, and Application Forms.
+Stave gives you a lot of freedom to create, share, and staff your events your way. See the [Key Concepts](./key-concepts.md) section to learn more about the relationship between Events, Games, and Application Forms. Read this section to learn step-by-step how to build Events and Application Forms.
 
 ## Creating an Event
 
-Start by visiting your league page by
+Start by visiting your league page by choosing Leagues from the navigation bar, then the Details link under your league's name.
 
-Click Create Event. Stave offers you a choice of _Event Templates_. Event Templates are part of your [league's setup](./league_management.md). Most leagues will have a set of Event Templates provided by Stave, which include
+Click Create Event. Stave offers you a choice of _Event Templates_. Event Templates are part of your [league's setup](./league-management.md). Most leagues will have a set of Event Templates provided by Stave, which include
 
 - Singleheader
 - Doubleheader
@@ -52,7 +52,7 @@ You can choose your availability model separately for each Application Form. Sin
 
 Your form can present _intro text_ to the user before they're asked questions. This is your opportunity to describe the process, the event, or offer whatever other messaging you need. You can write text formatted with [Markdown](https://en.wikipedia.org/wiki/Markdown) in this field, which allows you to use bold (`**like this**`), italic (`_like this_`), and links (`[link text goes here](https://stave.app/your-link-goes-here/)`). [Learn to use Markdown in 60 seconds](https://commonmark.org/help/).
 
-When Stave sends messages to applicants (covered in detail in [Staffing](./staffing.md)), it uses _Message Templates_ to create those messages. Message Templates let you use a standard email message, but substitute in key information like the user's name, the event dates, and more. They're configured in your [League Management](./league_management.md).
+When Stave sends messages to applicants (covered in detail in [Staffing](./staffing.md)), it uses _Message Templates_ to create those messages. Message Templates let you use a standard email message, but substitute in key information like the user's name, the event dates, and more. They're configured in your [League Management](./league-management.md).
 
 Here, you'll choose an email template for sending invitations, rejections, and assignments. You can leave these blank if you wish; you can write messages when you need to send them. In most cases, you'll want to leave the default or the value chosen by your Application Form Template in place.
 
@@ -70,7 +70,7 @@ All Application Forms have four main sections:
 
 Stave stores common information on each user's profile, so that they need not retype it for each application they submit. The Stave profile includes information like the derby name, legal name, certification status, and game history link. You can choose which profile fields you'd like to receive for this Application Form.
 
-> [!NOTE]
+> [!CAUTION]
 > You cannot change your selected profile fields after you receive your first application.
 
 You can add any number of custom Questions to your Application Form. Questions can be
@@ -82,7 +82,7 @@ You can add any number of custom Questions to your Application Form. Questions c
 
 When you staff based on your applications, you'll be able to see answers to your custom questions alongside the other data provided by the applicant.
 
-> [!NOTE]
+> [!CAUTION]
 > You cannot add or remove your custom Questions after you receive your first application, and you cannot change choices on Choose One or Choose Multiple questions. You can change the text of question titles any time.
 
 
