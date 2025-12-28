@@ -30,10 +30,10 @@ If you use a social account to login, Stave will record basic information about 
 
 When you interact with Stave, some information is automatically recorded in the form of server and error logs. These logs may contain information like (but not limited to):
 
- - Your computer's IP address.
- - Your Stave username, if you have one.
- - The dates and times you interact with Stave.
- - Any errors that you encounter while using Stave.
+- Your computer's IP address.
+- Your Stave username, if you have one.
+- The dates and times you interact with Stave.
+- Any errors that you encounter while using Stave.
 
 We strive to avoid or minimize inclusion of personal data in these logs, but it may occur inadvertently.
 
