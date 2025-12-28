@@ -29,6 +29,7 @@
             </div>
             <div>
                 <ul>
+                <li><a target="_blank" href="https://docs.stave.app/">Docs</a></li>
                 {% if request.user.is_authenticated %}
                 <li><a href="{% url 'officiating-history' %}">Officiating History</a></li>
                 <li><a href="{% url 'my-applications' %}">My Applications</a></li>
@@ -54,6 +55,13 @@
         {% block content %}{% endblock %}
         {% block extra_body %}{% endblock %}
     </main>
-    <footer class="container"><small>Stave &copy; 2025 <a href="https://ktema.org">David "Stacktrace" Reed</a>. <a href="https://github.com/davidmreed/stave">Free and open source</a> for the roller derby community. <a href="{% url 'about' %}">About</a> <a href="{% url 'privacy-policy' %}">Privacy</a></small></footer>
+    <footer class="container">
+        <small>
+            Stave &copy; 2025 <a href="https://ktema.org">David "Stacktrace" Reed</a>.
+            <a target="_blank" href="https://github.com/davidmreed/stave">Free and open source</a> for the roller derby community.
+            <a target="_blank" href="https://docs.stave.app/about.html">About</a>
+            <a target="_blank" href="https://docs.stave.app/privacy-policy.html">Privacy</a>
+        </small>
+    </footer>
     </body>
 </html>

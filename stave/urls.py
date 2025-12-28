@@ -1,14 +1,23 @@
 from debug_toolbar.toolbar import debug_toolbar_urls
 from django.contrib import admin
 from django.urls import include, path
+from django.views.generic.base import RedirectView
 
 from . import calendars, settings, views
 
 urlpatterns = [
     path(f"{settings.MEDIA_URL}<str:path>", view=views.MediaView.as_view()),
     path("", views.HomeView.as_view(), name="home"),
-    path("about", views.AboutView.as_view(), name="about"),
-    path("privacy", views.PrivacyPolicyView.as_view(), name="privacy-policy"),
+    path(
+        "about",
+        RedirectView.as_view(url="https://docs.stave.app/about.html"),
+        name="about",
+    ),
+    path(
+        "privacy",
+        RedirectView.as_view(url="https://docs.stave.app/privacy-policy.html"),
+        name="privacy-policy",
+    ),
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
     path("profile/", view=views.ProfileView.as_view(), name="profile"),

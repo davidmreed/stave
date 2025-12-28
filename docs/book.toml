@@ -1,0 +1,9 @@
+[book]
+authors = ["David Reed"]
+language = "en"
+src = "src"
+title = "Stave"
+description = "Documentation for Stave, managing events and volunteer staffing for roller derby."
+
+[output.html]
+git-repository-url = "https://github.com/davidmreed/stave"
