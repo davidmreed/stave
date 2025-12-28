@@ -1,6 +1,6 @@
 # About Stave
 
-Stave provides event and volunteer management by and for roller derby: staff your derby games and tournaments, build application forms, communicate with officials and other volunteers, and maintain a calendar.
+[Stave](https://stave.app/) provides event and volunteer management by and for roller derby: staff your derby games and tournaments, build application forms, communicate with officials and other volunteers, and maintain a calendar.
 
 Stave is a new application and is in <strong>beta</strong> status, meaning it's being actively developed and tested and may have bugs.
 

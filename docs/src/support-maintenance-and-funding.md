@@ -1,4 +1,4 @@
-# Funding and Support
+# Support, Maintenance, and Funding
 
 Stave is built and supported by [Stacktrace](https://ktema.org), with [contributions](./contributors.md) from other members of the derby tech community.
 
