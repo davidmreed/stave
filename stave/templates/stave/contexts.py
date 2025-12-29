@@ -183,12 +183,14 @@ class StaffingHeaderInputs:
     form: models.ApplicationForm
     request: HttpRequest
 
+
 @dataclass
 class HomeInputs:
     application_forms: Iterable[models.ApplicationForm]
     applications: Iterable[models.Application]
     events: Iterable[models.Event]
     leagues: Iterable[models.League]
+
 
 @dataclass
 class LeagueActionButtonsInputs:

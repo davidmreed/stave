@@ -127,6 +127,7 @@ class MyApplicationsView(LoginRequiredMixin, generic.ListView):
             .order_by("-form__event__start_date")
         )
 
+
 class MyEventsView(LoginRequiredMixin, generic.ListView):
     template_name = "stave/my_events_list.html"
     model = models.Event
@@ -135,6 +136,7 @@ class MyEventsView(LoginRequiredMixin, generic.ListView):
     def get_queryset(self) -> QuerySet[models.Event]:
         return models.Event.objects.manageable(self.request.user)
 
+
 class MyLeaguesView(LoginRequiredMixin, generic.ListView):
     template_name = "stave/my_leagues_list.html"
     model = models.League
@@ -142,6 +144,7 @@ class MyLeaguesView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self) -> QuerySet[models.League]:
         return models.League.objects.manageable(self.request.user)
+
 
 class OfficiatingHistoryView(LoginRequiredMixin, generic.ListView):
     """
@@ -205,7 +208,9 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
     template_name = "stave/home.html"
 
     def get_context(self) -> contexts.HomeInputs:
-        application_form_queryset = models.ApplicationForm.objects.listed(self.request.user)
+        application_form_queryset = models.ApplicationForm.objects.listed(
+            self.request.user
+        )
         event_queryset = models.Event.objects.none()
         application_queryset = models.Application.objects.none()
         league_queryset = models.League.objects.none()
@@ -227,7 +232,7 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
             application_forms=Paginator(application_form_queryset, 10).page(1),
             applications=Paginator(application_queryset, 10).get_page(1),
             events=Paginator(event_queryset, 10).get_page(1),
-            leagues=Paginator(league_queryset, 10).get_page(1)
+            leagues=Paginator(league_queryset, 10).get_page(1),
         )
 
     def get_context_data(self, *args, **kwargs):
