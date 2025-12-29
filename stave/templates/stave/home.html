@@ -54,6 +54,30 @@ You don't have any open applications right now.
 
 <article style="flex: 1 1 auto;">
     <header>
+        <h2>Upcoming Assignments</h2>
+    </header>
+
+    <ul>
+        {% for history in upcoming_assignments %}
+        <li>
+            {{ history.game.start_time|date:"DATETIME_FORMAT" }} —
+            <a href="{% url 'event-schedule' history.game.event.league.slug history.game.event.slug %}">{{ history.game.event.name }}</a>:
+            {{ history.game.home_league }} {{ history.game.home_team }} vs
+            {{ history.game.visiting_league }} {{ history.game.visiting_team }} —
+            {{ history.role.name }}{% if history.secondary_role %} ({{ history.secondary_role.name }}){% endif %}
+        </li>
+        {% empty %}
+        <p>
+            You don't have any upcoming assignments.
+        </p>
+        {% endfor %}
+    </ul>
+    {% url 'calendar-user' request.user.id as url %}
+    {% include "stave/partials/calendar.html" with url=url only %}
+</article>
+
+<article style="flex: 1 1 auto;">
+    <header>
         <h2>My Events</h2>
     </header>
 <ul>
