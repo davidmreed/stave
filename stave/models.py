@@ -1131,6 +1131,7 @@ class ApplicationFormTemplate(models.Model):
         super().save(**kwargs)
 
     class Meta:
+        ordering = ["name"]
         constraints = [
             models.CheckConstraint(
                 condition=Q(league__isnull=True) ^ Q(league_template__isnull=True),

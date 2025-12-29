@@ -153,19 +153,19 @@ def then_user_sees_message_in_applications(context, message):
     )
 
 
-@then('the user sees "{message}" in the My Events section')
+@then('the user sees "{message}" in the Staffing section')
 def then_user_sees_message_in_events(context, message):
     soup = BeautifulSoup(context.response.content, "html.parser")
 
-    # Find the My Events section
-    my_events_header = soup.find("h2", string="My Events")
+    # Find the Staffing section
+    my_events_header = soup.find("h2", string="Staffing")
     context.test.assertIsNotNone(my_events_header)
 
     # Look for the message in the same article
     article = my_events_header.find_parent("article")
     message_text = article.find(text=lambda t: t and message in t)
     context.test.assertIsNotNone(
-        message_text, f"Could not find message '{message}' in My Events section"
+        message_text, f"Could not find message '{message}' in Staffing section"
     )
 
 
@@ -273,18 +273,18 @@ def then_user_can_click_applications(context):
     context.test.assertTrue(len(view_links) > 0, "No view application links found")
 
 
-@then('the user sees their events in the "My Events" section')
+@then('the user sees their events in the "Staffing" section')
 def then_user_sees_their_events(context):
     soup = BeautifulSoup(context.response.content, "html.parser")
 
     # Find the My Events section
-    my_events_header = soup.find("h2", string="My Events")
+    my_events_header = soup.find("h2", string="Staffing")
     context.test.assertIsNotNone(my_events_header)
 
     # Look for event links in the same article
     article = my_events_header.find_parent("article")
     event_links = article.find_all("a", href=True)
-    context.test.assertTrue(len(event_links) > 0, "No event links found in My Events")
+    context.test.assertTrue(len(event_links) > 0, "No event links found in Staffing")
 
 
 @then("each event shows application forms with role groups")
@@ -292,7 +292,7 @@ def then_event_shows_application_forms(context):
     soup = BeautifulSoup(context.response.content, "html.parser")
 
     # Look for role group names in the My Events section
-    my_events_header = soup.find("h2", string="My Events")
+    my_events_header = soup.find("h2", string="Staffing")
     article = my_events_header.find_parent("article")
 
     # Look for role group information
@@ -352,7 +352,7 @@ def then_user_sees_join_now_section(context):
     )
 
 
-@then('the user does not see "My Applications" or "My Events" sections')
+@then('the user does not see "My Applications" or "Staffing" sections')
 def then_user_does_not_see_personal_sections(context):
     soup = BeautifulSoup(context.response.content, "html.parser")
 
