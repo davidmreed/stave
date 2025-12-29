@@ -92,16 +92,12 @@ td.highlighted-cell-user {
 
 dl {
     display: flex;
-    gap: 0.5rem;
+    gap: 1rem;
     flex-direction: row;
     flex-wrap: wrap;
     border-left: 0.25rem solid var(--pico-primary);
     padding-left: 1rem;
     margin-bottom: 1rem;
-}
-
-article dl {
-    justify-content: space-between;
 }
 
 dl dt {
