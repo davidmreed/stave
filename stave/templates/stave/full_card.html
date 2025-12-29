@@ -1,0 +1,22 @@
+<article>
+    <header>
+        <h3>
+        {% block header %}
+        {{ item }}
+        {% endblock %}
+        </h3>
+        <div class="inline">
+        {% block actions %}
+        {% endblock %}
+        </div>
+    </header>
+    {% block metadata %}
+    {% endblock %}
+    <nav>
+    {% if item.get_absolute_url != request.path %}
+    <a href="{{ item.get_absolute_url }}">View</a>
+    {% endif %}
+    {% block navigation %}
+    {% endblock %}
+    </nav>
+</article>

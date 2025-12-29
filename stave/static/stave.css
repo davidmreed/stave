@@ -37,6 +37,10 @@ a[role=button] {
     width: 100%;
 }
 
+.inline form {
+    display: inline-block;
+}
+
 .inline input, .inline a[role=button], header input, header a[role=button] {
     width: auto;
     margin: 0.25rem;

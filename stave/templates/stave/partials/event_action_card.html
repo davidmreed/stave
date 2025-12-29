@@ -1,0 +1,15 @@
+{% extends "stave/event.html" %}
+{% block navigation %}
+<ul>
+    {% for application_form in item.application_forms.all %}
+    <li style="display: inline; margin-right: 1rem;"><strong>{{ application_form.role_group_names }}</strong>
+        {% if application_form.applications.open|length %}
+        <span class="cta">{{ application_form.applications.open|length }} open</span>
+        {% endif %}
+        {% if application_form.applications.pending|length %}
+        <span class="cta">{{ application_form.applications.pending|length }} pending</span>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}

@@ -6,52 +6,32 @@
 
 {% block content %}
 
-<header>
-    <h1>{{ league.name }}</h1>
-    <div class="header-buttons">
-{% if request.user|can_manage_league:league %}
-<a role="button" href="{% url 'league-edit' league.slug %}">Edit</a>
-<a role="button" href="{% url 'role-group-list' league.slug %}">Manage Roles</a>
-<a role="button" href="{% url 'message-template-list' league.slug %}">Manage Message Templates</a>
-<a role="button" href="{% url 'event-template-list' league.slug %}">Manage Event Templates</a>
-<a role="button" href="{% url 'application-form-template-list' league.slug %}">Manage Application Form Templates</a>
-{% endif %}
-{% if request.user|can_manage_league_events:league %}
-<a role="button" href="{% url 'event-create' league.slug %}">Create Event</a>
-{% endif %}
-    </div>
-</header>
 {% if not league.enabled %}
 <div class="disabled-warning">Not yet enabled. Visible only to you. <a href="mailto:david@ktema.org">Contact Stacktrace</a> to enable your league.</div>
 {% endif %}
-<dl>
-    {% if league.website %}
-    <div>
-        <dt>Website</dt>
-        <dd><a href="{{ league.website }}">Go</a></dd>
-    </div>
-    {% endif %}
-    {% if league.location %}
-    <div>
-        <dt>Location</dt>
-        <dd>{{ league.location }}</dd>
-    </div>
-    {% endif %}
-</dl>
+
+{% include "stave/league.html" with item=league user=request.user card_kind="stave/page_card.html" csrf_token=csrf_token only %}
+
 {% if league.logo %}
 <div style="float: right; max-width: 20%; max-height: 20%;">
 <img src="{{ league.logo.url }}" alt="{{ league.name }} logo">
 </div>
 {% endif %}
-<p>
-{{ league.description|markdownify }}
-</p>
 
-<h2>Upcoming Events</h2>
+<header>
+    <h2>Upcoming Events</h2>
+    {% if request.user|can_manage_league_events:league %}
+    <div class="inline">
+    <a role="button" href="{% url 'event-create' league.slug %}">Create Event</a>
+    </div>
+    {% endif %}
+</header>
+
 {% url 'calendar-league' league.slug as calendar_url %}
 {% include "stave/partials/calendar.html" with url=calendar_url only %}
+
 {% for event in events %}
-{% include "stave/event_card.html" with user=request.user event=event application_forms=request.user|listed_application_forms:event show_host=False show_details=True show_forms=True show_games=False csrf_token=csrf_token only %}
+{% include "stave/event.html" with user=request.user item=event csrf_token=csrf_token card_kind="stave/full_card.html" only %}
 {% empty %}
 <p>
   There are no upcoming events scheduled right now.

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, fields
-from typing import Tuple
+from typing import Tuple, Iterable
 from uuid import UUID
 
 from django.contrib.auth.models import AnonymousUser
@@ -182,3 +182,15 @@ class CommCenterInputs:
 class StaffingHeaderInputs:
     form: models.ApplicationForm
     request: HttpRequest
+
+@dataclass
+class HomeInputs:
+    application_forms: Iterable[models.ApplicationForm]
+    applications: Iterable[models.Application]
+    events: Iterable[models.Event]
+    leagues: Iterable[models.League]
+
+@dataclass
+class LeagueActionButtonsInputs:
+    user: models.User
+    league: models.League

@@ -1,0 +1,13 @@
+{% extends "stave/event.html" %}
+{% load stave_tags %}
+{% block navigation %}
+<ul>
+{% for application_form in item.application_forms.all %}
+<li>
+    <a href="{{ application_form.get_absolute_url }}">
+        Apply as {{ application_form.role_groups.all|commalist }}
+    </a>{% if application_form.close_date %} (closes {{ application_form.close_date }}){% endif %}{% if not forloop.last %}, {% endif %}
+</li>
+{% endfor %}
+</ul>
+{% endblock %}

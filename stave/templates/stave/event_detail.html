@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 
-{% load markdownify %}
 {% load stave_tags %}
 {% inputs 'EventDetailInputs' %}
 
 {% block content %}
+
+{% with can_manage_this_event=user|can_manage_event:event%}
 
 {% include "stave/partials/event_banner.html" with event=event only %}
 
@@ -16,6 +17,37 @@
 <div class="disabled-warning">This event is in Drafting status and cannot be viewed by other users.</div>
 {% endif %}
 
-{% include "stave/event_card.html" with user=request.user event=event application_forms=user|listed_application_forms:event show_host=True show_details=False show_forms=True show_games=True csrf_token=csrf_token only %}
+{% include "stave/event.html" with item=event user=request.user card_kind="stave/page_card.html" csrf_token=csrf_token only %}
 
+<section>
+<header>
+    <h2>Application Forms</h2>
+    {% if can_manage_this_event %}
+    <div class="header-buttons">
+        <a href="{% url 'form-create' event.league.slug event.slug %}" role="button">Create Form</a>
+    </div>
+    {% endif %}
+</header>
+{% for form in user|listed_application_forms:event %}
+{% include "stave/application_form.html" with item=form user=request.user card_kind="stave/full_card.html" csrf_token=csrf_token only %}
+{% endfor %}
+</section>
+
+<section>
+<header>
+    <h2>Games</h2>
+    {% if can_manage_this_event %}
+    <div class="header-buttons">
+        <a href="{% url 'event-edit' event.league.slug event.slug %}{% querystring action='add'%}" role="button">Create Game</a>
+    </div>
+    {% endif %}
+</header>
+{% for game in event.games.all %}
+{% include "stave/game.html" with item=game user=request.user card_kind="stave/full_card.html" csrf_token=csrf_token only %}
+{% empty %}
+No games scheduled yet.
+{% endfor %}
+</section>
+
+{% endwith %}
 {% endblock %}

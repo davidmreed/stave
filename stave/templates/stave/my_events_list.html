@@ -1,0 +1,19 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<h1>My Events</h1>
+{% url 'calendar-user' as url %}
+{% include "stave/partials/calendar.html" with url=url only %}
+<ul>
+    {% for event in page_obj %}
+    <li>
+        {% include "stave/partials/event_action_card.html" with event=event user=request.user card_kind="stave/full_card.html" csrf_token=csrf_token only %}
+    </li>
+    {% empty %}
+    You aren't managing any events.
+    {% endfor %}
+</ul>
+{% include "stave/partials/pagination.html" with page_obj=page_obj only %}
+
+{% endblock %}

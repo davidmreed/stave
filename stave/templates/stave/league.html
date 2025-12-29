@@ -1,0 +1,40 @@
+{% extends card_kind %}
+
+{% load stave_tags %}
+{% load markdownify %}
+
+{% block actions %}
+{% if user|can_manage_league:item %}
+<a role="button" href="{% url 'league-edit' item.slug %}">Edit</a>
+{% endif %}
+{% endblock %}
+
+{% block description %}
+{{ item.description|markdownify }}
+{% endblock %}
+
+{% block metadata %}
+<dl>
+    {% if item.website %}
+    <div>
+         <dt>Website</dt>
+        <dd><a href="{{ item.website }}">Go</a></dd>
+    </div>
+    {% endif %}
+    {% if item.location %}
+    <div>
+        <dt>Location</dt>
+        <dd>{{ item.location }}</dd>
+    </div>
+    {% endif %}
+</dl>
+{% endblock %}
+
+{% block navigation %}
+{% if user|can_manage_league:item %}
+<a href="{% url 'role-group-list' item.slug %}">Manage Roles</a>
+<a href="{% url 'message-template-list' item.slug %}">Manage Message Templates</a>
+<a href="{% url 'event-template-list' item.slug %}">Manage Event Templates</a>
+<a href="{% url 'application-form-template-list' item.slug %}">Manage Application Form Templates</a>
+{% endif %}
+{% endblock %}

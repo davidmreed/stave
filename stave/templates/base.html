@@ -25,14 +25,12 @@
                 <li><a href="{% url 'home' %}"><strong>Stave</strong></a> <small><strong style="color: darkred;">BETA</strong></small></li>
                 <li><a href="{% url 'league-list' %}">Leagues</a></li>
                 <li><a href="{% url 'event-list' %}">Events</a></li>
+                <li><a target="_blank" href="https://docs.stave.app/">Docs</a></li>
             </ul>
             </div>
             <div>
                 <ul>
-                <li><a target="_blank" href="https://docs.stave.app/">Docs</a></li>
                 {% if request.user.is_authenticated %}
-                <li><a href="{% url 'officiating-history' %}">Officiating History</a></li>
-                <li><a href="{% url 'my-applications' %}">My Applications</a></li>
                 <li><a href="{% url 'profile' %}">My Account</a></li>
                 <li><a href="{% url 'account_logout' %}">Logout</a></li>
                 {% else %}

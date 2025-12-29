@@ -5,9 +5,13 @@
 <h2>My Applications</h2>
 
 <ul>
-    {% for application in application_list %}
-    <li><a href="{% url 'view-application' application.id %}">{{ application.form.event.name }}</a></li>
+    {% for application in page_obj %}
+    <li>
+        <a href="{% url 'view-application' application.id %}">{{ application.form.event.name }}</a>
+    </li>
     {% endfor %}
 </ul>
+
+{% include "stave/partials/pagination.html" with page_obj=page_obj only %}
 
 {% endblock %}

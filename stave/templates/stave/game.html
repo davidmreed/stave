@@ -1,0 +1,38 @@
+{% extends card_kind %}
+{% load stave_tags %}
+
+{% block header %}
+Game {{ item.order_key }} ({{ item.start_time|time }}&ndash;{{ item.end_time|time }} {{ item.start_time|tzname }})
+{% endblock %}
+
+{% block actions %}
+{% with can_manage_this_event=user|can_manage_event:item.event %}
+{% if can_manage_this_event %}
+<a role="button" href="{% url 'event-edit' item.event.league.slug item.event.slug %}">Edit</a>
+{% endif %}
+{% endwith %}
+{% endblock %}
+
+{% block metadata %}
+<dl>
+    <div>
+        <dt>Association</dt>
+        <dd>{{ item.get_association_display }}</dd>
+    </div>
+    <div>
+        <dt>Type</dt>
+        <dd>{{ item.get_kind_display }}</dd>
+    </div>
+    <div>
+        <dt>Home</dt>
+        <dd>{{ item.home_league}} {{ item.home_team }}</dd>
+    </div>
+    <div>
+        <dt>Visitor</dt>
+        <dd>{{ item.visiting_league}} {{ item.visiting_team }}</dd>
+    </div>
+</dl>
+{% endblock %}
+
+{% block navigation %}
+{% endblock %}
