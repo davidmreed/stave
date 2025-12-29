@@ -11,10 +11,12 @@
 {% endblock %}
 
 {% block description %}
+{% if card_kind == "stave/mini_card.html" %}
 {% timezone item.league.time_zone %}
 {{ item.start_date }}{% if item.start_date != item.end_date %}&ndash;{{ item.end_date }}{% endif %},
 {{ item.league }}
 {% endtimezone %}
+{% endif %}
 {% endblock %}
 
 {% block metadata %}

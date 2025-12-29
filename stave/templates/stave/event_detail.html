@@ -23,7 +23,7 @@
 <header>
     <h2>Application Forms</h2>
     {% if can_manage_this_event %}
-    <div class="header-buttons">
+    <div class="inline">
         <a href="{% url 'form-create' event.league.slug event.slug %}" role="button">Create Form</a>
     </div>
     {% endif %}
@@ -37,7 +37,7 @@
 <header>
     <h2>Games</h2>
     {% if can_manage_this_event %}
-    <div class="header-buttons">
+    <div class="inline">
         <a href="{% url 'event-edit' event.league.slug event.slug %}{% querystring action='add'%}" role="button">Create Game</a>
     </div>
     {% endif %}

@@ -1,7 +1,7 @@
 {% extends "stave/event.html" %}
 {% block navigation %}
 {% for application_form in item.application_forms.all %}
-<span style="display: inline; margin-right: 1rem;">
+<div>
     <strong>
         <a href="{{ application_form.get_absolute_url }}"">{{ application_form.role_group_names }}</a>
     </strong>
@@ -19,6 +19,6 @@
         </a>
     </span>
     {% endif %}
-</span>
+</div>
 {% endfor %}
 {% endblock %}

@@ -29,17 +29,13 @@ Showing {{ application_forms|length }} of {{ application_forms.paginator.count }
     <header>
         <h2>My Applications</h2>
     </header>
-<ul>
 {% for application in applications %}
-<li>
-    {% include "stave/event_applied_card.html" with item=application.form.event application=application user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
-</li>
+{% include "stave/event_applied_card.html" with item=application.form.event application=application user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
 {% empty %}
 <p>
 You don't have any applications pending right now.
 </p>
 {% endfor %}
-</ul>
 Showing {{ applications|length }} of {{ applications.paginator.count }}.
 <a href="{% url 'my-applications' %}">See all my applications</a>
 {% url 'calendar-user' request.user.id as url %}
@@ -50,15 +46,11 @@ Showing {{ applications|length }} of {{ applications.paginator.count }}.
     <header>
         <h2>Staffing</h2>
     </header>
-<ul>
 {% for event in events %}
-<li>
 {% include "stave/partials/event_action_card.html" with item=event user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
-</li>
 {% empty %}
 You aren't managing any events.
 {% endfor %}
-</ul>
 Showing {{ events|length }} of {{ events.paginator.count }}.
 <a href="{% url 'my-events' %}">See all my events</a>
 {% url 'calendar-user' request.user.id as url %}
@@ -70,11 +62,8 @@ Showing {{ events|length }} of {{ events.paginator.count }}.
     <h2>My Leagues</h2>
 </header>
 
-<ul>
 {% for league in leagues %}
-    <li>
-        {% include "stave/league.html" with item=league user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
-    </li>
+{% include "stave/league.html" with item=league user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
 {% endfor %}
 Showing {{ leagues|length }} of {{ leagues.paginator.count }}.
 <a href="{% url 'my-leagues' %}">See all my leagues</a>

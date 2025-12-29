@@ -24,7 +24,7 @@ urlpatterns = [
     path("events/", view=views.EventListView.as_view(), name="event-list"),
     path("my-events/", view=views.MyEventsView.as_view(), name="my-events"),
     path("leagues/", view=views.LeagueListView.as_view(), name="league-list"),
-    path("my-leagues", view=views.MyLeaguesView.as_view(), name="my-leagues"),
+    path("my-leagues/", view=views.MyLeaguesView.as_view(), name="my-leagues"),
     path(
         "leagues/create/", view=views.LeagueCreateView.as_view(), name="league-create"
     ),

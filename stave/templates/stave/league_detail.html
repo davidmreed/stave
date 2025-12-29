@@ -22,6 +22,7 @@
 </div>
 {% endif %}
 
+<section>
 <header>
     <h2>Upcoming Events</h2>
     {% if request.user|can_manage_league_events:league %}
@@ -40,5 +41,6 @@
 <p>
   There are no upcoming events scheduled right now.
 </p>
+</section>
 {% endfor %}
 {% endblock %}

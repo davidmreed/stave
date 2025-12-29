@@ -12,6 +12,10 @@
     </header>
     {% block metadata %}
     {% endblock %}
+    <div>
+    {% block description %}
+    {% endblock %}
+    </div>
     <nav>
     {% if item.get_absolute_url != request.path %}
     <a href="{{ item.get_absolute_url }}">View</a>

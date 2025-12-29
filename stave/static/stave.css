@@ -24,8 +24,26 @@ header nav {
     width: 100%;
 }
 
+section nav, article nav, main nav {
+    justify-content: normal;
+    flex-wrap: wrap;
+}
+
+section nav > *, article nav > *, main nav > * {
+    padding-right: 1rem;
+}
+
 article h1, h2, h3, h4, h5, h6 {
     margin-bottom: 0;
+}
+
+section h2 {
+    padding-top: 1rem;
+    padding-bottom: 0.5rem;
+}
+
+article h3 {
+    font-size: 110%;
 }
 
 article header:not(:first-child) {
@@ -79,7 +97,7 @@ dl {
     flex-wrap: wrap;
     border-left: 0.25rem solid var(--pico-primary);
     padding-left: 1rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
 }
 
 article dl {
