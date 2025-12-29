@@ -193,11 +193,13 @@ urlpatterns = [
         name="send-email",
     ),
     path(
-        "open-applications",
+        "open-applications/",
         views.OpenApplicationsListView.as_view(),
         name="open-applications",
     ),
-    path("my-applications", views.MyApplicationsView.as_view(), name="my-applications"),
+    path(
+        "my-applications/", views.MyApplicationsView.as_view(), name="my-applications"
+    ),
     path(
         "application/<uuid:pk>/",
         view=views.SingleApplicationView.as_view(),
