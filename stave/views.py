@@ -219,10 +219,14 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
             application_form_queryset = application_form_queryset.exclude(
                 applications__user=self.request.user
             )
-            application_queryset = models.Application.objects.filter(
-                user=self.request.user,
-                form__event__start_date__gt=datetime.now(),
-            ).exclude(status=models.ApplicationStatus.WITHDRAWN)
+            application_queryset = (
+                models.Application.objects.filter(
+                    user=self.request.user,
+                    form__event__start_date__gt=datetime.now(),
+                )
+                .exclude(status=models.ApplicationStatus.WITHDRAWN)
+                .order_by("form__event__start_date")
+            )
             event_queryset = models.Event.objects.manageable(self.request.user).exclude(
                 status__in=[models.EventStatus.CANCELED, models.EventStatus.COMPLETE]
             )
