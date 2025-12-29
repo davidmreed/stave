@@ -3,20 +3,6 @@
 
 {% block header %}
 {{ item.role_groups.all|commalist }}
-{% with can_manage_this_event=user|can_manage_event:item.event %}
-{% if can_manage_this_event %}
-{% if item.applications.open|length %}
-<span class="cta">
-    <strong>{{ item.applications.open|length }}</strong> open
-</span>
-{% endif %}
-{% if item.applications.pending %}
-<span class="cta">
-    <strong> {{ item.applications.pending|length }}</strong> pending
-</span>
-{% endif %}
-{% endif %}
-{% endwith %}
 {% endblock %}
 
 {% block actions %}
@@ -40,9 +26,23 @@
 {% block navigation %}
 {% with can_manage_this_event=user|can_manage_event:item.event is_staffed_on_event=user|is_staffed_on_event:item.event %}
 {% if can_manage_this_event %}
-<a href="{% url 'form-applications' item.event.league.slug item.event.slug item.slug %}">Applications</a>
+<div>
+    <a href="{% url 'form-applications' item.event.league.slug item.event.slug item.slug %}">Applications</a>
+    {% if item.applications.open|length %}
+    <span class="cta">
+        <strong>{{ item.applications.open|length }} open</strong>
+    </span>
+    {% endif %}
+</div>
 <a href="{% url 'crew-builder' item.event.league.slug item.event.slug item.slug %}">Crew Builder</a>
-<a href="{% url 'form-comms' item.event.league.slug item.event.slug item.slug %}">Comm Center</a>
+<div>
+    <a href="{% url 'form-comms' item.event.league.slug item.event.slug item.slug %}">Comm Center</a>
+    {% if item.applications.pending %}
+    <span class="cta">
+        <strong> {{ item.applications.pending|length }} pending</strong>
+     </span>
+    {% endif %}
+</div>
 {% if can_manage_this_event or is_staffed_on_event %}
 <a href="{{ item.get_schedule_url }}">Staffing Schedule</a>
 {% endif %}

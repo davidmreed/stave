@@ -31,7 +31,9 @@ Showing {{ application_forms|length }} of {{ application_forms.paginator.count }
     </header>
 <ul>
 {% for application in applications %}
-<li><a href="{% url 'view-application' application.id %}">{{ application.form.event }} ({{application.user_visible_status.label|title}})</a></li>
+<li>
+    {% include "stave/event_applied_card.html" with item=application.form.event application=application user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
+</li>
 {% empty %}
 <p>
 You don't have any applications pending right now.

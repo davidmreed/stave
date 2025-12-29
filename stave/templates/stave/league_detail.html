@@ -12,6 +12,10 @@
 
 {% include "stave/league.html" with item=league user=request.user card_kind="stave/page_card.html" csrf_token=csrf_token only %}
 
+<p>
+{{ league.description|markdownify }}
+</p>
+
 {% if league.logo %}
 <div style="float: right; max-width: 20%; max-height: 20%;">
 <img src="{{ league.logo.url }}" alt="{{ league.name }} logo">

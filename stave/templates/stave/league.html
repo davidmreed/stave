@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block description %}
-{{ item.description|markdownify }}
+{{ item.description|markdownify|truncatewords:"12" }}
 {% endblock %}
 
 {% block metadata %}
@@ -32,9 +32,9 @@
 
 {% block navigation %}
 {% if user|can_manage_league:item %}
-<a href="{% url 'role-group-list' item.slug %}">Manage Roles</a>
-<a href="{% url 'message-template-list' item.slug %}">Manage Message Templates</a>
-<a href="{% url 'event-template-list' item.slug %}">Manage Event Templates</a>
-<a href="{% url 'application-form-template-list' item.slug %}">Manage Application Form Templates</a>
+<a href="{% url 'role-group-list' item.slug %}">Roles</a>
+<a href="{% url 'message-template-list' item.slug %}">Message Templates</a>
+<a href="{% url 'event-template-list' item.slug %}">Event Templates</a>
+<a href="{% url 'application-form-template-list' item.slug %}">Application Form Templates</a>
 {% endif %}
 {% endblock %}

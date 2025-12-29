@@ -62,6 +62,7 @@
 {% endblock %}
 
 {% block navigation %}
+{% if card_kind == "stave/page_card.html" %}
 {% with can_manage_this_event=user|can_manage_event:item is_staffed_on_event=user|is_staffed_on_event:item %}
     {% if can_manage_this_event or is_staffed_on_event %}
     <a href="{% url 'event-schedule' item.league.slug item.slug %}">Staffing Schedule</a>
@@ -70,4 +71,13 @@
     <a href="{% url 'event-staff-list' item.league.slug item.slug %}">Staff List</a>
     {% endif %}
 {% endwith %}
+{% else %}
+{% for application_form in user|listed_application_forms:item %}
+<div>
+<a href="{{ application_form.get_absolute_url }}">
+    Apply as {{ application_form.role_groups.all|commalist }}
+</a>{% if application_form.close_date %} (closes {{ application_form.close_date }}){% endif %}
+</div>
+{% endfor %}
+{% endif %}
 {% endblock %}
