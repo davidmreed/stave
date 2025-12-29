@@ -8,6 +8,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from django import views
+from django.core.paginator import Paginator
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
@@ -104,9 +105,19 @@ class MediaView(views.View):
         return HttpResponseNotFound()
 
 
+class OpenApplicationsListView(generic.ListView):
+    template_name = "stave/open_applications_list.html"
+    model = models.Application
+    paginate_by = 10
+
+    def get_queryset(self) -> QuerySet[models.ApplicationForm]:
+        return models.ApplicationForm.objects.listed(self.request.user)
+
+
 class MyApplicationsView(LoginRequiredMixin, generic.ListView):
     template_name = "stave/my_applications.html"
     model = models.Application
+    paginate_by = 10
 
     def get_queryset(self) -> QuerySet[models.Application]:
         return (
@@ -115,6 +126,24 @@ class MyApplicationsView(LoginRequiredMixin, generic.ListView):
             .filter(user=self.request.user)
             .order_by("-form__event__start_date")
         )
+
+
+class MyEventsView(LoginRequiredMixin, generic.ListView):
+    template_name = "stave/my_events_list.html"
+    model = models.Event
+    paginate_by = 10
+
+    def get_queryset(self) -> QuerySet[models.Event]:
+        return models.Event.objects.manageable(self.request.user)
+
+
+class MyLeaguesView(LoginRequiredMixin, generic.ListView):
+    template_name = "stave/my_leagues_list.html"
+    model = models.League
+    paginate_by = 10
+
+    def get_queryset(self) -> QuerySet[models.League]:
+        return models.League.objects.manageable(self.request.user)
 
 
 class OfficiatingHistoryView(LoginRequiredMixin, generic.ListView):
@@ -175,32 +204,39 @@ class OfficiatingHistoryView(LoginRequiredMixin, generic.ListView):
         return context
 
 
-class HomeView(generic.TemplateView):
+class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
     template_name = "stave/home.html"
 
-    def get_context_data(self, *args, **kwargs):
-        # TODO: switch to typed approach
-        context = super().get_context_data(*args, **kwargs)
+    def get_context(self) -> contexts.HomeInputs:
+        application_form_queryset = models.ApplicationForm.objects.listed(
+            self.request.user
+        )
+        event_queryset = models.Event.objects.none()
+        application_queryset = models.Application.objects.none()
+        league_queryset = models.League.objects.none()
 
-        application_forms = models.ApplicationForm.objects.listed(self.request.user)
         if self.request.user.is_authenticated:
-            application_forms = application_forms.exclude(
+            application_form_queryset = application_form_queryset.exclude(
                 applications__user=self.request.user
             )
-            applications = models.Application.objects.filter(
+            application_queryset = models.Application.objects.filter(
                 user=self.request.user,
                 form__event__start_date__gt=datetime.now(),
             ).exclude(status=models.ApplicationStatus.WITHDRAWN)
-            events = models.Event.objects.manageable(self.request.user).exclude(
+            event_queryset = models.Event.objects.manageable(self.request.user).exclude(
                 status__in=[models.EventStatus.CANCELED, models.EventStatus.COMPLETE]
             )
-        else:
-            applications = []
-            events = []
+            league_queryset = models.League.objects.manageable(self.request.user)
 
-        context["application_forms"] = application_forms
-        context["events"] = events
-        context["applications"] = applications
+        return contexts.HomeInputs(
+            application_forms=Paginator(application_form_queryset, 10).page(1),
+            applications=Paginator(application_queryset, 10).get_page(1),
+            events=Paginator(event_queryset, 10).get_page(1),
+            leagues=Paginator(league_queryset, 10).get_page(1),
+        )
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
         context["meta"] = Meta(
             site_name=gettext_lazy("Stave"),
             title=gettext_lazy("Stave: Signups and Staffing for Roller Derby"),
@@ -356,6 +392,7 @@ class MessageTemplateListView(
 ):
     template_name = "stave/message_template_list.html"
     model = models.MessageTemplate
+    paginate_by = 10
 
     def get_queryset(self) -> QuerySet[models.MessageTemplate]:
         return self.league.message_templates.all()
@@ -366,6 +403,7 @@ class MessageTemplateCreateView(
 ):
     template_name = "stave/message_template_edit.html"
     form_class = forms.MessageTemplateForm
+    paginate_by = 10
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
@@ -433,6 +471,7 @@ class MessageTemplateDeleteView(TenantedGenericDeleteView[models.MessageTemplate
 class RoleGroupListView(LoginRequiredMixin, TenantedObjectMixin, generic.ListView):
     template_name = "stave/role_group_list.html"
     model = models.RoleGroup
+    paginate_by = 10
 
     def get_queryset(self) -> QuerySet[models.RoleGroup]:
         return self.league.role_groups.all()
@@ -495,6 +534,7 @@ class RoleGroupDeleteView(TenantedGenericDeleteView[models.RoleGroup]):
 class EventTemplateListView(LoginRequiredMixin, TenantedObjectMixin, generic.ListView):
     template_name = "stave/event_template_list.html"
     model = models.EventTemplate
+    paginate_by = 10
 
     def get_queryset(self) -> QuerySet[models.EventTemplate]:
         return self.league.event_templates.all()
@@ -552,6 +592,7 @@ class ApplicationFormTemplateListView(
 ):
     template_name = "stave/application_form_template_list.html"
     model = models.ApplicationFormTemplate
+    paginate_by = 10
 
     def get_queryset(self) -> QuerySet[models.ApplicationFormTemplate]:
         return self.league.application_form_templates.all()
@@ -872,6 +913,7 @@ class LeagueDetailView(
 class LeagueListView(generic.ListView):
     template_name = "stave/league_list.html"
     model = models.League
+    paginate_by = 10
 
     def get_queryset(self) -> QuerySet[models.League]:
         return models.League.objects.visible(self.request.user)
@@ -880,6 +922,7 @@ class LeagueListView(generic.ListView):
 class EventListView(generic.ListView):
     template_name = "stave/event_list.html"
     model = models.Event
+    paginate_by = 10
 
     def get_queryset(self) -> QuerySet[models.Event]:
         return models.Event.objects.listed(self.request.user)

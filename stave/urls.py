@@ -22,7 +22,9 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("profile/", view=views.ProfileView.as_view(), name="profile"),
     path("events/", view=views.EventListView.as_view(), name="event-list"),
+    path("my-events/", view=views.MyEventsView.as_view(), name="my-events"),
     path("leagues/", view=views.LeagueListView.as_view(), name="league-list"),
+    path("my-leagues/", view=views.MyLeaguesView.as_view(), name="my-leagues"),
     path(
         "leagues/create/", view=views.LeagueCreateView.as_view(), name="league-create"
     ),
@@ -190,7 +192,14 @@ urlpatterns = [
         views.SendEmailView.as_view(),
         name="send-email",
     ),
-    path("my-applications", views.MyApplicationsView.as_view(), name="my-applications"),
+    path(
+        "open-applications/",
+        views.OpenApplicationsListView.as_view(),
+        name="open-applications",
+    ),
+    path(
+        "my-applications/", views.MyApplicationsView.as_view(), name="my-applications"
+    ),
     path(
         "application/<uuid:pk>/",
         view=views.SingleApplicationView.as_view(),

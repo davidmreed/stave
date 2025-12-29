@@ -1,14 +1,15 @@
 {% extends "base.html" %}
 {% load stave_tags %}
+{% inputs 'HomeInputs' %}
 
 {% block content %}
 
-
 <p style="text-align: center;">
-Welcome to Stave, a free and open source platform for roller derby signups and staffing.<br>
-<small>
-Getting started? Read the <a target="_blank" href="https://docs.stave.app/">docs</a> or watch <a href="#video-guides">videos below</a>.
-<a href="mailto:david@ktema.org">Contact Stacktrace</a> with questions.</small>
+    Welcome to Stave, a free and open source platform for roller derby signups and staffing.<br>
+    <small>
+        Getting started? Read the <a target="_blank" href="https://docs.stave.app/">docs</a> or watch <a href="#video-guides">videos below</a>.
+        <a href="mailto:david@ktema.org">Contact Stacktrace</a> with questions.
+    </small>
 </p>
 
 <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
@@ -16,20 +17,10 @@ Getting started? Read the <a target="_blank" href="https://docs.stave.app/">docs
 <article style="flex: 1 1 auto;">
     <header><h2>Open Applications</h2></header>
 
-<ul>
-{% regroup application_forms by event as app_forms_by_event %}
-{% for by_event in app_forms_by_event %}
-    <li>
-        <a href="{{ by_event.grouper.get_absolute_url }}">{{ by_event.grouper }} </a><br>
-        {% for application_form in by_event.list %}
-        <a href="{{ application_form.get_absolute_url }}">Apply as {{ application_form.role_groups.all|commalist }}</a>{% if application_form.close_date %} (closes {{ application_form.close_date }}){% endif %}{% if not forloop.last %}, {% endif %}
-        {% endfor %}
-        <br><small>{{ by_event.grouper.start_date }}{% if by_event.grouper.start_date != by_event.grouper.end_date %}&ndash;{{ by_event.grouper.end_date }}{% endif %}, {{ by_event.grouper.league }}, {{ by_event.grouper.league.location }}</small>
-    </li>
-{% empty %}
-There aren't any open applications for you right now.
-{% endfor %}
-</ul>
+{% include "stave/partials/grouped_application_list.html" with page_obj=application_forms user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
+
+Showing {{ application_forms|length }} of {{ application_forms.paginator.count }}.
+<a href="{% url 'open-applications' %}">See all open applications</a>
 </article>
 
 {% if request.user.is_authenticated %}
@@ -38,50 +29,54 @@ There aren't any open applications for you right now.
     <header>
         <h2>My Applications</h2>
     </header>
-
-<ul>
 {% for application in applications %}
-<li><a href="{% url 'view-application' application.id %}">{{ application.form.event }} ({{application.user_visible_status.label|title}})</a></li>
+{% include "stave/event_applied_card.html" with item=application.form.event application=application user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
 {% empty %}
 <p>
-You don't have any open applications right now.
+You don't have any applications pending right now.
 </p>
 {% endfor %}
-</ul>
+Showing {{ applications|length }} of {{ applications.paginator.count }}.
+<a href="{% url 'my-applications' %}">See all my applications</a>
 {% url 'calendar-user' request.user.id as url %}
 {% include "stave/partials/calendar.html" with url=url only %}
 </article>
 
 <article style="flex: 1 1 auto;">
     <header>
-        <h2>My Events</h2>
+        <h2>Staffing</h2>
     </header>
-<ul>
 {% for event in events %}
-<li>
-    <a href="{% url 'event-detail' event.league.slug event.slug %}">
-        {{ event }}
-    </a>
-    <ul>
-    {% for application_form in event.application_forms.all %}
-    <li style="display: inline; margin-right: 1rem;"><strong>{{ application_form.role_group_names }}</strong>
-    {% if application_form.applications.open|length %}
-    <span class="cta">{{ application_form.applications.open|length }} open</span>
-    {% endif %}
-    {% if application_form.applications.pending|length %}
-    <span class="cta">{{ application_form.applications.pending|length }} pending</span>
-    {% endif %}
-    </li>
-    {% endfor %}
-    </ul>
-</li>
+{% include "stave/partials/event_action_card.html" with item=event user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
 {% empty %}
 You aren't managing any events.
 {% endfor %}
-</ul>
+Showing {{ events|length }} of {{ events.paginator.count }}.
+<a href="{% url 'my-events' %}">See all my events</a>
 {% url 'calendar-user' request.user.id as url %}
 {% include "stave/partials/calendar.html" with url=url only %}
 </article>
+
+<article style="flex: 1 1 auto;">
+<header>
+    <h2>My Leagues</h2>
+</header>
+
+{% for league in leagues %}
+{% include "stave/league.html" with item=league user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
+{% endfor %}
+Showing {{ leagues|length }} of {{ leagues.paginator.count }}.
+<a href="{% url 'my-leagues' %}">See all my leagues</a>
+</article>
+
+<article style="flex: 1 1 auto;">
+<header>
+    <h2>Officiating History</h2>
+</header>
+
+<a href="{% url 'officiating-history' %}">View my Stave history</a>
+</article>
+
 {% else %}
 <article style="flex: 1 1 auto;">
     <header><h2>Join Now</h2></header>

@@ -1,0 +1,56 @@
+{% extends card_kind %}
+{% load stave_tags %}
+{% load markdownify %}
+
+{% block header %}
+{{ item.role_groups.all|commalist }}
+{% endblock %}
+
+{% block actions %}
+{% with can_manage_this_event=user|can_manage_event:item.event %}
+{% if can_manage_this_event %}
+<form class="inline" method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="redirect_url" value="{{ item.event.get_absolute_url }}">
+    {% if item.closed %}
+    <input type="submit" value="Reopen" formaction="{% url 'form-open' item.event.league.slug item.event.slug item.slug %}">
+    {% else %}
+    <input type="submit" value="Close" formaction="{% url 'form-close' item.event.league.slug item.event.slug item.slug %}">
+    {% endif %}
+</form>
+<a role="button" href="{% url 'form-update' item.event.league.slug item.event.slug item.slug %}">Edit</a>
+<a role="button" href="{% url 'form-delete' item.event.league.slug item.event.slug item.slug %}">Delete</a>
+{% endif %}
+{% endwith %}
+{% endblock %}
+
+{% block description %}
+{{ item.intro_text|markdownify|truncatewords:"20"}}
+{% endblock %}
+
+{% block navigation %}
+{% with can_manage_this_event=user|can_manage_event:item.event is_staffed_on_event=user|is_staffed_on_event:item.event %}
+{% if can_manage_this_event %}
+<div>
+    <a href="{% url 'form-applications' item.event.league.slug item.event.slug item.slug %}">Applications</a>
+    {% if item.applications.open|length %}
+    <span class="cta">
+        <strong>{{ item.applications.open|length }} open</strong>
+    </span>
+    {% endif %}
+</div>
+<a href="{% url 'crew-builder' item.event.league.slug item.event.slug item.slug %}">Crew Builder</a>
+<div>
+    <a href="{% url 'form-comms' item.event.league.slug item.event.slug item.slug %}">Comm Center</a>
+    {% if item.applications.pending %}
+    <span class="cta">
+        <strong> {{ item.applications.pending|length }} pending</strong>
+     </span>
+    {% endif %}
+</div>
+{% if can_manage_this_event or is_staffed_on_event %}
+<a href="{{ item.get_schedule_url }}">Staffing Schedule</a>
+{% endif %}
+{% endif %}
+{% endwith %}
+{% endblock %}

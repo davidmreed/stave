@@ -1,0 +1,19 @@
+<header>
+    <h1>
+        {% block header %}
+        {{ item }}
+        {% endblock %}
+    </h1>
+    <div class="inline">
+        {% block actions %}
+        {% endblock %}
+    </div>
+</header>
+<div>
+{% block metadata %}
+{% endblock %}
+</div>
+<nav>
+{% block navigation %}
+{% endblock %}
+</nav>

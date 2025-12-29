@@ -1,0 +1,17 @@
+<section>
+    <header>
+        <strong>
+        {% block header %}
+        <a href="{{ item.get_absolute_url }}">{{ item }}</a>
+        {% endblock %}
+        </strong>
+    </header>
+    <small>
+    {% block description %}
+    {% endblock %}
+    <nav>
+    {% block navigation %}
+    {% endblock %}
+    </nav>
+    </small>
+</section>

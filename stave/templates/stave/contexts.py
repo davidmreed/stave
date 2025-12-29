@@ -2,7 +2,7 @@ from dataclasses import dataclass, fields
 from typing import Tuple
 from uuid import UUID
 
-from django.contrib.auth.models import AnonymousUser
+from django.core.paginator import Page
 from django.db.models import QuerySet
 from django.http import HttpRequest
 
@@ -129,15 +129,6 @@ class EventDetailInputs:
 
 
 @dataclass
-class EventCardInputs(EventDetailInputs):
-    user: models.User | AnonymousUser
-    show_host: bool
-    show_details: bool
-    show_forms: bool
-    show_games: bool
-
-
-@dataclass
 class ParentChildCreateUpdateInputs:
     form: forms.ParentChildForm
     parent_name: str
@@ -182,3 +173,11 @@ class CommCenterInputs:
 class StaffingHeaderInputs:
     form: models.ApplicationForm
     request: HttpRequest
+
+
+@dataclass
+class HomeInputs:
+    application_forms: Page
+    applications: Page
+    events: Page
+    leagues: Page
