@@ -654,7 +654,10 @@ class EventQuerySet(models.QuerySet["Event"]):
                 ]
             )
 
-    def manageable(self, user: User) -> models.QuerySet["Event"]:
+    def manageable(self, user: User | AnonymousUser) -> models.QuerySet["Event"]:
+        if isinstance(user, AnonymousUser):
+            return self.none()
+
         return self.filter(
             league__user_permissions__permission=UserPermission.EVENT_MANAGER,
             league__user_permissions__user=user,
@@ -786,7 +789,10 @@ class RoleGroupCrewAssignment(models.Model):
 
 
 class GameQuerySet(models.QuerySet["Game"]):
-    def manageable(self, user: User) -> models.QuerySet["Game"]:
+    def manageable(self, user: User | AnonymousUser) -> models.QuerySet["Game"]:
+        if isinstance(user, AnonymousUser):
+            return self.none()
+
         return self.filter(
             event__league__user_permissions__permission=UserPermission.EVENT_MANAGER,
             event__league__user_permissions__user=user,
