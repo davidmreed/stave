@@ -75,6 +75,8 @@ class MyEventsFeed(StaveEventFeed):
             )
             .filter(~Q(status=models.EventStatus.CANCELED))
             .distinct()
+            .select_related("league")
+            .prefetch_related("games")
         )
 
 
@@ -91,7 +93,9 @@ class LeagueEventsFeed(StaveEventFeed):
         return _("Events for {league} from Stave.app").format(league=obj)
 
     def items(self, obj: models.League) -> QuerySet[models.Event]:
-        return obj.events.listed(None)
+        return (
+            obj.events.listed(None).select_related("league").prefetch_related("games")
+        )
 
 
 class AllEventsFeed(StaveEventFeed):
@@ -102,4 +106,8 @@ class AllEventsFeed(StaveEventFeed):
         return _("All events from Stave.app")
 
     def items(self) -> QuerySet[models.Event]:
-        return models.Event.objects.listed(None)
+        return (
+            models.Event.objects.listed(None)
+            .select_related("league")
+            .prefetch_related("games")
+        )
