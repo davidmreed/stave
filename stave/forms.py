@@ -672,21 +672,33 @@ class ApplicationFormForm(forms.ModelForm):
                 f for f in instance.requires_profile_fields if f != "preferred_name"
             ]
         super().__init__(*args, **kwargs)
-        if event:
-            self.fields["role_groups"].queryset = event.role_groups.all()
-            self.fields["invitation_email_template"].queryset = self.fields[
-                "rejection_email_template"
-            ].queryset = self.fields["schedule_email_template"].queryset = (
-                event.league.message_templates.all()
-            )
-        elif self.instance:
-            self.fields["role_groups"].queryset = self.instance.event.role_groups.all()
 
-            self.fields["invitation_email_template"].queryset = self.fields[
-                "rejection_email_template"
-            ].queryset = self.fields["schedule_email_template"].queryset = (
-                self.instance.event.league.message_templates.all()
+        assert event or self.instance
+        this_event = event or self.instance.event
+        assert this_event
+
+        # Only role groups not already assigned to a different form are in play
+        self.fields["role_groups"].queryset = this_event.role_groups.exclude(
+            applicationform__event=this_event
+        ).distinct()
+        if self.instance:
+            self.fields[
+                "role_groups"
+            ].queryset |= self.instance.role_groups.all().distinct()
+
+        if not self.fields["role_groups"].queryset.exists():
+            self.cleaned_data = {}
+            self.add_error(
+                None,
+                _(
+                    "All of the Role Groups for this Event are already assigned to Application Forms. You won't be able to add a new Application Form."
+                ),
             )
+        self.fields["invitation_email_template"].queryset = self.fields[
+            "rejection_email_template"
+        ].queryset = self.fields["schedule_email_template"].queryset = (
+            this_event.league.message_templates.all()
+        )
 
         if self.instance and not self.instance.editable:
             # Our instance might not be editable due to receiving applications.
