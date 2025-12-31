@@ -216,8 +216,11 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
         league_queryset = models.League.objects.none()
 
         if self.request.user.is_authenticated:
-            application_form_queryset = application_form_queryset.exclude(
-                applications__user=self.request.user
+            application_form_queryset = (
+                application_form_queryset.exclude(applications__user=self.request.user)
+                .select_related("event")
+                .select_related("event__league")
+                .prefetch_related("role_groups")
             )
             application_queryset = (
                 models.Application.objects.filter(
@@ -226,9 +229,21 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
                 )
                 .exclude(status=models.ApplicationStatus.WITHDRAWN)
                 .order_by("form__event__start_date")
+                .select_related("form")
+                .select_related("form__event")
+                .select_related("form__event__league")
             )
-            event_queryset = models.Event.objects.manageable(self.request.user).exclude(
-                status__in=[models.EventStatus.CANCELED, models.EventStatus.COMPLETE]
+            event_queryset = (
+                models.Event.objects.manageable(self.request.user)
+                .exclude(
+                    status__in=[
+                        models.EventStatus.CANCELED,
+                        models.EventStatus.COMPLETE,
+                    ]
+                )
+                .select_related("league")
+                .prefetch_related("application_forms")
+                .prefetch_related("application_forms__role_groups")
             )
             league_queryset = models.League.objects.manageable(self.request.user)
 
@@ -929,7 +944,12 @@ class EventListView(generic.ListView):
     paginate_by = 10
 
     def get_queryset(self) -> QuerySet[models.Event]:
-        return models.Event.objects.listed(self.request.user)
+        return (
+            models.Event.objects.listed(self.request.user)
+            .prefetch_related("games")
+            .prefetch_related("application_forms")
+            .select_related("league")
+        )
 
 
 class ApplicationFormCreateUpdateView(

@@ -135,6 +135,9 @@ class AvailabilityManager:
                     queryset=models.Role.objects.select_related("role_group"),
                 ),
                 Prefetch(
+                    "applications__availability_by_game",
+                ),
+                Prefetch(
                     "event__games",
                     queryset=models.Game.objects.filter(
                         role_groups__in=application_form.role_groups.all()
