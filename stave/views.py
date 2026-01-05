@@ -1934,6 +1934,8 @@ class SendEmailView(LoginRequiredMixin, views.View):
             sender=models.User(),
         )
 
+        initial = {}
+
         # If we have a GET param with a user id in it, filter down to that.
         # (Supplying the applicant query if we do not have a member_queryset or email_type)
         if target_member := request.GET.get("recipient"):
