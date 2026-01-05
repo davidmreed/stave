@@ -1940,9 +1940,7 @@ class SendEmailView(LoginRequiredMixin, views.View):
             if member_queryset is None:
                 member_queryset = models.User.objects.filter(
                     id__in=application_form.applications.all().values("user_id")
-                ).distinct()application_form.applications.filter(user=member_queryset.first()).exclude(status=models.ApplicationStatus.WITHDRAWN).first()
-
-            member_queryset = member_queryset.filter(id=target_mem
+                ).distinct()
 
         if message_template := application_form.get_template_for_context_type(
             email_type
@@ -1954,7 +1952,11 @@ class SendEmailView(LoginRequiredMixin, views.View):
                     league=application_form.event.league,
                     event=application_form.event,
                     app_form=application_form,
-                    application=application_form.applications.filter(user=member_queryset.first()).exclude(status=models.ApplicationStatus.WITHDRAWN).first(),
+                    application=application_form.applications.filter(
+                        user=member_queryset.first()
+                    )
+                    .exclude(status=models.ApplicationStatus.WITHDRAWN)
+                    .first(),
                     user=member_queryset.first(),
                     sender=request.user,
                 )
