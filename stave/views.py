@@ -1942,6 +1942,8 @@ class SendEmailView(LoginRequiredMixin, views.View):
                     id__in=application_form.applications.all().values("user_id")
                 ).distinct()
 
+            member_queryset = member_queryset.filter(id=target_member)
+
         if message_template := application_form.get_template_for_context_type(
             email_type
         ):
