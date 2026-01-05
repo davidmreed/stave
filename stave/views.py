@@ -1925,31 +1925,28 @@ class SendEmailView(LoginRequiredMixin, views.View):
             email_type
         )
 
-        merge_context = models.MergeContext(
-            league=application_form.event.league,
-            event=application_form.event,
-            app_form=application_form,
+        empty_merge_context = models.MergeContext(
+            league=models.League(),
+            event=models.Event(),
+            app_form=models.ApplicationForm(),
             application=models.Application(),
-            # We don't have an actual user yet;
-            # this context is just to get the merge field names.
-            user=request.user,
-            sender=request.user,
+            user=models.User(),
+            sender=models.User(),
         )
+
+        initial = {}
 
         # If we have a GET param with a user id in it, filter down to that.
         # (Supplying the applicant query if we do not have a member_queryset or email_type)
         if target_member := request.GET.get("recipient"):
             if member_queryset is None:
                 member_queryset = models.User.objects.filter(
-                    id__in=application_form.applications.all().values("user_id")
+                    id__in=application_form.applications.exclude(
+                        status=models.ApplicationStatus.WITHDRAWN
+                    ).values("user_id")
                 ).distinct()
 
             member_queryset = member_queryset.filter(id=target_member)
-
-        initial = {}
-        if member_queryset.count() == 1:
-            # Set the `user` value on the merge_context
-            merge_context.user = member_queryset.first()
 
         if message_template := application_form.get_template_for_context_type(
             email_type
@@ -1957,6 +1954,18 @@ class SendEmailView(LoginRequiredMixin, views.View):
             from . import emails
 
             if member_queryset.count() == 1:
+                merge_context = models.MergeContext(
+                    league=application_form.event.league,
+                    event=application_form.event,
+                    app_form=application_form,
+                    application=application_form.applications.filter(
+                        user=member_queryset.first()
+                    )
+                    .exclude(status=models.ApplicationStatus.WITHDRAWN)
+                    .first(),
+                    user=member_queryset.first(),
+                    sender=request.user,
+                )
                 initial["subject"] = emails.substitute(
                     merge_context, message_template.subject
                 )
@@ -1982,7 +1991,7 @@ class SendEmailView(LoginRequiredMixin, views.View):
                     email_recipients_form=email_recipients_form,
                     kind=models.SendEmailContextType(email_type),
                     application_form=application_form,
-                    merge_fields=merge_context.get_merge_fields(),
+                    merge_fields=empty_merge_context.get_merge_fields(),
                     redirect_url=request.GET.get("redirect_url"),
                     recipient_count=member_queryset.count(),
                 )
