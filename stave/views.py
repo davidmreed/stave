@@ -1939,7 +1939,9 @@ class SendEmailView(LoginRequiredMixin, views.View):
         if target_member := request.GET.get("recipient"):
             if member_queryset is None:
                 member_queryset = models.User.objects.filter(
-                    id__in=application_form.applications.all().values("user_id")
+                    id__in=application_form.applications.exclude(
+                        status=models.ApplicationStatus.WITHDRAWN
+                    ).values("user_id")
                 ).distinct()
 
             member_queryset = member_queryset.filter(id=target_member)
