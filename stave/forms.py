@@ -556,7 +556,12 @@ class QuestionForm(forms.ModelForm):
                 self.fields["allow_other"].disabled = True
 
         if not self.kind:
-            kind_data = kwargs.get("data", {}).get(kwargs["prefix"] + "-kind")
+            breakpoint()
+            prefix = kwargs["prefix"]
+            if prefix:
+                kind_data = kwargs.get("data", {}).get(f"{prefix}-kind")
+            if not kind_data:
+                kind_data = kwargs.get("initial", {}).get("kind")
             if not kind_data:
                 raise Exception("No kind specified for question")
 
@@ -969,6 +974,15 @@ class EventTemplateCreateUpdateForm(ParentChildForm):
 
     def get_redirect_url(self) -> str:
         return reverse("event-template-list", args=[self.league.slug])
+
+
+class ApplicationFormFromTemplateForm(forms.ModelForm):
+    class Meta:
+        model = models.ApplicationForm
+        fields = []
+
+    def __init__(self, *args, league: models.League | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class BaseApplicationFormCreateUpdateForm(ParentChildForm):

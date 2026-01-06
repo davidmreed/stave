@@ -223,6 +223,16 @@ urlpatterns = [
         name="form-update-question",
     ),
     path(
+        "_/<slug:league_slug>/events/<slug:event_slug>/create-form-with-template/",
+        views.ApplicationFormCreateView.as_view(),
+        name="form-create-template-selector",
+    ),
+    path(
+        "_/<slug:league_slug>/events/<slug:event_slug>/create-form-with-template/<uuid:template_id>",
+        view=views.ApplicationFormCreateUpdateView.as_view(),
+        name="form-create-with-template",
+    ),
+    path(
         "_/<slug:league_slug>/events/<slug:event_slug>/create-form/",
         views.ApplicationFormCreateUpdateView.as_view(),
         name="form-create",

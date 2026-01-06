@@ -24,7 +24,7 @@
     <h2>Application Forms</h2>
     {% if can_manage_this_event %}
     <div class="inline">
-        <a href="{% url 'form-create' event.league.slug event.slug %}" role="button">Create Form</a>
+        <a href="{% url 'form-create-template-selector' event.league.slug event.slug %}" role="button">Create Form</a>
     </div>
     {% endif %}
 </header>

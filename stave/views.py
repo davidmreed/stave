@@ -1148,6 +1148,66 @@ class EventListView(generic.ListView):
         )
 
 
+class ApplicationFormCreateView(
+    LoginRequiredMixin,
+    TypedContextMixin[contexts.TemplateSelectorInputs],
+    generic.edit.CreateView,
+):
+    template_name = "stave/template_selector.html"
+    league: models.League
+    event: models.Event
+
+    def setup(self, request: HttpRequest, *args, **kwargs) -> None:
+        super().setup(request, *args, **kwargs)
+
+        if isinstance(self.request.user, models.User):
+            self.event = get_object_or_404(
+                models.Event.objects.manageable(self.request.user),
+                slug=self.kwargs.get("event_slug"),
+            )
+            self.league = self.event.league
+
+    def get_form_class(self) -> type:
+        return forms.ApplicationFormFromTemplateForm
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["league"] = self.league
+
+        return kwargs
+
+    def get_context(self) -> contexts.TemplateSelectorInputs:
+        return contexts.TemplateSelectorInputs(
+            templates=self.league.application_form_templates.all(),
+            object_type="Application Form",
+            require_template_selection_first=False,
+        )
+
+    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        if not self.league.application_form_templates.exists():
+            # No templates. Redirect to the template-free create page.
+            return HttpResponseRedirect(
+                reverse("form-create", args=[self.league.slug, self.event.slug])
+            )
+
+        return super().get(request, *args, **kwargs)
+
+    def form_valid(self, form: forms.ApplicationFormFromTemplateForm) -> HttpResponse:
+        template_id = self.request.POST.get("template_id")
+        if template_id and template_id != "none":
+            get_object_or_404(
+                self.league.application_form_templates.all(), pk=template_id
+            )
+            url = reverse(
+                "form-create-with-template",
+                args=[self.league.slug, self.event.slug, template_id],
+            )
+        else:
+            url = reverse("form-create", args=[self.league.slug, self.event.slug])
+
+        return HttpResponseRedirect(url)
+
+
 class ApplicationFormCreateUpdateView(
     LoginRequiredMixin,
     ParentChildCreateUpdateFormTimezoneView,
@@ -1169,7 +1229,7 @@ class ApplicationFormCreateUpdateView(
             self.form = get_object_or_404(self.event.application_forms.all(), slug=slug)
 
     def get_view_url(self) -> str:
-        league_slug = self.league.slug
+        league_slug = self.event.league.slug
         event_slug = self.event.slug
         slug = self.kwargs.get("form_slug")
 
@@ -1181,7 +1241,51 @@ class ApplicationFormCreateUpdateView(
             return reverse("application-form-create", args=[league_slug, event_slug])
 
     def get_form(self, **kwargs) -> forms.ApplicationFormCreateUpdateForm:
-        return forms.ApplicationFormCreateUpdateForm(event=self.event, **kwargs)
+        if template_id := self.kwargs.get("template_id"):
+            template = get_object_or_404(
+                self.event.league.application_form_templates.all(), id=template_id
+            )
+            role_groups = (
+                template.role_groups.all()
+                .exclude(applicationform__event=self.event)
+                .distinct()
+            )
+            initial = {
+                "slug": slugify(
+                    "apply-" + "-".join(sorted(rg.name for rg in role_groups))
+                ),
+                "application_kind": template.application_kind,
+                "application_availability_kind": template.application_availability_kind,
+                "role_groups": role_groups,
+                "intro_text": template.intro_text,
+                "requires_profile_fields": template.requires_profile_fields,
+                "invitation_email_template": template.invitation_email_template,
+                "schedule_email_template": template.assigned_email_template,
+                "rejection_email_template": template.rejected_email_template,
+            }
+            question_initial = []
+            for question_template in template.template_questions.all():
+                question_initial.append(
+                    {
+                        "content": question_template.content,
+                        "kind": question_template.kind,
+                        "required": question_template.required,
+                        "options": question_template.options,
+                        "allow_other": question_template.allow_other,
+                    }
+                )
+        else:
+            initial = None
+            question_initial = None
+
+        print(question_initial)
+
+        return forms.ApplicationFormCreateUpdateForm(
+            event=self.event,
+            parent_initial=initial,
+            child_initial=question_initial,
+            **kwargs,
+        )
 
     def get_time_zone(self) -> str:
         return self.event.league.time_zone
