@@ -1246,7 +1246,7 @@ class ApplicationFormCreateUpdateView(
                 self.event.league.application_form_templates.all(), id=template_id
             )
             role_groups = (
-                template.role_groups.all()
+                template.role_groups.filter(id__in=self.event.role_groups.all())
                 .exclude(applicationform__event=self.event)
                 .distinct()
             )
