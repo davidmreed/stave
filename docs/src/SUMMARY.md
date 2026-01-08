@@ -21,6 +21,7 @@
 - [Privacy Policy](./privacy-policy.md)
 - [Age Restrictions](./age-restrictions.md)
 - [Support, Maintenance, and Funding](./support-maintenance-and-funding.md)
+- [LLM / Generative AI Policy](./llm-generative-ai-policy.md)
 - [License](./license.md)
 
 ---
