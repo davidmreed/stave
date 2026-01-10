@@ -19,8 +19,8 @@ This process is typically used by smaller events. Applicants receive a schedule 
 flowchart LR
     A(Applied) --> B(Assignment Pending)
     A --> C(Rejection Pending)
-    C -->|✉️| F(Rejected)
-    B -->|✉️| Z(Assigned)
+    C -->|✉️ Email| F(Rejected)
+    B -->|✉️ Email| Z(Assigned)
 ```
 
 ### Confirm, then Assign
@@ -31,12 +31,12 @@ This process is typically used by larger events and tournaments. Applicants are 
 flowchart LR
     A(Applied) --> B(Invitation Pending)
     A --> C(Rejection Pending)
-    C --> F(Rejected)
-    B -->|✉️| E(Invited)
+    C -->|✉️ Email| F(Rejected)
+    B -->|✉️ Email| E(Invited)
     E --> G(Confirmed)
     G --> Q(Assignment Pending)
-    Q -->|✉️| Z(Assigned)
-    E -->|✉️| J(Declined)
+    Q -->|✉️ Email| Z(Assigned)
+    E --> J(Declined)
 ```
 
 ## Viewing Applications
@@ -45,19 +45,19 @@ The Applications page shows you all of the applications you've received. Applica
 
 <dl>
     <div>
-        <dt>**Open**</dt>
+        <dt>Open</dt>
         <dd> are applications that require your action: no decision has been made.</dd>
     </div>
     <div>
-        <dt>**In Progress**</dt>
+        <dt>In Progress</dt>
         <dd>are applications where a staffing decision has been made but not yet sent to the applicant, or, in the "Confirm, then Assign" process, applications that have received a confirmation but not an assignment.</dd>
     </div>
     <div>
-        <dt>**Staffed**</dt>
+        <dt>Staffed</dt>
         <dd>are applications where a staffing decision has been made and communicated to the applicant.</dd>
     </div>
     <div>
-        <dt>**Closed**</dt>
+        <dt>Closed</dt>
         <dd>are applications that will not be staffed and whose status has been communicated to the applicant.</dd>
     </div>
 </dl>
