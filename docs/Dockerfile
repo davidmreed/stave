@@ -1,5 +1,5 @@
 FROM alpine:latest AS builder
-RUN apk add --no-cache mdbook
+RUN apk add --no-cache mdbook mdbook-mermaid
 RUN mkdir /docs
 WORKDIR /docs
 COPY . .
