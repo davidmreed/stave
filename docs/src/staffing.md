@@ -47,13 +47,13 @@ Open
 : applications that require your action: no decision has been made.
 
 In Progress
-: applications where a staffing decision has been made but not yet sent to the applicant, or, in the "Confirm, then Assign" process, applications that have received a confirmation but not an assignment.</dd>
+: applications where a staffing decision has been made but not yet sent to the applicant, or, in the "Confirm, then Assign" process, applications that have received a confirmation but not an assignment.
 
 Staffed
-: applications where a staffing decision has been made and communicated to the applicant.</dd>
+: applications where a staffing decision has been made and communicated to the applicant.
 
 Closed
-: applications that will not be staffed and whose status has been communicated to the applicant.</dd>
+: applications that will not be staffed and whose status has been communicated to the applicant.
 
 On the Applications page, you can mark applicants to be invited by clicking the ✉️ button, or to be declined by clicking the ❌ button. Stave tracks your decisions by updating the status of the application, but does not send any communications until you choose to do so ([Sending Communications](#sending-communications)).
 
@@ -102,7 +102,7 @@ Stave messages are written in Markdown format, which looks like plain text. You 
 Stave recognizes four types of email you can send.
 
 Invitation Emails
-: Invitation emails are only used in the Confirm, then Assign process. They invite the applicant to participate, and provide a link where the applicant can confirm or decline. When you send an invitation email to an applicant, the Application's status is updated to Invited.</dd>
+: Invitation emails are only used in the Confirm, then Assign process. They invite the applicant to participate, and provide a link where the applicant can confirm or decline. When you send an invitation email to an applicant, the Application's status is updated to Invited.
 
 Rejection Emails
 : Rejection emails are used in both processes. They inform the applicant that they won't be staffed. When you send a rejection email to an applicant, the Application's status is updated to Rejected.
@@ -111,7 +111,7 @@ Assignment Emails
 : Assignment emails are used in both processes. They inform the applicant that they have been staffed with a specific schedule and provide a link where they can view their assignments in Stave. WHen you send an assignment email to an applicant, the Application's status is updated to Assigned. Applicants who are Assigned can view the staffing schedule in Stave.
 
 Crew Emails
-: Crew emails are independent of application process. Once you've staffed your crews, you can send crew emails to provide them updates and other information. Crew emails only go to applicants who are already Assigned. They don't change the status of the Application.</dd>
+: Crew emails are independent of application process. Once you've staffed your crews, you can send crew emails to provide them updates and other information. Crew emails only go to applicants who are already Assigned. They don't change the status of the Application.
 
 ### Sending Single Communications
 
