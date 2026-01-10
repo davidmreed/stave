@@ -9,7 +9,23 @@ Do you prefer to draft your crews before you send out invitations? Send invitati
 
 ## Application Processes
 
+Stave offers two _application processes_, which you can choose for each Application Form independently.
+
+### Assign Only
+
+This process is typically used by smaller events. Applicants receive a schedule email when they are staffed. There is no invitation or confirmation process. The process looks like this:
+
+```mermaid
+flowchart LR
+    A(Applied) --> B(Assignment Pending)
+    A --> C(Rejection Pending)
+    C -->|✉️| F(Rejected)
+    B -->|✉️| Z(Assigned)
+```
+
 ### Confirm, then Assign
+
+This process is typically used by larger events and tournaments. Applicants are sent an invitation email when they are accepted and are asked to confirm or decline their participation. If they confirm, they receive a schedule email when they are staffed. The process looks like this:
 
 ```mermaid
 flowchart LR
@@ -22,17 +38,6 @@ flowchart LR
     Q -->|✉️| Z(Assigned)
     E -->|✉️| J(Declined)
 ```
-
-### Assign Only
-
-```mermaid
-flowchart LR
-    A(Applied) --> B(Assignment Pending)
-    A --> C(Rejection Pending)
-    C -->|✉️| F(Rejected)
-    B -->|✉️| Z(Assigned)
-```
-
 
 ## Viewing Applications
 
