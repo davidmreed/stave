@@ -43,24 +43,17 @@ flowchart LR
 
 The Applications page shows you all of the applications you've received. Applications are grouped into categories based on what action you made need to take on them.
 
-<dl>
-    <div>
-        <dt>Open</dt>
-        <dd> are applications that require your action: no decision has been made.</dd>
-    </div>
-    <div>
-        <dt>In Progress</dt>
-        <dd>are applications where a staffing decision has been made but not yet sent to the applicant, or, in the "Confirm, then Assign" process, applications that have received a confirmation but not an assignment.</dd>
-    </div>
-    <div>
-        <dt>Staffed</dt>
-        <dd>are applications where a staffing decision has been made and communicated to the applicant.</dd>
-    </div>
-    <div>
-        <dt>Closed</dt>
-        <dd>are applications that will not be staffed and whose status has been communicated to the applicant.</dd>
-    </div>
-</dl>
+Open
+: applications that require your action: no decision has been made.
+
+In Progress
+: applications where a staffing decision has been made but not yet sent to the applicant, or, in the "Confirm, then Assign" process, applications that have received a confirmation but not an assignment.</dd>
+
+Staffed
+: applications where a staffing decision has been made and communicated to the applicant.</dd>
+
+Closed
+: applications that will not be staffed and whose status has been communicated to the applicant.</dd>
 
 On the Applications page, you can mark applicants to be invited by clicking the ✉️ button, or to be declined by clicking the ❌ button. Stave tracks your decisions by updating the status of the application, but does not send any communications until you choose to do so ([Sending Communications](#sending-communications)).
 
@@ -102,28 +95,23 @@ Once you've made decisions about any of your Applications, you can start sending
 > [!NOTE]
 > Outbound emails from Stave come from the email address `stave@stave.app`. Applicants can add this email address to their address book to avoid having messages routed to Spam.
 
+Stave messages are written in Markdown format, which looks like plain text. You can use _merge fields_ to add information from the Event, League, Application, Application Form, applicant profile, and your own profile. Read [Messaging](./messaging.md) to learn about writing Stave messages.
+
 ### Types of Email
 
 Stave recognizes four types of email you can send.
 
-<dl>
-    <div>
-        <dt>Invitation Emails</dt>
-        <dd>Invitation emails are only used in the Confirm, then Assign process. They invite the applicant to participate, and provide a link where the applicant can confirm or decline. When you send an invitation email to an applicant, the Application's status is updated to Invited.</dd>
-    </div>
-    <div>
-        <dt>Rejection Emails</dt>
-        <dd>Rejection emails are used in both processes. They inform the applicant that they won't be staffed. When you send a rejection email to an applicant, the Application's status is updated to Rejected.</dd>
-    </div>
-    <div>
-        <dt>Assignment Emails</dt>
-        <dd>Assignment emails are used in both processes. They inform the applicant that they have been staffed with a specific schedule and provide a link where they can view their assignments in Stave. WHen you send an assignment email to an applicant, the Application's status is updated to Assigned. Applicants who are Assigned can view the staffing schedule in Stave.</dd>
-    </div>
-    <div>
-        <dt>Crew Emails</dt>
-        <dd>Crew emails are independent of application process. Once you've staffed your crews, you can send crew emails to provide them updates and other information. Crew emails only go to applicants who are already Assigned. They don't change the status of the Application.</dd>
-    </div>
-</dl>
+Invitation Emails
+: Invitation emails are only used in the Confirm, then Assign process. They invite the applicant to participate, and provide a link where the applicant can confirm or decline. When you send an invitation email to an applicant, the Application's status is updated to Invited.</dd>
+
+Rejection Emails
+: Rejection emails are used in both processes. They inform the applicant that they won't be staffed. When you send a rejection email to an applicant, the Application's status is updated to Rejected.
+
+Assignment Emails
+: Assignment emails are used in both processes. They inform the applicant that they have been staffed with a specific schedule and provide a link where they can view their assignments in Stave. WHen you send an assignment email to an applicant, the Application's status is updated to Assigned. Applicants who are Assigned can view the staffing schedule in Stave.
+
+Crew Emails
+: Crew emails are independent of application process. Once you've staffed your crews, you can send crew emails to provide them updates and other information. Crew emails only go to applicants who are already Assigned. They don't change the status of the Application.</dd>
 
 ### Sending Single Communications
 
@@ -133,7 +121,7 @@ You can send communication to a single applicant at any time from their applicat
 
 The Comm Center lets you send communication to groups of applicants all at once. Comm Center will only offer you controls to send communications that you've queued up via actions on the Crew Builder or Applications pages. For example, if you haven't marked any applications to be rejected, you won't get the option to send rejection emails; invitation emails will only be available on Application Forms that use the "Confirm, then Assign" process.
 
-Invitation, rejection, and assignment emails can be sent with or without using a Message Template. Message Templates let you send personalized emails with applicant-specific data automatically inserted (a mail merge), and allow you to use standardized communications across Events. See [League Management](./league-management.md) for more on creating Message Templates.
+Invitation, rejection, and assignment emails can be sent with or without using a Message Template. Message Templates let you send personalized emails with applicant-specific data automatically inserted (a mail merge), and allow you to use standardized communications across Events. See [League Management](./league-management.md#message-templates) for more on creating Message Templates.
 
 Message Templates are assigned on the [Application Form](./build-events-and-forms.md). If your Application Form has templates assigned, you'll see Send Email buttons in Comm Center. Click that button to automatically template and send emails to **all applicants in the appropriate status**. Invitation emails go to all applications whose status is Pending Invitation. Rejection emails go to all applications whose status is Pending Rejection. And assignment emails go to all applications whose status is Pending Assignment.
 
