@@ -1667,6 +1667,12 @@ class Application(models.Model):
                             ]
                         )
                 case ApplicationStatus.INVITATION_PENDING:
+                    if user == self.user:
+                        states.extend(
+                            [
+                                ApplicationStatus.WITHDRAWN,
+                            ]
+                        )
                     if can_manage:
                         states.extend(
                             [
@@ -1689,6 +1695,12 @@ class Application(models.Model):
                 case ApplicationStatus.DECLINED:
                     pass
                 case ApplicationStatus.REJECTION_PENDING:
+                    if user == self.user:
+                        states.extend(
+                            [
+                                ApplicationStatus.WITHDRAWN,
+                            ]
+                        )
                     if can_manage:
                         states.extend(
                             [ApplicationStatus.APPLIED, ApplicationStatus.REJECTED]
@@ -1718,25 +1730,32 @@ class Application(models.Model):
         else:
             match self.status:
                 case ApplicationStatus.APPLIED:
-                    if user == self.user or can_manage:
+                    if user == self.user:
                         states.extend([ApplicationStatus.WITHDRAWN])
                     if can_manage:
                         states.extend(
                             [
                                 ApplicationStatus.REJECTION_PENDING,
                                 ApplicationStatus.REJECTED,
+                                ApplicationStatus.WITHDRAWN,
                             ]
                         )
                 case ApplicationStatus.REJECTION_PENDING:
+                    if user == self.user:
+                        states.extend([ApplicationStatus.WITHDRAWN])
                     if can_manage:
-                        states.extend([ApplicationStatus.APPLIED])
+                        states.extend(
+                            [ApplicationStatus.APPLIED, ApplicationStatus.WITHDRAWN]
+                        )
                 case ApplicationStatus.ASSIGNMENT_PENDING:
+                    if user == self.user:
+                        states.extend([ApplicationStatus.WITHDRAWN])
                     if can_manage:
-                        states.extend([ApplicationStatus.ASSIGNED])
+                        states.extend(
+                            [ApplicationStatus.ASSIGNED, ApplicationStatus.WITHDRAWN]
+                        )
                 case ApplicationStatus.WITHDRAWN:
                     pass
-                case _:
-                    states.append(ApplicationStatus.WITHDRAWN)
 
         return states
 
