@@ -1749,7 +1749,7 @@ class Application(models.Model):
                         )
                 case ApplicationStatus.ASSIGNMENT_PENDING:
                     if user == self.user:
-                        status.extend([ApplicationStatus.WITHDRAWN])
+                        states.extend([ApplicationStatus.WITHDRAWN])
                     if can_manage:
                         states.extend(
                             [ApplicationStatus.ASSIGNED, ApplicationStatus.WITHDRAWN]
