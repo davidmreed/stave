@@ -1569,7 +1569,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                 id=application_id,
                 roles__name=role.name,
             ).exclude(status=models.ApplicationStatus.WITHDRAWN)
-            if len(applications) != 1:
+            if len(applications) == 0:
                 return HttpResponseBadRequest("invalid application_id")
         else:
             applications = []
