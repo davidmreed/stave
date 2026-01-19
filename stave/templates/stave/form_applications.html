@@ -11,30 +11,14 @@
 {% csrf_token %}
 <input type="hidden" name="redirect_url" id="redirect_url" value="{{ request.path }}">
 
-<details>
-    <summary>How to use this page</summary>
-{% if form.application_kind == form.ApplicationKind.CONFIRM_THEN_ASSIGN %}
-<p>This application form is using the Confirm, then Assign model.
-
-<ol>
-    <li>Mark applications for Invitation or Rejection here as you make decisions.</li>
-    <li>Draft your crews in Crew Builder. As you add users to crews, they'll automatically be marked for invitation.</li>
-    <li>Send invitation and rejection emails from Comm Center.</li>
-    <li>Users confirm or decline their invitations. You'll see their status here as they update. Stave will automatically remove users who decline their invitations from Crew Builder.</li>
-    <li>Once you finish your crews in Crew Builder, send assignments from Comm Center.</li>
-</ol>
-</p>
-{% else %}
-<p>This application form is using the Confirm Only model.
-
-<ol>
-    <li>Browse available applications here. You can choose to mark applications Rejected to hide them in Crew Builder. This won't send any emails yet.</li>
-    <li>Use Crew Builder to make assignments.</li>
-    <li>Once you finish your crews in Crew Builder, send assignments and rejections from Comm Center.</li>
-</ol>
-</p>
-{% endif %}
-</details>
+<aside>
+    <a href="https://docs.stave.app/staffing.html#viewing-applications">Learn how to use this page</a>.
+    {% if form.application_kind == form.ApplicationKind.CONFIRM_THEN_ASSIGN %}
+    This application form is using the Confirm, then Assign model.
+    {% else %}
+    This application form is using the Confirm Only model.
+    {% endif %}
+</aside>
 
 {% partialdef application-table %}
         {% for application in applications %}

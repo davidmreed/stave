@@ -24,7 +24,16 @@
     {% with application.responses_by_question|get:question.id as response %}
         <td>
             <small>
+            {% if response|stringformat:"s"|length > 25 %}
+            <details>
+            <summary>
+            <span>{{ response|stringformat:"s"|truncatechars:25 }}</span>
+            </summary>
             {{ response }}
+            </details>
+            {% else %}
+            {{ response }}
+            {% endif %}
             </small>
         </td>
     {% endwith %}

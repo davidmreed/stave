@@ -17,6 +17,22 @@
     {# Availability #}
     {# Application questions #}
     {% for question in form.form_questions.all %}
-    <th><small>{{ question.content }}</small></th>
+    <th>
+        <small>
+            {% if question.content|length > 25 %}
+            <details>
+            <summary>
+            <span>
+            {{ question.content|truncatechars:25 }}
+            </span>
+            </summary>
+            {{ question.content }}
+            </details>
+            {% else %}
+            {{ question.content }}
+            {% endif %}
+        </small>
+    </th>
+
     {% endfor %}
 </thead>
