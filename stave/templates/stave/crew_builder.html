@@ -31,29 +31,14 @@
 {% endif %}
 
 {% if editable %}
-<details>
-    <summary>How to use this page</summary>
-{% if form.application_kind == form.ApplicationKind.CONFIRM_THEN_ASSIGN %}
-<p>This application form is using the Confirm, then Assign model.
-
-<ol>
-    <li>Mark the application Invited on Applications.</li>
-    <li>When you're ready to send invitations, click Send Emails on Applications.</li>
-    <li>Users Confirm or Decline their invitations. You'll see their status on Applications as they update.</li>
-    <li>Use Crew Builder to make assignments. You can select users who've Confirmed their invitations.</li>
-    <li>When you're ready to send out a schedule, click Send Schedule Emails in Crew Builder.</li>
-</ol>
-</p>
-{% else %}
-<p>This application form is using the Confirm Only model.
-
-<ol>
-    <li>Build crews here, drawing on all applications whose status is Applied.</li>
-    <li>When you're ready to send out a schedule, click Send Schedule Emails in Crew Builder.</li>
-</ol>
-</p>
-{% endif %}
-</details>
+<aside>
+    <a href="https://docs.stave.app/staffing.html#crew-builder">Learn how to use this page</a>.
+    {% if form.application_kind == form.ApplicationKind.CONFIRM_THEN_ASSIGN %}
+    This application form is using the Confirm, then Assign model.
+    {% else %}
+    This application form is using the Confirm Only model.
+    {% endif %}
+</aside>
 {% endif %}
 
 {# Static crews #}

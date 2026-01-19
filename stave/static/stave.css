@@ -159,3 +159,11 @@ a {
 details {
     margin: 1rem;
 }
+
+table details {
+    margin: 0;
+}
+
+table details[open] summary span {
+    display: none;
+}
