@@ -4,7 +4,25 @@
 <td><small>{{ game_count }}</small></td>
 {# Profile fields #}
 {% for field in application.form.requires_profile_fields %}
-<td><small>{{ application.get_user_data|get:field }}</small></td>
+<td>
+    {% if field == "game_history_url" %}
+    {% with application.get_user_data|get:field|valid_url as url %}
+    {% if url %}
+    <a href="{{ url }}" target="_blank">
+        View
+    </a>
+    {% else %}
+    {{ url }}
+    {% endif %}
+    {% endwith %}
+    {% elif field == "email" %}
+    <a href="mailto:{{ application.get_user_data|get:field }}">
+        ✉️
+    </a>
+    {% else %}
+    <small>{{ application.get_user_data|get:field }}</small>
+    {% endif %}
+</td>
 {% endfor %}
 {# Roles #}
 {% for role_group in application.form.role_groups.all %}
