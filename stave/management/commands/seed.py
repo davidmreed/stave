@@ -297,6 +297,7 @@ class Command(BaseCommand):
                 pronouns=pronouns,
                 is_superuser=admin,
                 is_staff=admin,
+                email=f"{username}@example.com",
             )
             user.set_password(username)
             user.save()
