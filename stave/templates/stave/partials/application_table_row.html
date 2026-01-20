@@ -40,9 +40,54 @@
 {% endfor %}
 {# Availability #}
 {% if form.application_availability_kind == form.ApplicationAvailabilityKind.BY_DAY %}
-<td><small>{{ application.availability_by_day|length }}/{{ form.event.days|length }}</small></td>
+<td>
+    <small>
+    {% if form.event.days|length == application.availability_by_day|length %}
+    All days
+    {% elif form.event.days|length <= 3 %}
+    {% for day in application.availability_by_day %}
+    {{ day|as_date|date:"D" }}.{% if not forloop.last %},{% endif %}
+    {% endfor %}
+    only
+    {% else %}
+    <details>
+        <summary>
+            <span>
+                {{ application.availability_by_day|length }}/{{ form.event.days|length }}
+            </span>
+        </summary>
+        {% for day in application.availability_by_day %}
+        {{ day }}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    </details>
+    {% endif %}
+    </small>
+</td>
 {% elif form.application_availability_kind == form.ApplicationAvailabilityKind.BY_GAME %}
-<td><small>{{ application.availability_by_game.all|length }}/{{ form.games|length }}</small></td>
+<td>
+    <small>
+    {% if form.games|length == application.availability_by_game.all|length %}
+    All games
+    {% elif form.games|length <= 3 %}
+        Game{% if application.availability_by_game.all|length > 1 %}s{% endif %}
+        {% for game in application.availability_by_game.all %}
+         {{ game.order_key }}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+        only
+    {% else %}
+    <details>
+        <summary>
+            <span>
+                {{ application.availability_by_game.all|length }}/{{ form.games|length }}
+            </span>
+        </summary>
+        {% for game in application.availability_by_game.all %}
+        Game {{ game.order_key }}{% if not forloop.last %},<br>{% endif %}
+        {% endfor %}
+    </details>
+    {% endif %}
+    </small>
+</td>
 {% endif %}
 {# Application questions #}
 {% for question in form.form_questions.all %}
