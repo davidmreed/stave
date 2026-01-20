@@ -5,11 +5,12 @@
 {# Profile fields #}
 {% for field in application.form.requires_profile_fields %}
 <td>
+    <small>
     {% if field == "game_history_url" %}
     {% with application.get_user_data|get:field|valid_url as url %}
     {% if url %}
     <a href="{{ url }}" target="_blank">
-        View
+        Open
     </a>
     {% else %}
     {{ url }}
@@ -17,11 +18,12 @@
     {% endwith %}
     {% elif field == "email" %}
     <a href="mailto:{{ application.get_user_data|get:field }}">
-        ✉️
+        <abbr title="Send Email">✉️</abbr>
     </a>
     {% else %}
-    <small>{{ application.get_user_data|get:field }}</small>
+    {{ application.get_user_data|get:field }}
     {% endif %}
+    </small>
 </td>
 {% endfor %}
 {# Roles #}
@@ -36,7 +38,12 @@
         </small>
     </td>
 {% endfor %}
-{# Availability TODO #}
+{# Availability #}
+{% if form.application_availability_kind == form.ApplicationAvailabilityKind.BY_DAY %}
+<td><small>{{ application.availability_by_day|length }}/{{ form.event.days|length }}</small></td>
+{% elif form.application_availability_kind == form.ApplicationAvailabilityKind.BY_GAME %}
+<td><small>{{ application.availability_by_game.all|length }}/{{ form.games|length }}</small></td>
+{% endif %}
 {# Application questions #}
 {% for question in form.form_questions.all %}
     {% with application.responses_by_question|get:question.id as response %}

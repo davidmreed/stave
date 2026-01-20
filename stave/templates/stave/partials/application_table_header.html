@@ -15,6 +15,11 @@
     <th>{{ role_group.name }}</th>
     {% endfor %}
     {# Availability #}
+    {% if form.application_availability_kind == form.ApplicationAvailabilityKind.BY_DAY %}
+    <th>Days Avail.</th>
+    {% elif form.application_availability_kind == form.ApplicationAvailabilityKind.BY_GAME %}
+    <th>Games Avail.</th>
+    {% endif %}
     {# Application questions #}
     {% for question in form.form_questions.all %}
     <th>
