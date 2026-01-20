@@ -1,6 +1,6 @@
 import copy
 from collections.abc import Mapping, Sequence
-from datetime import datetime
+from datetime import datetime, date
 from typing import Any
 
 from django import forms, template
@@ -16,6 +16,11 @@ register = template.Library()
 
 class TemplateValidationException(Exception):
     pass
+
+
+@register.filter
+def as_date(value: str) -> date:
+    return date.fromisoformat(value)
 
 
 @register.filter
