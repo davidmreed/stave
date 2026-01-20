@@ -19,6 +19,15 @@ class TemplateValidationException(Exception):
 
 
 @register.filter
+def valid_url(text: str | None) -> str | None:
+    if text:
+        if text.startswith("https://") or text.startswith("http://"):
+            return text
+        elif "." in text:
+            return f"https://{text}"
+
+
+@register.filter
 def is_saved(model: Model):
     return not model._state.adding
 
