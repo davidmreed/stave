@@ -294,6 +294,13 @@ class Subscription(models.Model):
         League, related_name="subscribers", on_delete=models.CASCADE
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "league"], name="unique_subscription"
+            )
+        ]
+
 
 class LeagueTemplate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

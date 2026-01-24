@@ -24,7 +24,16 @@
 
 <section>
 <header>
-    <h2>Upcoming Events</h2>
+    <div style="display: flex; flex-direction: row; justify-content: space-between; width: 100%;">
+        <h2>Upcoming Events</h2>
+        <button hx-get="/_/{{ league.slug }}/toggle-subscribed" hx-swap="innerHTML">
+            {% if request.user|is_subscribed_to:league %}
+            Unsubscribe
+            {% else %}
+            Subscribe
+            {% endif %}
+        </button>
+    </div>
     {% if request.user|can_manage_league_events:league %}
     <div class="inline">
     <a role="button" href="{% url 'event-create' league.slug %}">Create Event</a>
