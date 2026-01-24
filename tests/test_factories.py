@@ -64,6 +64,7 @@ def test_user_model_creation(user_factory):
     assert user.game_history_url is None
     assert user.nso_certification_level is None
     assert user.so_certification_level is None
+    assert user.mrda_recognized_official is None
     assert user.legal_name is None
     assert user.league_affiliation == "Independent"
     assert user.is_superuser is False

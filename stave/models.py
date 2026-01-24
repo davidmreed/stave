@@ -25,6 +25,10 @@ class CertificationLevel(models.TextChoices):
     LEVEL_3 = "Level 3", _("Level 3")
 
 
+class MRDACertificationLevel(models.TextChoices):
+    RECOGNIZED = "Recognized", _("Recognized")
+
+
 class UserQuerySet(models.QuerySet["User"]):
     def staffed(self, event: "Event") -> "UserQuerySet":
         return self.filter(
@@ -45,6 +49,7 @@ class User(AbstractBaseUser):
         "insurance",
         "nso_certification_level",
         "so_certification_level",
+        "mrda_recognized_official",
     ]
     USERNAME_FIELD = "id"
 
@@ -67,14 +72,21 @@ class User(AbstractBaseUser):
         choices=CertificationLevel.choices,
         null=True,
         blank=True,
-        verbose_name=_("NSO certification level"),
+        verbose_name=_("WFTDA NSO certification level"),
     )
     so_certification_level = models.CharField(
         max_length=32,
         choices=CertificationLevel.choices,
         null=True,
         blank=True,
-        verbose_name=_("SO certification level"),
+        verbose_name=_("WFTDA SO certification level"),
+    )
+    mrda_recognized_official = models.CharField(
+        max_length=32,
+        choices=MRDACertificationLevel.choices,
+        null=True,
+        blank=True,
+        verbose_name=_("MRDA recognized official"),
     )
     date_created = models.DateTimeField(auto_now_add=True)
 
