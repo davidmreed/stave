@@ -29,7 +29,7 @@ INTERNAL_IPS = [
 
 # Development email backend - Use console backend for local development
 if not os.environ.get("EMAIL_BACKEND"):
-    EMAIL_BACKEND = "django.core.email.backends.console.EmailBackend"
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Allow verbose error pages
 DEBUG_PROPAGATE_EXCEPTIONS = True
