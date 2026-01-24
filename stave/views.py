@@ -929,6 +929,19 @@ class LeagueDetailView(
         )
 
 
+def league_toggle_subscribed(request, slug):
+    if request.htmx and models.League.objects.visible(request.user):
+        league = models.League.objects.get(slug=slug)
+        if len(request.user.subscriptions.filter(league=league)) > 0:
+            request.user.subscriptions.filter(league=league).delete()
+            return HttpResponse("Subscribe")
+        else:
+            request.user.subscriptions.create(league=league)
+            return HttpResponse("Unsubscribe")
+    else:
+        return HttpResponseBadRequest("")
+
+
 class LeagueListView(generic.ListView):
     template_name = "stave/league_list.html"
     model = models.League

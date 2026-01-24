@@ -30,6 +30,11 @@ urlpatterns = [
     ),
     path("_/<slug:slug>/", view=views.LeagueDetailView.as_view(), name="league-detail"),
     path(
+        "_/<slug:slug>/toggle-subscribed",
+        view=views.league_toggle_subscribed,
+        name="league-toggle-subscribed",
+    ),
+    path(
         "_/<slug:slug>/edit/", view=views.LeagueUpdateView.as_view(), name="league-edit"
     ),
     path(

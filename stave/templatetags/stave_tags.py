@@ -107,6 +107,11 @@ def can_manage_league_events(user: models.User, league: models.League) -> bool:
 
 
 @register.filter
+def is_subscribed_to(user: models.User, league: models.League) -> bool:
+    return len(user.subscriptions.filter(league=league)) > 0
+
+
+@register.filter
 def can_manage_event(user: models.User, event: models.Event) -> bool:
     if user.is_authenticated:
         return models.LeagueUserPermission.objects.filter(
