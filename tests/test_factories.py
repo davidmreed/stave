@@ -62,8 +62,8 @@ def test_user_model_creation(user_factory):
     assert isinstance(user.preferred_name, str)
     assert user.pronouns is None
     assert user.game_history_url is None
-    assert user.wftda_nso_certification_level is None
-    assert user.wftda_so_certification_level is None
+    assert user.nso_certification_level is None
+    assert user.so_certification_level is None
     assert user.mrda_recognized_official is None
     assert user.legal_name is None
     assert user.league_affiliation == "Independent"
