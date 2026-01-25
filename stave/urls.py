@@ -23,12 +23,67 @@ urlpatterns = [
     path("profile/", view=views.ProfileView.as_view(), name="profile"),
     path("events/", view=views.EventListView.as_view(), name="event-list"),
     path("my-events/", view=views.MyEventsView.as_view(), name="my-events"),
+    path(
+        "league-groups/",
+        view=views.LeagueGroupListView.as_view(),
+        name="league-group-list",
+    ),
+    path(
+        "league-groups/<uuid:pk>/",
+        view=views.LeagueGroupDetailView.as_view(),
+        name="league-group-detail",
+    ),
+    path(
+        "league-groups/<uuid:id>/subscribe/",
+        view=views.LeagueGroupSubscribeView.as_view(),
+        name="league-group-subscribe",
+    ),
+    path(
+        "league-groups/<uuid:id>/unsubscribe/",
+        view=views.LeagueGroupUnsubscribeView.as_view(),
+        name="league-group-unsubscribe",
+    ),
+    path(
+        "league-groups/create/",
+        view=views.LeagueGroupCreateUpdateView.as_view(),
+        name="league-group-create",
+    ),
+    path(
+        "league-groups/<uuid:id>/edit/",
+        view=views.LeagueGroupCreateUpdateView.as_view(),
+        name="league-group-edit",
+    ),
+    path(
+        "league-groups/<uuid:pk>/delete/",
+        view=views.LeagueGroupDeleteView.as_view(),
+        name="league-group-delete",
+    ),
+    path(
+        "my-league-groups/",
+        view=views.MyLeagueGroupsView.as_view(),
+        name="my-league-groups",
+    ),
     path("leagues/", view=views.LeagueListView.as_view(), name="league-list"),
     path("my-leagues/", view=views.MyLeaguesView.as_view(), name="my-leagues"),
+    path(
+        "my-subscriptions/",
+        view=views.MySubscriptionsView.as_view(),
+        name="my-subscriptions",
+    ),
     path(
         "leagues/create/", view=views.LeagueCreateView.as_view(), name="league-create"
     ),
     path("_/<slug:slug>/", view=views.LeagueDetailView.as_view(), name="league-detail"),
+    path(
+        "_/<slug:league_slug>/subscribe/",
+        view=views.LeagueSubscribeView.as_view(),
+        name="league-subscribe",
+    ),
+    path(
+        "_/<slug:league_slug>/unsubscribe/",
+        view=views.LeagueUnsubscribeView.as_view(),
+        name="league-unsubscribe",
+    ),
     path(
         "_/<slug:slug>/edit/", view=views.LeagueUpdateView.as_view(), name="league-edit"
     ),
@@ -283,8 +338,18 @@ urlpatterns = [
         calendars.LeagueEventsFeed(),
         name="calendar-league",
     ),
+    path(
+        "league-groups/<uuid:id>/calendar/",
+        calendars.LeagueGroupEventsFeed(),
+        name="calendar-league-group",
+    ),
     path("calendar/", calendars.AllEventsFeed(), name="calendar-all"),
     path(
         "calendar/user/<uuid:user_id>", calendars.MyEventsFeed(), name="calendar-user"
+    ),
+    path(
+        "calendar/user/<uuid:user_id>/subscriptions/",
+        calendars.MySubscriptionsEventFeed(),
+        name="calendar-user-subscriptions",
     ),
 ] + debug_toolbar_urls()

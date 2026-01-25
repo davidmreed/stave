@@ -181,3 +181,11 @@ class HomeInputs:
     applications: Page
     events: Page
     leagues: Page
+    league_groups: Page
+    subscribed_leagues: int
+    subscribed_league_groups: int
+
+
+@dataclass
+class LeagueGroupInputs:
+    events: Page

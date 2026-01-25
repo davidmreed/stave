@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load stave_tags %}
+{% block content %}
+<header>
+    <h1>My Subscriptions</h1>
+</header>
+
+{% url 'calendar-user-subscriptions' request.user.id as url %}
+{% include "stave/partials/calendar.html" with url=url only %}
+
+{% for item in page_obj %}
+<article>
+{% if item.kind == "league" %}
+<header>
+    <h2>{{ item.name }}</h2>
+    <div class="inline">
+    {% if user|is_subscribed_to_league:item %}
+    <form action="{% url 'league-unsubscribe' item.slug %}" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.path }}">
+        <input type="submit" value="Unsubscribe">
+    </form>
+    {% else %}
+    <form action="{% url 'league-subscribe' item.slug %}" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.path }}">
+        <input type="submit" value="Subscribe">
+    </form>
+    {% endif %}
+    </div>
+</header>
+{% else %}
+<header>
+    <h2>{{ item.name }}</h2>
+    <div class="inline">
+    {% if user|is_subscribed_to_league_group:item %}
+    <form action="{% url 'league-group-unsubscribe' item.id %}" method="POST">
+    {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.path }}">
+    <input type="submit" value="Unsubscribe">
+    </form>
+    {% else%}
+    <form action="{% url 'league-group-subscribe' item.id %}" method="POST">
+    {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.path }}">
+    <input type="submit" value="Subscribe">
+    </form>
+    {% endif %}
+</header>
+{% endif %}
+</article>
+{% empty %}
+You don't have any subscriptions right now.
+{% endfor %}
+
+{% include "stave/partials/pagination.html" with page_obj=page_obj only %}
+
+{% endblock %}

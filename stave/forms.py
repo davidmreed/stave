@@ -1388,3 +1388,70 @@ class SendEmailForm(forms.Form):
     def __init__(self, *args, **kwargs):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
+
+
+class LeagueGroupForm(forms.ModelForm):
+    class Meta:
+        model = models.LeagueGroup
+        fields = ["name", "description", "private"]
+
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
+
+class LeagueGroupMemberForm(forms.ModelForm):
+    class Meta:
+        model = models.LeagueGroupMember
+        fields = ["league"]
+
+        # TODO: constrain the League queryset
+
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
+        if not self.instance._state.adding:
+            self.fields["league"].disabled = True
+
+
+class LeagueGroupCreateUpdateForm(ParentChildForm):
+    parent_form_class = LeagueGroupForm
+    child_form_class = LeagueGroupMemberForm
+    relation_name = "group"
+    reverse_name = "group_memberships"
+
+    user: models.User
+
+    def __init__(self, *args, user: models.User, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        self.parent_form.instance.owner = self.user
+        seen_leagues = set()
+        for child_form in [
+            child_form
+            for child_form in self.child_formset.forms
+            if child_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
+        ]:
+            if child_form.instance._state.adding:
+                if child_form.instance.league in seen_leagues:
+                    child_form.add_error(
+                        "league",
+                        _("This league has already been included in the group."),
+                    )
+
+            seen_leagues.add(child_form.instance.league)
+
+    def save(self, *args, **kwargs):
+        with transaction.atomic():
+            new = self.parent_form.instance._state.adding
+            ret = super().save(*args, **kwargs)
+            if new:
+                models.LeagueGroupSubscription.objects.create(
+                    league_group=ret, user=self.user
+                )
+
+            return ret

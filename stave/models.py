@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
 from django.template.defaultfilters import slugify
 from django.urls import reverse
@@ -225,6 +225,11 @@ class LeagueQuerySet(models.QuerySet["League"]):
         return self.filter(
             user_permissions__permission=UserPermission.LEAGUE_MANAGER,
             user_permissions__user=user,
+        ).distinct()
+
+    def subscribed(self, user: User) -> models.QuerySet["League"]:
+        return self.filter(
+            league_groups__group__in=LeagueGroup.objects.subscribed(user)
         ).distinct()
 
 
@@ -666,6 +671,14 @@ class EventQuerySet(models.QuerySet["Event"]):
                 ]
             )
 
+    def subscribed(self, user: User) -> models.QuerySet["Event"]:
+        return self.listed(user).filter(league__in=League.objects.subscribed(user))
+
+    def in_league_group(self, league_group: "LeagueGroup") -> models.QuerySet["Event"]:
+        return self.filter(
+            league__in=League.objects.filter(league_groups__group=league_group)
+        )
+
     def manageable(self, user: User | AnonymousUser) -> models.QuerySet["Event"]:
         if isinstance(user, AnonymousUser):
             return self.none()
@@ -674,6 +687,28 @@ class EventQuerySet(models.QuerySet["Event"]):
             league__user_permissions__permission=UserPermission.EVENT_MANAGER,
             league__user_permissions__user=user,
         ).distinct()
+
+    def open_applications_grouped_by_subscription(
+        self, user: User | AnonymousUser
+    ) -> models.QuerySet["Event"]:
+        application_form_queryset = Event.objects.filter(
+            id__in=ApplicationForm.objects.listed(user).values("event")
+        )
+
+        if user.is_authenticated:
+            application_form_queryset = (
+                (
+                    application_form_queryset.exclude(
+                        application_forms__applications__user=user
+                    )
+                    .select_related("league")
+                    .prefetch_related("application_forms__role_groups")
+                )
+                .annotate(is_subscribed=Q(league__in=League.objects.subscribed(user)))
+                .order_by("-is_subscribed", "start_date", "end_date")
+            )
+
+        return application_form_queryset
 
     def prefetch_for_display(self) -> models.QuerySet["Event"]:
         return self.select_related("league").prefetch_related("games")
@@ -1192,6 +1227,9 @@ class ApplicationFormQuerySet(models.QuerySet["ApplicationForm"]):
                 event__league__enabled=True,
             ).distinct()
         ).order_by("close_date", "event__start_date")  # TODO: make this a CASE()
+
+    def subscribed(self, user: User) -> models.QuerySet["ApplicationForm"]:
+        return self.filter(event__in=Event.objects.subscribed(user))
 
     def accessible(
         self, user: User | AnonymousUser
@@ -1822,6 +1860,93 @@ class ApplicationResponse(models.Model):
             ),
             # models.CheckConstraint(check=Q(application=F("question__application")), name="response_app_and_question_app_match")
         ]
+
+
+class LeagueGroupQuerySet(models.QuerySet["LeagueGroup"]):
+    def visible(self, user: User | AnonymousUser) -> "LeagueGroupQuerySet":
+        # Note that this deliberately excludes the user's subscription group.
+        visible = self.exclude(private=True)
+        if isinstance(user, User):
+            visible = visible | self.owned(user)
+
+        return visible.distinct()
+
+    def owned(self, user: User) -> "LeagueGroupQuerySet":
+        return self.filter(owner=user, is_subscriptions_group=False)
+
+    def subscribed(self, user: User) -> "LeagueGroupQuerySet":
+        return self.filter(subscriptions__user=user) | self.filter(
+            owner=user, is_subscriptions_group=True
+        )
+
+
+class LeagueGroup(models.Model):
+    class Meta:
+        ordering = ["name"]
+
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+    name = models.CharField(max_length=256)
+    description = models.TextField(null=True, blank=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    is_subscriptions_group = models.BooleanField(default=False)
+    private = models.BooleanField(default=True)
+
+    objects = LeagueGroupQuerySet.as_manager()
+
+    @classmethod
+    def get_subscriptions_group_for_user(cls, user: User) -> "LeagueGroup":
+        with transaction.atomic():
+            user = User.objects.filter(id=user.id).select_for_update().first()
+            group, _ = cls.objects.get_or_create(
+                name="Subscriptions", is_subscriptions_group=True, owner=user
+            )
+
+        return group
+
+    def __str__(self) -> str:
+        return self.name
+
+    def get_absolute_url(self) -> str:
+        if self.is_subscriptions_group:
+            return reverse("my-subscriptions")
+        else:
+            return reverse("league-group-detail", args=[self.id])
+
+
+class LeagueGroupMember(models.Model):
+    class Meta:
+        ordering = ["league__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["league", "group"], name="leagues_appear_once_per_group"
+            )
+        ]
+
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+    league = models.ForeignKey(
+        League, on_delete=models.CASCADE, related_name="league_groups"
+    )
+    group = models.ForeignKey(
+        LeagueGroup, on_delete=models.CASCADE, related_name="group_memberships"
+    )
+
+
+class LeagueGroupSubscription(models.Model):
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["league_group", "user"],
+                name="one_subscription_per_league_group",
+            )
+        ]
+
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="league_group_subscriptions"
+    )
+    league_group = models.ForeignKey(
+        LeagueGroup, on_delete=models.CASCADE, related_name="subscriptions"
+    )
 
 
 class GameHistory:

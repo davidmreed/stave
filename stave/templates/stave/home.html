@@ -19,6 +19,9 @@
 
 {% include "stave/partials/grouped_application_list.html" with page_obj=application_forms user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
 
+{% if not application_forms|length %}
+<p>There aren't any open applications for you right now.</p>
+{% endif %}
 Showing {{ application_forms|length }} of {{ application_forms.paginator.count }}.
 <a href="{% url 'open-applications' %}">See all open applications</a>
 </article>
@@ -71,10 +74,48 @@ Showing {{ leagues|length }} of {{ leagues.paginator.count }}.
 
 <article style="flex: 1 1 auto;">
 <header>
+    <h2>My League Groups</h2>
+</header>
+{% for league_group in league_groups %}
+{% include "stave/league_group.html" with item=league_group user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
+{% empty %}
+<p>You don't have any League Groups right now.</p>
+{% endfor %}
+
+Showing {{ league_groups|length }} of {{ league_groups.paginator.count }}.
+<a href="{% url 'my-league-groups' %}">See all my league groups</a>
+</article>
+
+<article style="flex: 1 1 auto;">
+<header>
+    <h2>Subscriptions</h2>
+</header>
+<dl>
+    <div>
+        <dt>Leagues</dt>
+        <dd>{{ subscribed_leagues }}</dd>
+    </div>
+    <div>
+        <dt>League Groups</dt>
+        <dd>{{ subscribed_league_groups }}</dd>
+    </div>
+</dl>
+<a href="{% url 'my-subscriptions' %}">See all my subscriptions</a>
+{% url 'calendar-user-subscriptions' request.user.id as url %}
+{% include "stave/partials/calendar.html" with url=url only %}
+</article>
+
+<article style="flex: 1 1 auto;">
+<header>
     <h2>Officiating History</h2>
 </header>
 
+<nav>
 <a href="{% url 'officiating-history' %}">View my Stave history</a>
+{% if request.user.game_history_url %}
+<a target="_blank" href="{{ request.user.game_history_url }}">View my officiating history document</a>
+</nav>
+{% endif %}
 </article>
 
 {% else %}
