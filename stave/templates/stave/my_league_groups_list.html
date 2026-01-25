@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <h1>My League Groups</h1>
+    <div class="inline">
+        <a href="{% url 'league-group-create' %}" role="button">Create</a>
+    </div>
+</header>
+
+{% for league_group in page_obj %}
+{% include "stave/league_group.html" with item=league_group user=request.user card_kind="stave/full_card.html" csrf_token=csrf_token only %}
+{% empty %}
+You don't have any league groups yet.
+{% endfor %}
+
+{% include "stave/partials/pagination.html" with page_obj=page_obj only %}
+
+{% endblock %}

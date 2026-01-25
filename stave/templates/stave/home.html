@@ -75,12 +75,7 @@ Showing {{ leagues|length }} of {{ leagues.paginator.count }}.
 
 <article style="flex: 1 1 auto;">
 <header>
-    <h2>Subscriptions and League Groups</h2>
-</header>
-
-<header>
-    <h3>League Groups</h3>
-    <a role="button" href="{% url 'league-group-create' %}">Create</a>
+    <h2>My League Groups</h2>
 </header>
 {% for league_group in league_groups %}
 {% include "stave/league_group.html" with item=league_group user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
@@ -88,8 +83,13 @@ Showing {{ leagues|length }} of {{ leagues.paginator.count }}.
 You don't have any League Groups right now.
 {% endfor %}
 
+Showing {{ league_groups|length }} of {{ league_groups.paginator.count }}.
+<a href="{% url 'my-league-groups' %}">See all my league groups</a>
+</article>
+
+<article style="flex: 1 1 auto;">
 <header>
-    <h3>Subscriptions</h3>
+    <h2>Subscriptions</h2>
 </header>
 <dl>
     <div>
@@ -102,6 +102,8 @@ You don't have any League Groups right now.
     </div>
 </dl>
 <a href="{% url 'my-subscriptions' %}">See all my subscriptions</a>
+{% url 'calendar-user-subscriptions' request.user.id as url %}
+{% include "stave/partials/calendar.html" with url=url only %}
 </article>
 
 <article style="flex: 1 1 auto;">
@@ -112,7 +114,7 @@ You don't have any League Groups right now.
 <nav>
 <a href="{% url 'officiating-history' %}">View my Stave history</a>
 {% if request.user.game_history_url %}
-<a target="_blank" href="{{ request.user.game_history_url }}">View my official's history document</a>
+<a target="_blank" href="{{ request.user.game_history_url }}">View my officiating history document</a>
 </nav>
 {% endif %}
 </article>

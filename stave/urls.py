@@ -59,14 +59,9 @@ urlpatterns = [
         name="league-group-delete",
     ),
     path(
-        "league-groups/<uuid:id>/calendar/",
-        view=views.LeagueGroupCalendarView.as_view(),
-        name="league-group-calendar",
-    ),
-    path(
-        "league-groups/<uuid:id>/events/",
-        view=views.LeagueGroupEventsView.as_view(),
-        name="league-group-events",
+        "my-league-groups/",
+        view=views.MyLeagueGroupsView.as_view(),
+        name="my-league-groups",
     ),
     path("leagues/", view=views.LeagueListView.as_view(), name="league-list"),
     path("my-leagues/", view=views.MyLeaguesView.as_view(), name="my-leagues"),
@@ -351,5 +346,10 @@ urlpatterns = [
     path("calendar/", calendars.AllEventsFeed(), name="calendar-all"),
     path(
         "calendar/user/<uuid:user_id>", calendars.MyEventsFeed(), name="calendar-user"
+    ),
+    path(
+        "calendar/user/<uuid:user_id>/subscriptions/",
+        calendars.MySubscriptionsEventFeed(),
+        name="calendar-user-subscriptions",
     ),
 ] + debug_toolbar_urls()

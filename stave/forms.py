@@ -1445,9 +1445,13 @@ class LeagueGroupCreateUpdateForm(ParentChildForm):
 
             seen_leagues.add(child_form.instance.league)
 
+    def save(self, *args, **kwargs):
+        with transaction.atomic():
+            new = self.parent_form.instance._state.adding
+            ret = super().save(*args, **kwargs)
+            if new:
+                models.LeagueGroupSubscription.objects.create(
+                    league_group=ret, user=self.user
+                )
 
-class MySubscriptionsCreateUpdateForm(LeagueGroupCreateUpdateForm):
-    def get_parent_formset(self, *args, **kwargs) -> forms.ModelForm:
-        form = super().get_parent_formset(*args, **kwargs)
-        form.fields = {}
-        return form
+            return ret

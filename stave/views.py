@@ -148,6 +148,15 @@ class MyLeaguesView(LoginRequiredMixin, generic.ListView):
         return models.League.objects.manageable(self.request.user)
 
 
+class MyLeagueGroupsView(LoginRequiredMixin, generic.ListView):
+    template_name = "stave/my_league_groups_list.html"
+    model = models.LeagueGroup
+    paginate_by = 10
+
+    def get_queryset(self) -> QuerySet[models.LeagueGroup]:
+        return models.LeagueGroup.objects.owned(self.request.user)
+
+
 class OfficiatingHistoryView(LoginRequiredMixin, generic.ListView):
     """
     A view that displays a user's officiating history.
@@ -218,6 +227,7 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
         event_queryset = models.Event.objects.none()
         application_queryset = models.Application.objects.none()
         league_queryset = models.League.objects.none()
+        league_group_queryset = models.LeagueGroup.objects.none()
         subscribed_leagues = 0
         subscribed_league_groups = 0
 
@@ -246,16 +256,24 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
                 .prefetch_related("application_forms__role_groups")
             )
             league_queryset = models.League.objects.manageable(self.request.user)
-            subscribed_leagues = models.LeagueGroup.get_subscriptions_group_for_user(self.request.user).group_memberships.count()
-            subscribed_league_groups = models.LeagueGroup.objects.subscribed(self.request.user).count()
+            league_group_queryset = models.LeagueGroup.objects.owned(self.request.user)
+            subscribed_leagues = models.LeagueGroup.get_subscriptions_group_for_user(
+                self.request.user
+            ).group_memberships.count()
+            subscribed_league_groups = (
+                models.LeagueGroup.objects.subscribed(self.request.user)
+                .exclude(is_subscriptions_group=True)
+                .count()
+            )
 
         return contexts.HomeInputs(
             application_forms=Paginator(application_form_queryset, 10).page(1),
             applications=Paginator(application_queryset, 10).get_page(1),
             events=Paginator(event_queryset, 10).get_page(1),
             leagues=Paginator(league_queryset, 10).get_page(1),
+            league_groups=Paginator(league_group_queryset, 10).get_page(1),
             subscribed_leagues=subscribed_leagues,
-            subscribed_league_groups=subscribed_league_groups
+            subscribed_league_groups=subscribed_league_groups,
         )
 
     def get_context_data(self, *args, **kwargs):
@@ -432,9 +450,21 @@ class LeagueGroupListView(generic.ListView):
         return models.LeagueGroup.objects.visible(self.request.user)
 
 
-class LeagueGroupDetailView(generic.DetailView):
+class LeagueGroupDetailView(
+    TypedContextMixin[contexts.LeagueGroupInputs], generic.DetailView
+):
     template_name = "stave/league_group_detail.html"
     model = models.LeagueGroup
+
+    def get_context(self) -> contexts.LeagueGroupInputs:
+        return contexts.LeagueGroupInputs(
+            events=Paginator(
+                models.Event.objects.listed(self.request.user).in_league_group(
+                    self.object
+                ),
+                10,
+            ).get_page(self.request.GET.get("page"))
+        )
 
     def get_queryset(self) -> QuerySet[models.LeagueGroup]:
         return models.LeagueGroup.objects.visible(self.request.user)
@@ -443,6 +473,9 @@ class LeagueGroupDetailView(generic.DetailView):
 class LeagueGroupDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
     template_name = "stave/confirm_delete.html"
     model = models.LeagueGroup
+
+    def get_success_url(self) -> str:
+        return reverse("home")
 
 
 class LeagueGroupSubscribeView(LoginRequiredMixin, views.View):
@@ -489,12 +522,6 @@ class LeagueGroupUnsubscribeView(LoginRequiredMixin, views.View):
             return HttpResponseRedirect(redirect_url)
 
         return HttpResponseRedirect(league_group.get_absolute_url())
-
-
-class LeagueGroupCalendarView(generic.DetailView): ...
-
-
-class LeagueGroupEventsView(generic.ListView): ...
 
 
 class LeagueSubscribeView(LoginRequiredMixin, views.View):
@@ -1083,23 +1110,26 @@ class LeagueListView(generic.ListView):
 class MySubscriptionsView(LoginRequiredMixin, generic.ListView):
     template_name = "stave/my_subscriptions_list.html"
     paginate_by = 10
-    model = models.League # or LeagueGroup, below
+    model = models.League  # or LeagueGroup, below
 
-    def get_queryset(self) -> QuerySet[models.League|models.LeagueGroup]:
+    def get_queryset(self) -> QuerySet[models.League | models.LeagueGroup]:
         return (
-        models.League.objects.filter(id__in=
-                                     models.LeagueGroup
-                .get_subscriptions_group_for_user(self.request.user)
-                .group_memberships
-                .all()
+            models.League.objects.filter(
+                id__in=models.LeagueGroup.get_subscriptions_group_for_user(
+                    self.request.user
+                )
+                .group_memberships.all()
                 .values("league_id")
-            ).values("id", "name")
+            )
+            .values("id", "name", "slug")
+            .order_by()
             .annotate(kind=Value("league"))
             .union(
-                   models.LeagueGroup.objects
-                   .subscribed(self.request.user)
-                   .values("id", "name")
-                   .annotate(kind=Value("league_group"))
+                models.LeagueGroup.objects.subscribed(self.request.user)
+                .filter(is_subscriptions_group=False)
+                .values("id", "name")
+                .annotate(kind=Value("league_group"), slug=Value(""))
+                .order_by()
             )
         ).order_by("name")
 
@@ -1111,9 +1141,7 @@ class EventListView(generic.ListView):
 
     def get_queryset(self) -> QuerySet[models.Event]:
         return (
-            models.Event.objects.open_applications_grouped_by_subscription(
-                self.request.user
-            )
+            models.Event.objects.listed(self.request.user)
             .prefetch_related("games")
             .prefetch_related("application_forms")
             .select_related("league")

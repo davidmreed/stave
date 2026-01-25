@@ -75,8 +75,7 @@ class MyEventsFeed(StaveEventFeed):
             )
             .filter(~Q(status=models.EventStatus.CANCELED))
             .distinct()
-            .select_related("league")
-            .prefetch_related("games")
+            .prefetch_for_display()
         )
 
 
@@ -93,13 +92,11 @@ class LeagueEventsFeed(StaveEventFeed):
         return _("Events for {league} from Stave.app").format(league=obj)
 
     def items(self, obj: models.League) -> QuerySet[models.Event]:
-        return (
-            obj.events.listed(None).select_related("league").prefetch_related("games")
-        )
+        return obj.events.listed(None).prefetch_for_display()
 
 
 class LeagueGroupEventsFeed(StaveEventFeed):
-    def get_object(self, request: HttpRequest, id: UUID) -> models.League:
+    def get_object(self, request: HttpRequest, id: UUID) -> models.LeagueGroup:
         return get_object_or_404(models.LeagueGroup.objects.all(), id=id)
 
     def title(self, obj: models.LeagueGroup) -> str:
@@ -109,12 +106,21 @@ class LeagueGroupEventsFeed(StaveEventFeed):
         return _("Events for {league_group} from Stave.app").format(league_group=obj)
 
     def items(self, obj: models.LeagueGroup) -> QuerySet[models.Event]:
-        return (
-            models.Event.listed(None)
-            .filter(league__in=models.League.filter(league_groups__group=obj))
-            .select_related("league")
-            .prefetch_related("games")
-        )
+        return models.Event.listed(None).in_league_group(obj).prefetch_for_display()
+
+
+class MySubscriptionsEventFeed(StaveEventFeed):
+    def get_object(self, request: HttpRequest, user_id: UUID) -> models.User:
+        return get_object_or_404(models.User.objects.all(), id=user_id)
+
+    def title(self, obj: models.User) -> str:
+        return _("Stave Events for {user} Subscriptions").format(user=obj)
+
+    def description(self, obj: models.LeagueGroup) -> str:
+        return _("Events for {user} Subscriptions from Stave.app").format(user=obj)
+
+    def items(self, obj: models.User) -> QuerySet[models.Event]:
+        return models.Event.objects.subscribed(obj).prefetch_for_display()
 
 
 class AllEventsFeed(StaveEventFeed):
@@ -125,8 +131,4 @@ class AllEventsFeed(StaveEventFeed):
         return _("All events from Stave.app")
 
     def items(self) -> QuerySet[models.Event]:
-        return (
-            models.Event.objects.listed(None)
-            .select_related("league")
-            .prefetch_related("games")
-        )
+        return models.Event.objects.listed(None).prefetch_for_display()

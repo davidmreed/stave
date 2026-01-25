@@ -118,21 +118,36 @@ def can_manage_event(user: models.User, event: models.Event) -> bool:
 
 
 @register.filter
-def is_subscribed_to_league(user: models.User, league: models.League) -> bool:
+def is_subscribed_to_league(user: models.User, league: models.League | dict) -> bool:
+    # Why the weird type signature?
+    # We need to call this from a context where we have a combination
+    # of Leagues and League Groups, so the values are just objects
+    # with an "id" key, not models.
+    if isinstance(league, models.League):
+        id = league.id
+    else:
+        id = league["id"]
+
     return (
         models.LeagueGroup.get_subscriptions_group_for_user(user)
-        .group_memberships.filter(league=league)
+        .group_memberships.filter(league_id=id)
         .exists()
     )
 
 
 @register.filter
 def is_subscribed_to_league_group(
-    user: models.User, league_group: models.LeagueGroup
+    user: models.User, league_group: models.LeagueGroup | dict
 ) -> bool:
-    return (
-        models.LeagueGroup.objects.subscribed(user).filter(id=league_group.id).exists()
-    )
+    # Why the weird type signature?
+    # We need to call this from a context where we have a combination
+    # of Leagues and League Groups, so the values are just objects
+    # with an "id" key, not models.
+    if isinstance(league_group, models.LeagueGroup):
+        id = league_group.id
+    else:
+        id = league_group["id"]
+    return models.LeagueGroup.objects.subscribed(user).filter(id=id).exists()
 
 
 @register.filter

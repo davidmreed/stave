@@ -672,7 +672,12 @@ class EventQuerySet(models.QuerySet["Event"]):
             )
 
     def subscribed(self, user: User) -> models.QuerySet["Event"]:
-        return self.filter(league__in=League.objects.subscribed(user))
+        return self.listed(user).filter(league__in=League.objects.subscribed(user))
+
+    def in_league_group(self, league_group: "LeagueGroup") -> models.QuerySet["Event"]:
+        return self.filter(
+            league__in=League.objects.filter(league_groups__group=league_group)
+        )
 
     def manageable(self, user: User | AnonymousUser) -> models.QuerySet["Event"]:
         if isinstance(user, AnonymousUser):
