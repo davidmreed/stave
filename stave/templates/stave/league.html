@@ -7,10 +7,20 @@
 {% if user|can_manage_league:item %}
 <a role="button" href="{% url 'league-edit' item.slug %}">Edit</a>
 {% endif %}
-{% if user|is_subscribed:league %}
-<a role="button" href="{% url 'league-subscribe' league.slug %}">Subscribe</a>
-{% else %}
-<a role="button" href="{% url 'league-unsubscribe' league.slug %}">Unsubscribe</a>
+{% if user.is_authenticated %}
+    {% if user|is_subscribed_to_league:item %}
+    <form action="{% url 'league-unsubscribe' item.slug %}" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.path }}">
+        <input type="submit" value="Unsubscribe">
+    </form>
+    {% else %}
+    <form action="{% url 'league-subscribe' item.slug %}" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.path }}">
+        <input type="submit" value="Subscribe">
+    </form>
+    {% endif %}
 {% endif %}
 {% endblock %}
 

@@ -1,0 +1,47 @@
+
+{% extends card_kind %}
+
+{% load stave_tags %}
+{% load markdownify %}
+
+{% block actions %}
+{% if item.owner == user %}
+<a role="button" href="{% url 'league-group-edit' item.id %}">Edit</a>
+<a role="button" href="{% url 'league-group-delete' item.id %}">Delete</a>
+{% endif %}
+{% if user.is_authenticated and user|is_subscribed_to_league_group:item %}
+<form action="{% url 'league-group-unsubscribe' item.id %}" method="POST">
+<input type="submit" value="Unsubscribe">
+</form>
+{% elif user.is_authenticated %}
+<form action="{% url 'league-group-subscribe' item.id %}" method="POST">
+<input type="submit" value="Subscribe">
+</form>
+{% endif %}
+{% endblock %}
+
+{% block description %}
+{{ item.description|markdownify|truncatewords:"20" }}
+{% endblock %}
+
+{% block metadata %}
+<dl>
+    <div>
+         <dt>Owner</dt>
+        <dd>{{ item.owner }}</dd>
+    </div>
+    <div>
+        <dt>Leagues</dt>
+        <dd>{{ item.group_memberships.all|length }}</dd>
+    </div>
+    {% if item.owner == user %}
+    <div>
+        <dt>Private</dt>
+        <dd>{{ item.private|yesno }}</dd>
+    </div>
+    {% endif %}
+</dl>
+{% endblock %}
+
+{% block navigation %}
+{% endblock %}

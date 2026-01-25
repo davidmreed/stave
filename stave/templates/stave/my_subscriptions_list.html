@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <h1>My Subscriptions</h1>
+</header>
+
+{% for league in page_obj %}
+{% include "stave/league.html" with item=league user=request.user card_kind="stave/full_card.html" csrf_token=csrf_token only %}
+{% endfor %}
+
+{% include "stave/partials/pagination.html" with page_obj=page_obj only %}
+
+{% endblock %}

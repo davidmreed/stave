@@ -1,8 +1,15 @@
 {% load stave_tags %}
-{% regroup page_obj by event as app_forms_by_event %}
-{% for by_event in app_forms_by_event %}
-{% include "stave/event.html" with item=by_event.grouper user=user card_kind=card_kind csrf_token=csrf_token only %}
-{% empty %}
-There aren't any open applications for you right now.
+{% regroup page_obj by is_subscribed as events_by_subscription %}
+{% for event_group in events_by_subscription %}
+{% if events_by_subscription|length == 2 %}
+<h3>
+    {% if event_group.grouper %}
+    Subscribed
+    {% endif %}
+</h3>
+{% endif %}
+{% for event in event_group %}
+{% include "stave/event.html" with item=event user=user card_kind=card_kind csrf_token=csrf_token only %}
+{% endfor %}
 {% endfor %}
 </ul>

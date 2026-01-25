@@ -4,9 +4,8 @@
 <h1>Events</h1>
 {% url 'calendar-all' as url %}
 {% include "stave/partials/calendar.html" with url=url only %}
-{% for event in page_obj %}
-{% include "stave/event.html" with user=request.user item=event card_kind="stave/full_card.html" csrf_token=csrf_token only %}
-{% endfor %}
+
+{% include "stave/partials/grouped_application_list.html" with page_obj=page_obj card_kind="stave/full_card.html" user=request.user csrf_token=csrf_token only %}
 
 {% include "stave/partials/pagination.html" with page_obj=page_obj only %}
 

@@ -97,6 +97,27 @@ class LeagueEventsFeed(StaveEventFeed):
             obj.events.listed(None).select_related("league").prefetch_related("games")
         )
 
+class LeagueGroupEventsFeed(StaveEventFeed):
+    def get_object(self, request: HttpRequest, id: UUID) -> models.League:
+        return get_object_or_404(
+            models.LeagueGroup.objects.all(), id=id
+        )
+
+    def title(self, obj: models.LeagueGroup) -> str:
+        return _("Stave Events for {league_group}").format(league_group=obj)
+
+    def description(self, obj: models.LeagueGroup) -> str:
+        return _("Events for {league_group} from Stave.app").format(league_group=obj)
+
+    def items(self, obj: models.LeagueGroup) -> QuerySet[models.Event]:
+        return (
+            models.Event.listed(None)
+            .filter(league__in=models.League.filter(
+                        league_groups__group=obj
+                    ))
+            .select_related("league")
+            .prefetch_related("games")
+        )
 
 class AllEventsFeed(StaveEventFeed):
     def title(self, obj: models.League) -> str:

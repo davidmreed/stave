@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% load markdownify %}
+{% load stave_tags %}
+
+{% block content %}
+
+{% include "stave/league_group.html" with item=object user=request.user card_kind="stave/page_card.html" csrf_token=csrf_token only %}
+
+<div>
+{{ object.description|markdownify }}
+</div>
+
+<h2>Events</h2>
+
+{% url 'calendar-league-group' object.id as url %}
+{% include "stave/partials/calendar.html" with url=url only %}
+
+<h2>Members</h2>
+
+{% for league_group_member in object.group_memberships.all %}
+{% include "stave/league.html" with item=league_group_member.league user=request.user card_kind="stave/full_card.html" csrf_token=csrf_token only %}
+{% empty %}
+This group doesn't have any members yet.
+{% endfor %}
+{% endblock %}

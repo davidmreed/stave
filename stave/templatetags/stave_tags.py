@@ -116,6 +116,14 @@ def can_manage_event(user: models.User, event: models.Event) -> bool:
         ).exists()
     return False
 
+@register.filter
+def is_subscribed_to_league(user: models.User, league: models.League) -> bool:
+    return models.LeagueGroup.get_subscriptions_group_for_user(user).group_memberships.filter(league=league).exists()
+
+@register.filter
+def is_subscribed_to_league_group(user: models.User, league_group: models.LeagueGroup) -> bool:
+    return models.LeagueGroup.objects.subscribed(user).filter(id=league_group.id).exists()
+
 
 @register.filter
 def listed_application_forms(

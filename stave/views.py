@@ -208,19 +208,25 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
     template_name = "stave/home.html"
 
     def get_context(self) -> contexts.HomeInputs:
-        application_form_queryset = models.ApplicationForm.objects.listed(
+        application_form_queryset = models.Event.objects.filter(event__in=models.ApplicationForm.objects.listed(
             self.request.user
-        )
+        ).values("event"))
         event_queryset = models.Event.objects.none()
         application_queryset = models.Application.objects.none()
         league_queryset = models.League.objects.none()
+        subscription_queryset = models.League.objects.none()
 
         if self.request.user.is_authenticated:
             application_form_queryset = (
-                application_form_queryset.exclude(applications__user=self.request.user)
-                .select_related("event")
-                .select_related("event__league")
-                .prefetch_related("role_groups")
+                application_form_queryset.exclude(application_forms__applications__user=self.request.user)
+                .select_related("league")
+                .prefetch_related("application_forms__role_groups")
+            ).annotate(
+                is_subscribed=Q(league__in=models.League.objects.subscribed(self.request.user))
+            ).order_by(
+                "is_subscribed",
+                "start_date",
+                "end_date"
             )
             application_queryset = (
                 models.Application.objects.filter(
@@ -246,12 +252,14 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
                 .prefetch_related("application_forms__role_groups")
             )
             league_queryset = models.League.objects.manageable(self.request.user)
+            subscription_queryset = models.League.objects.subscribed(self.request.user)
 
         return contexts.HomeInputs(
             application_forms=Paginator(application_form_queryset, 10).page(1),
             applications=Paginator(application_queryset, 10).get_page(1),
             events=Paginator(event_queryset, 10).get_page(1),
             leagues=Paginator(league_queryset, 10).get_page(1),
+            subscriptions=Paginator(subscription_queryset, 10).get_page(1),
         )
 
     def get_context_data(self, *args, **kwargs):
@@ -400,6 +408,138 @@ class ParentChildCreateUpdateFormTimezoneView(ParentChildCreateUpdateFormView, A
     @abstractmethod
     def get_time_zone(self) -> str: ...
 
+
+# League group views
+
+
+class LeagueGroupCreateUpdateView(ParentChildCreateUpdateFormView):
+    form_class= forms.LeagueGroupCreateUpdateForm
+
+    def get_form(self, **kwargs) -> forms.LeagueGroupCreateUpdateForm:
+        return super().get_form(user=self.request.user, **kwargs)
+
+    def get_object(self, request: HttpRequest, id: UUID | None = None, **kwargs) -> Any | None:
+        if id:
+            return get_object_or_404(
+                models.LeagueGroup.objects.all(),
+                owner=request.user,
+                id=id
+            )
+
+
+
+
+class LeagueGroupListView(generic.ListView):
+    template_name = "stave/league_group_list.html"
+    model = models.LeagueGroup
+    paginate_by = 10
+
+    def get_queryset(self) -> QuerySet[models.MessageTemplate]:
+        return models.LeagueGroup.objects.visible(self.request.user)
+
+class LeagueGroupDetailView(
+     generic.DetailView
+):
+    template_name = "stave/league_group_detail.html"
+    model = models.LeagueGroup
+
+    def get_queryset(self) -> QuerySet[models.LeagueGroup]:
+        return models.LeagueGroup.objects.visible(self.request.user)
+
+class LeagueGroupDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
+    template_name = "stave/confirm_delete.html"
+    model = models.LeagueGroup
+
+class LeagueGroupSubscribeView(LoginRequiredMixin, views.View):
+    def post(
+        self, request: HttpRequest, id: UUID,
+    ) -> HttpResponse:
+        league_group = get_object_or_404(
+            models.LeagueGroup.objects.visible(request.user),
+            id=id,
+        )
+        models.LeagueGroupSubscription.get_or_create(
+            league_group=league_group,
+            user=request.user
+        )
+
+        redirect_url = request.POST.get("redirect_url")
+        if redirect_url and url_has_allowed_host_and_scheme(
+            redirect_url, settings.ALLOWED_HOSTS
+        ):
+            return HttpResponseRedirect(redirect_url)
+
+        return HttpResponseRedirect(league_group.get_absolute_url())
+
+
+class LeagueGroupUnsubscribeView(LoginRequiredMixin, views.View):
+    def post(
+        self, request: HttpRequest, id: UUID,
+    ) -> HttpResponse:
+        league_group = get_object_or_404(
+            models.LeagueGroup.objects.visible(request.user),
+            id=id,
+        )
+        models.LeagueGroupSubscription.filter(
+            league_group=league_group,
+            user=request.user
+        ).delete()
+
+        redirect_url = request.POST.get("redirect_url")
+        if redirect_url and url_has_allowed_host_and_scheme(
+            redirect_url, settings.ALLOWED_HOSTS
+        ):
+            return HttpResponseRedirect(redirect_url)
+
+        return HttpResponseRedirect(league_group.get_absolute_url())
+
+class LeagueGroupCalendarView(generic.DetailView):
+    ...
+
+class LeagueGroupEventsView(generic.ListView):
+    ...
+
+class LeagueSubscribeView(LoginRequiredMixin, views.View):
+    def post(
+        self, request: HttpRequest, league_slug: str,
+    ) -> HttpResponse:
+        league = get_object_or_404(
+            models.League.objects.visible(request.user),
+            slug=league_slug
+        )
+        models.LeagueGroupMember.objects.get_or_create(
+            group=models.LeagueGroup.get_subscriptions_group_for_user(request.user),
+            league=league
+        )
+
+        redirect_url = request.POST.get("redirect_url")
+        if redirect_url and url_has_allowed_host_and_scheme(
+            redirect_url, settings.ALLOWED_HOSTS
+        ):
+            return HttpResponseRedirect(redirect_url)
+
+        return HttpResponseRedirect(league.get_absolute_url())
+
+class LeagueUnsubscribeView(LoginRequiredMixin, views.View):
+    def post(
+        self, request: HttpRequest, league_slug: str,
+    ) -> HttpResponse:
+        league = get_object_or_404(
+            models.League.objects.visible(request.user),
+            slug=league_slug
+        )
+        models.LeagueGroupMember.objects.filter(
+            group=models.LeagueGroup.get_subscriptions_group_for_user(request.user),
+            league=league
+        ).delete()
+
+        redirect_url = request.POST.get("redirect_url")
+        if redirect_url and url_has_allowed_host_and_scheme(
+            redirect_url, settings.ALLOWED_HOSTS
+        ):
+            return HttpResponseRedirect(redirect_url)
+
+        return HttpResponseRedirect(league.get_absolute_url())
 
 # League management views
 
@@ -936,6 +1076,12 @@ class LeagueListView(generic.ListView):
 
     def get_queryset(self) -> QuerySet[models.League]:
         return models.League.objects.visible(self.request.user)
+
+class MySubscriptionsView(LoginRequiredMixin, LeagueListView):
+    template_name = "stave/my_subscriptions_list.html"
+
+    def get_queryset(self) -> QuerySet[models.League]:
+        return models.League.objects.subscribed(self.request.user)
 
 
 class EventListView(generic.ListView):

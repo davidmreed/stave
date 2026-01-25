@@ -181,3 +181,4 @@ class HomeInputs:
     applications: Page
     events: Page
     leagues: Page
+    subscriptions: Page

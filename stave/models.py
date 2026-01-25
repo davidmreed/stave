@@ -227,6 +227,11 @@ class LeagueQuerySet(models.QuerySet["League"]):
             user_permissions__user=user,
         ).distinct()
 
+    def subscribed(self, user: User) -> models.QuerySet["League"]:
+        return self.filter(
+            league_groups__group__in=LeagueGroup.objects.subscribed(user)
+                    ).distinct()
+
 
 class League(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -665,6 +670,11 @@ class EventQuerySet(models.QuerySet["Event"]):
                     EventStatus.COMPLETE,
                 ]
             )
+
+    def subscribed(self, user: User) -> models.QuerySet["Event"]:
+        return self.filter(
+            league__in=League.objects.subscribed(user)
+        )
 
     def manageable(self, user: User | AnonymousUser) -> models.QuerySet["Event"]:
         if isinstance(user, AnonymousUser):
@@ -1192,6 +1202,9 @@ class ApplicationFormQuerySet(models.QuerySet["ApplicationForm"]):
                 event__league__enabled=True,
             ).distinct()
         ).order_by("close_date", "event__start_date")  # TODO: make this a CASE()
+
+    def subscribed(self, user: User) -> models.QuerySet["ApplicationForm"]:
+        return self.filter(event__league__in=League.objects.subscribed(user))
 
     def accessible(
         self, user: User | AnonymousUser
@@ -1828,29 +1841,53 @@ class LeagueGroupQuerySet(models.QuerySet["LeagueGroup"]):
     def visible(self, user: User | AnonymousUser) -> "LeagueGroupQuerySet":
         visible = self.filter(private=False)
         if isinstance(user, User):
-            visible = visible | self.filter(owner=user)
+            visible = visible | self.owned(user)
 
-        return visible
+        return visible.distinct()
 
     def owned(self, user: User) -> "LeagueGroupQuerySet":
-        return self.filter(owner=user)
+        return self.filter(owner=user, is_subscriptions_group=False)
+
+    def subscribed(self, user: User) -> "LeagueGroupQuerySet":
+        return self.filter(
+            subscriptions__user=user
+        ) | self.filter(
+                owner=user,
+                is_subscriptions_group=True
+            )
 
 
 class LeagueGroup(models.Model):
     class Meta:
         ordering = ["name"]
-        constraints = [
-            models.UniqueConstraint(fields=["slug"], name="slug-must-be-unique")
-        ]
 
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
     name = models.CharField(max_length=256)
     description = models.TextField(null=True, blank=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    is_subscriptions_group = models.BooleanField(default=False)
     private = models.BooleanField(default=True)
-    slug = models.SlugField(null=True, blank=True)
 
     objects = LeagueGroupQuerySet.as_manager()
+
+    @classmethod
+    def get_subscriptions_group_for_user(cls, user: User) -> "LeagueGroup":
+        group, _ = cls.objects.get_or_create(
+            name="Subscriptions",
+            is_subscriptions_group=True,
+            owner=user
+        )
+
+        return group
+
+    def __str__(self) -> str:
+        return self.name
+
+    def get_absolute_url(self) -> str:
+        if self.is_subscriptions_group:
+            return reverse("my-subscriptions")
+        else:
+            return reverse("league-group-detail", args=[self.id])
 
 class LeagueGroupMember(models.Model):
     class Meta:
@@ -1860,16 +1897,16 @@ class LeagueGroupMember(models.Model):
         ]
 
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
-    league = models.ForeignKey(League, on_delete=models.CASCADE)
-    group = models.ForeignKey(LeagueGroup, on_delete=models.CASCADE)
+    league = models.ForeignKey(League, on_delete=models.CASCADE, related_name="league_groups")
+    group = models.ForeignKey(LeagueGroup, on_delete=models.CASCADE, related_name="group_memberships")
 
 class LeagueGroupSubscription(models.Model):
     class Meta:
         pass
 
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    league_group = models.ForeignKey(LeagueGroup, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="league_group_subscriptions")
+    league_group = models.ForeignKey(LeagueGroup, on_delete=models.CASCADE, related_name="subscriptions")
 
 class GameHistory:
     game: Game
