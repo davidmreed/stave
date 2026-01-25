@@ -1,4 +1,3 @@
-
 {% extends card_kind %}
 
 {% load stave_tags %}
@@ -12,11 +11,13 @@
 {% if user.is_authenticated and user|is_subscribed_to_league_group:item %}
 <form action="{% url 'league-group-unsubscribe' item.id %}" method="POST">
 {% csrf_token %}
+<input type="hidden" name="redirect_url" value="{{ request.path }}">
 <input type="submit" value="Unsubscribe">
 </form>
 {% elif user.is_authenticated %}
 <form action="{% url 'league-group-subscribe' item.id %}" method="POST">
 {% csrf_token %}
+<input type="hidden" name="redirect_url" value="{{ request.path }}">
 <input type="submit" value="Subscribe">
 </form>
 {% endif %}

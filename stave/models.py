@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
 from django.template.defaultfilters import slugify
 from django.urls import reverse
@@ -1229,7 +1229,7 @@ class ApplicationFormQuerySet(models.QuerySet["ApplicationForm"]):
         ).order_by("close_date", "event__start_date")  # TODO: make this a CASE()
 
     def subscribed(self, user: User) -> models.QuerySet["ApplicationForm"]:
-        return self.filter(event__league__in=League.objects.subscribed(user))
+        return self.filter(event__in=Event.objects.subscribed(user))
 
     def accessible(
         self, user: User | AnonymousUser
@@ -1864,7 +1864,8 @@ class ApplicationResponse(models.Model):
 
 class LeagueGroupQuerySet(models.QuerySet["LeagueGroup"]):
     def visible(self, user: User | AnonymousUser) -> "LeagueGroupQuerySet":
-        visible = self.filter(private=False)
+        # Note that this deliberately excludes the user's subscription group.
+        visible = self.exclude(private=True)
         if isinstance(user, User):
             visible = visible | self.owned(user)
 
@@ -1894,9 +1895,11 @@ class LeagueGroup(models.Model):
 
     @classmethod
     def get_subscriptions_group_for_user(cls, user: User) -> "LeagueGroup":
-        group, _ = cls.objects.get_or_create(
-            name="Subscriptions", is_subscriptions_group=True, owner=user
-        )
+        with transaction.atomic():
+            user = User.objects.filter(id=user.id).select_for_update().first()
+            group, _ = cls.objects.get_or_create(
+                name="Subscriptions", is_subscriptions_group=True, owner=user
+            )
 
         return group
 
@@ -1930,7 +1933,12 @@ class LeagueGroupMember(models.Model):
 
 class LeagueGroupSubscription(models.Model):
     class Meta:
-        pass
+        constraints = [
+            models.UniqueConstraint(
+                fields=["league_group", "user"],
+                name="one_subscription_per_league_group",
+            )
+        ]
 
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
     user = models.ForeignKey(

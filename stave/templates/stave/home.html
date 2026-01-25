@@ -19,12 +19,11 @@
 
 {% include "stave/partials/grouped_application_list.html" with page_obj=application_forms user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
 
-{% if application_forms|length %}
+{% if not application_forms|length %}
+<p>There aren't any open applications for you right now.</p>
+{% endif %}
 Showing {{ application_forms|length }} of {{ application_forms.paginator.count }}.
 <a href="{% url 'open-applications' %}">See all open applications</a>
-{% else %}
-There aren't any open applications for you right now.
-{% endif %}
 </article>
 
 {% if request.user.is_authenticated %}
@@ -80,7 +79,7 @@ Showing {{ leagues|length }} of {{ leagues.paginator.count }}.
 {% for league_group in league_groups %}
 {% include "stave/league_group.html" with item=league_group user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
 {% empty %}
-You don't have any League Groups right now.
+<p>You don't have any League Groups right now.</p>
 {% endfor %}
 
 Showing {{ league_groups|length }} of {{ league_groups.paginator.count }}.
