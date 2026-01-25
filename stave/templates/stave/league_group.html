@@ -11,10 +11,12 @@
 {% endif %}
 {% if user.is_authenticated and user|is_subscribed_to_league_group:item %}
 <form action="{% url 'league-group-unsubscribe' item.id %}" method="POST">
+{% csrf_token %}
 <input type="submit" value="Unsubscribe">
 </form>
 {% elif user.is_authenticated %}
 <form action="{% url 'league-group-subscribe' item.id %}" method="POST">
+{% csrf_token %}
 <input type="submit" value="Subscribe">
 </form>
 {% endif %}
@@ -37,7 +39,7 @@
     {% if item.owner == user %}
     <div>
         <dt>Private</dt>
-        <dd>{{ item.private|yesno }}</dd>
+        <dd>{{ item.private|yesno|title }}</dd>
     </div>
     {% endif %}
 </dl>

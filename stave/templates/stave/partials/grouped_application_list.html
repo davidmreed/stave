@@ -5,10 +5,12 @@
 <h3>
     {% if event_group.grouper %}
     Subscribed
+    {% else %}
+    Other
     {% endif %}
 </h3>
 {% endif %}
-{% for event in event_group %}
+{% for event in event_group.list %}
 {% include "stave/event.html" with item=event user=user card_kind=card_kind csrf_token=csrf_token only %}
 {% endfor %}
 {% endfor %}

@@ -181,4 +181,5 @@ class HomeInputs:
     applications: Page
     events: Page
     leagues: Page
-    subscriptions: Page
+    subscribed_leagues: int
+    subscribed_league_groups: int

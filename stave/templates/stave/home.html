@@ -91,10 +91,16 @@ You don't have any League Groups right now.
 <header>
     <h3>Subscriptions</h3>
 </header>
-{% for league in subscriptions %}
-{% include "stave/league.html" with item=league user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
-{% endfor %}
-Showing {{ subscriptions|length }} of {{ subscriptions.paginator.count }}.
+<dl>
+    <div>
+        <dt>Leagues</dt>
+        <dd>{{ subscribed_leagues }}</dd>
+    </div>
+    <div>
+        <dt>League Groups</dt>
+        <dd>{{ subscribed_league_groups }}</dd>
+    </div>
+</dl>
 <a href="{% url 'my-subscriptions' %}">See all my subscriptions</a>
 </article>
 

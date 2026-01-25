@@ -1,12 +1,45 @@
 {% extends "base.html" %}
-
+{% load stave_tags %}
 {% block content %}
 <header>
     <h1>My Subscriptions</h1>
 </header>
 
-{% for league in page_obj %}
-{% include "stave/league.html" with item=league user=request.user card_kind="stave/full_card.html" csrf_token=csrf_token only %}
+{% for league_or_group in page_obj %}
+{% if league_or_group.kind == "league" %}
+
+    {% if request.user|is_subscribed_to_league:item %}
+    <form action="{% url 'league-unsubscribe' item.slug %}" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.path }}">
+        <input type="submit" value="Unsubscribe">
+    </form>
+    {% else %}
+    <form action="{% url 'league-subscribe' item.slug %}" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.path }}">
+        <input type="submit" value="Subscribe">
+    </form>
+    {% endif %}
+{% else %}
+<article>
+<header>
+    <h2>{{ league_or_group.name }}</h2>
+    {% if request.user|is_subscribed_to_league_group:item %}
+    <form action="{% url 'league-group-unsubscribe' item.id %}" method="POST">
+    {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.path }}">
+    <input type="submit" value="Unsubscribe">
+    </form>
+    {% else%}
+    <form action="{% url 'league-group-subscribe' item.id %}" method="POST">
+    {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.path }}">
+    <input type="submit" value="Subscribe">
+    </form>
+</header>
+{% endif %}
+{% endif %}
 {% endfor %}
 
 {% include "stave/partials/pagination.html" with page_obj=page_obj only %}
