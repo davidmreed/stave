@@ -106,7 +106,11 @@ class LeagueGroupEventsFeed(StaveEventFeed):
         return _("Events for {league_group} from Stave.app").format(league_group=obj)
 
     def items(self, obj: models.LeagueGroup) -> QuerySet[models.Event]:
-        return models.Event.listed(None).in_league_group(obj).prefetch_for_display()
+        return (
+            models.Event.objects.listed(None)
+            .in_league_group(obj)
+            .prefetch_for_display()
+        )
 
 
 class MySubscriptionsEventFeed(StaveEventFeed):
