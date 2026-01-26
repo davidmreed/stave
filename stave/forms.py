@@ -1405,8 +1405,6 @@ class LeagueGroupMemberForm(forms.ModelForm):
         model = models.LeagueGroupMember
         fields = ["league"]
 
-        # TODO: constrain the League queryset
-
     def __init__(self, *args, **kwargs):
         kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
@@ -1430,8 +1428,10 @@ class LeagueGroupCreateUpdateForm(ParentChildForm):
     def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
         formset = super().get_child_formset(*args, **kwargs)
 
+        queryset = models.League.objects.visible(self.user)
+
         for form in formset:
-            form.fields["leagues"].queryset = models.League.objects.visible(self.user)
+            form.fields["league"].queryset = queryset
 
         return formset
 
@@ -1445,6 +1445,12 @@ class LeagueGroupCreateUpdateForm(ParentChildForm):
             if child_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
         ]:
             if child_form.instance._state.adding:
+                if not child_form.instance.league_id:
+                    child_form.add_error(
+                        "league",
+                        _("You need to select a league."),
+                    )
+                    continue
                 if child_form.instance.league in seen_leagues:
                     child_form.add_error(
                         "league",
