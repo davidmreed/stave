@@ -1427,6 +1427,14 @@ class LeagueGroupCreateUpdateForm(ParentChildForm):
         self.user = user
         super().__init__(*args, **kwargs)
 
+    def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
+        formset = super().get_child_formset(*args, **kwargs)
+
+        for form in formset:
+            form.fields["leagues"].queryset = models.League.objects.visible(self.user)
+
+        return formset
+
     def clean(self):
         super().clean()
         self.parent_form.instance.owner = self.user
