@@ -7,6 +7,7 @@
 
 - [Signing Up and Logging In](./signing-up-and-logging-in.md)
 - [Applying for Events](./applying.md)
+- [Subscriptions](./subscriptions.md)
 - [Calendars](./calendars.md)
 
 # League Guide
