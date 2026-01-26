@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_ftl.apps.DjangoFtlConfig",
     "allauth",
     "allauth.account",
     "allauth.mfa",
@@ -77,6 +78,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
+    "django_ftl.middleware.activate_from_request_language_code",
 ]
 
 # Authentication
