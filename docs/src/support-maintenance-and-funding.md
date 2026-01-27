@@ -1,6 +1,6 @@
 # Support, Maintenance, and Funding
 
-Stave is built and supported by [Stacktrace](https://ktema.org), with [contributions](./contributors.md) from other members of the derby tech community.
+Stave is built and supported by [Stacktrace](https://ktema.org), with [contributions](./contributors.md) from other members of the derby tech community. Stave has a [Discord instance](https://discord.gg/jwYGPa2EAK) for discussion and support. [GitHub issues](https://github.com/davidmreed/stave) are available for bug reports and roadmap items.
 
 Stave does not request or accept funding from roller derby leagues or volunteers. It will be free for roller derby for its lifetime.
 
