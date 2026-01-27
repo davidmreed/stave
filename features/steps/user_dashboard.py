@@ -328,21 +328,6 @@ def then_open_applications_highlighted(context):
     )
 
 
-@then("multiple embedded video tutorials are displayed")
-def then_video_tutorials_displayed(context):
-    soup = BeautifulSoup(context.response.content, "html.parser")
-
-    # Look for iframe elements (YouTube embeds)
-    iframes = soup.find_all("iframe")
-    youtube_iframes = [
-        iframe for iframe in iframes if "youtube" in iframe.get("src", "")
-    ]
-    context.test.assertTrue(
-        len(youtube_iframes) >= 4,
-        f"Expected at least 4 YouTube videos, found {len(youtube_iframes)}",
-    )
-
-
 @then('the user sees the "Join Now" section instead of personalized content')
 def then_user_sees_join_now_section(context):
     soup = BeautifulSoup(context.response.content, "html.parser")
