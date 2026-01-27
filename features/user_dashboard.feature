@@ -14,7 +14,6 @@ Scenario: Authenticated user sees personalized dashboard sections
     And the user sees the "Open Applications" section
     And the user sees the "My Applications" section
     And the user sees the "Staffing" section
-    And the user sees the "Video Guides" section
     And the user sees their calendar widget
 
 Scenario: User with no applications sees empty state messages
@@ -50,15 +49,8 @@ Scenario: Event manager sees their managed events
     And pending applications are highlighted with counts
     And open applications are highlighted with counts
 
-Scenario: User can access video guides
-    When the user navigates to the home page
-    And the user logs in with valid credentials
-    Then the user sees the "Video Guides" section
-    And multiple embedded video tutorials are displayed
-
 Scenario: Unauthenticated user sees limited content
     When an unauthenticated user navigates to the home page
     Then the user sees the "Open Applications" section
     And the user sees the "Join Now" section instead of personalized content
-    And the user sees the "Video Guides" section
     And the user does not see "My Applications" or "Staffing" sections

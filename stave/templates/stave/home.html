@@ -7,8 +7,8 @@
 <p style="text-align: center;">
     Welcome to Stave, a free and open source platform for roller derby signups and staffing.<br>
     <small>
-        Getting started? Read the <a target="_blank" href="https://docs.stave.app/">docs</a> or watch <a href="#video-guides">videos below</a>.
-        <a href="mailto:david@ktema.org">Contact Stacktrace</a> with questions.
+        Getting started? Read the <a target="_blank" href="https://docs.stave.app/">docs</a>, with embedded video guides.
+        Join our <a target="_blank" href="https://discord.gg/jwYGPa2EAK">Discord</a> for support and discussion.
     </small>
 </p>
 
@@ -124,19 +124,5 @@ Showing {{ league_groups|length }} of {{ league_groups.paginator.count }}.
     {% include 'stave/login_options.html' %}
 </article>
 {% endif %}
-<article style="flex: 1 1 auto;">
-    <header>
-        <h2 id="video-guides">Video Guides</h2>
-    </header>
-<style type="text/css">
-iframe {
-    margin: 0.5rem;
-}
-</style>
-    <iframe src="https://www.youtube-nocookie.com/embed/NDkV3FNB48A?si=Jj7DTeVj7I54jzHd" title="Applying as an Official with Stave" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-    <iframe src="https://www.youtube-nocookie.com/embed/0Nwgefh4gOU?si=wZIm0VQoNB72I8cU" title="Getting Started with Stave for Leagues" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-    <iframe src="https://www.youtube-nocookie.com/embed/QYll774ke7w?si=y7KyvCiEe2MfY7UJ" title="Staffing Games" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-    <iframe src="https://www.youtube-nocookie.com/embed/f4whVACtDYs?si=uBZreTzTa3zOPqEe" title="Staffing Tournaments" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-</article>
 </div>
 {% endblock %}
