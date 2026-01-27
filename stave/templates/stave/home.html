@@ -3,124 +3,125 @@
 {% inputs 'HomeInputs' %}
 
 {% block content %}
+{% load ftl %}
+{% ftlconf bundle='stave.fluent_bundles.home' %}
 
 <p style="text-align: center;">
-    Welcome to Stave, a free and open source platform for roller derby signups and staffing.<br>
+    {% ftlmsg 'overview-welcome' %}<br>
     <small>
-        Getting started? Read the <a target="_blank" href="https://docs.stave.app/">docs</a>, with embedded video guides.
-        Join our <a target="_blank" href="https://discord.gg/jwYGPa2EAK">Discord</a> for support and discussion.
+        {% ftlmsg 'overview-getting-started-html' %}
+        {% ftlmsg 'overview-discord-html' %}
     </small>
 </p>
 
 <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
 
 <article style="flex: 1 1 auto;">
-    <header><h2>Open Applications</h2></header>
+<header><h2>{% ftlmsg 'open-applications-title' %}</h2></header>
 
 {% include "stave/partials/grouped_application_list.html" with page_obj=application_forms user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
 
 {% if not application_forms|length %}
-<p>There aren't any open applications for you right now.</p>
+<p>{% ftlmsg 'open-applications-none' %}</p>
 {% endif %}
-Showing {{ application_forms|length }} of {{ application_forms.paginator.count }}.
-<a href="{% url 'open-applications' %}">See all open applications</a>
+{% ftlmsg 'open-applications-showing-x-of-y' x=application_forms|length y=application_forms.paginator.count %}
+<a href="{% url 'open-applications' %}">{% ftlmsg 'open-applications-see-all' %}</a>
 </article>
 
 {% if request.user.is_authenticated %}
 
 <article style="flex: 1 1 auto;">
     <header>
-        <h2>My Applications</h2>
+        <h2>{% ftlmsg 'my-applications-title' %}</h2>
     </header>
 {% for application in applications %}
 {% include "stave/event_applied_card.html" with item=application.form.event application=application user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
 {% empty %}
 <p>
-You don't have any applications pending right now.
+{% ftlmsg 'my-applications-none-pending' %}
 </p>
 {% endfor %}
-Showing {{ applications|length }} of {{ applications.paginator.count }}.
-<a href="{% url 'my-applications' %}">See all my applications</a>
+{% ftlmsg 'my-applications-x-of-y' x=applications|length y=applications.paginator.count %}
+<a href="{% url 'my-applications' %}">{% ftlmsg 'my-applications-see-all' %}</a>
 {% url 'calendar-user' request.user.id as url %}
 {% include "stave/partials/calendar.html" with url=url only %}
 </article>
 
 <article style="flex: 1 1 auto;">
     <header>
-        <h2>Staffing</h2>
+        <h2>{% ftlmsg 'my-events-title' %}</h2>
     </header>
 {% for event in events %}
 {% include "stave/partials/event_action_card.html" with item=event user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
 {% empty %}
-You aren't managing any events.
+{% ftlmsg 'my-events-none' %}
 {% endfor %}
-Showing {{ events|length }} of {{ events.paginator.count }}.
-<a href="{% url 'my-events' %}">See all my events</a>
+{% ftlmsg 'my-events-showing-x-of-y' x=events|length y=events.paginator.count %}
+<a href="{% url 'my-events' %}">{% ftlmsg 'my-events-see-all' %}</a>
 {% url 'calendar-user' request.user.id as url %}
 {% include "stave/partials/calendar.html" with url=url only %}
 </article>
 
 <article style="flex: 1 1 auto;">
 <header>
-    <h2>My Leagues</h2>
+    <h2>{% ftlmsg 'my-leagues-title' %}</h2>
 </header>
 
 {% for league in leagues %}
 {% include "stave/league.html" with item=league user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
 {% endfor %}
-Showing {{ leagues|length }} of {{ leagues.paginator.count }}.
-<a href="{% url 'my-leagues' %}">See all my leagues</a>
+{% ftlmsg 'my-leagues-showing-x-of-y' x=leagues|length y=leagues.paginator.count %}
+<a href="{% url 'my-leagues' %}">{% ftlmsg 'my-leagues-see-all' %}</a>
 </article>
 
 <article style="flex: 1 1 auto;">
 <header>
-    <h2>My League Groups</h2>
+    <h2>{% ftlmsg 'my-league-groups-title' %}</h2>
 </header>
 {% for league_group in league_groups %}
 {% include "stave/league_group.html" with item=league_group user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
 {% empty %}
-<p>You don't have any League Groups right now.</p>
+<p>{% ftlmsg 'my-league-groups-none' %}</p>
 {% endfor %}
-
-Showing {{ league_groups|length }} of {{ league_groups.paginator.count }}.
-<a href="{% url 'my-league-groups' %}">See all my league groups</a>
+{% ftlmsg 'my-league-groups-showing-x-of-y' x=league_groups|length y=league_groups.paginator.count %}
+<a href="{% url 'my-league-groups' %}">{% ftlmsg 'my-league-groups-see-all' %}</a>
 </article>
 
 <article style="flex: 1 1 auto;">
 <header>
-    <h2>Subscriptions</h2>
+    <h2>{% ftlmsg 'subscriptions-title' %}</h2>
 </header>
 <dl>
     <div>
-        <dt>Leagues</dt>
+        <dt>{% ftlmsg 'subscriptions-leagues' %}</dt>
         <dd>{{ subscribed_leagues }}</dd>
     </div>
     <div>
-        <dt>League Groups</dt>
+        <dt>{% ftlmsg 'subscriptions-league-groups' %}</dt>
         <dd>{{ subscribed_league_groups }}</dd>
     </div>
 </dl>
-<a href="{% url 'my-subscriptions' %}">See all my subscriptions</a>
+<a href="{% url 'my-subscriptions' %}">{% ftlmsg 'subscriptions-see-all' %}</a>
 {% url 'calendar-user-subscriptions' request.user.id as url %}
 {% include "stave/partials/calendar.html" with url=url only %}
 </article>
 
 <article style="flex: 1 1 auto;">
 <header>
-    <h2>Officiating History</h2>
+    <h2>{% ftlmsg 'officiating-history-title' %}</h2>
 </header>
 
 <nav>
-<a href="{% url 'officiating-history' %}">View my Stave history</a>
+<a href="{% url 'officiating-history' %}">{% ftlmsg 'officiating-history-button' %}</a>
 {% if request.user.game_history_url %}
-<a target="_blank" href="{{ request.user.game_history_url }}">View my officiating history document</a>
+<a target="_blank" href="{{ request.user.game_history_url }}">{% ftlmsg 'officiating-history-document-button' %}</a>
 </nav>
 {% endif %}
 </article>
 
 {% else %}
 <article style="flex: 1 1 auto;">
-    <header><h2>Join Now</h2></header>
+    <header><h2>{% ftlmsg 'join-now' %}</h2></header>
     {% include 'stave/login_options.html' %}
 </article>
 {% endif %}
