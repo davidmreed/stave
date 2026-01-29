@@ -1,7 +1,7 @@
 {% load stave_tags %}
 {% inputs 'ApplicationTableRowInputs' %}
-<td><small>{{ application.get_status_display }}</small></td>
-<td><small>{{ game_count }}</small></td>
+<td><small>{{ entry.application.get_status_display }}</small></td>
+<td><small>{{ entry.user_game_count }}</small></td>
 {# Profile fields #}
 {% for field in application.form.requires_profile_fields %}
 <td>
@@ -27,10 +27,10 @@
 </td>
 {% endfor %}
 {# Roles #}
-{% for role_group in application.form.role_groups.all %}
+{% for role_group in entry.application.form.role_groups.all %}
     <td>
         <small>
-        {% for role in application.roles.all %}
+        {% for role in entry.application.roles.all %}
             {% if role.role_group_id == role_group.id %}
                 {{ role }}
             {% endif %}
@@ -91,7 +91,7 @@
 {% endif %}
 {# Application questions #}
 {% for question in form.form_questions.all %}
-    {% with application.responses_by_question|get:question.id as response %}
+    {% with entry.application.responses_by_question|get:question.id as response %}
         <td>
             <small>
             {% if response|stringformat:"s"|length > 25 %}

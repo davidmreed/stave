@@ -21,14 +21,12 @@
 </aside>
 
 {% partialdef application-table %}
-        {% for application in applications %}
+        {% for entry in entries %}
         <tr>
             <td class="inline">
-                {% include "stave/application_actions.html" with user=request.user can_manage_event=can_manage_event application=application ApplicationStatus=ApplicationStatus include_view=True minimal=True only %}
+                {% include "stave/application_actions.html" with user=request.user can_manage_event=can_manage_event application=entry.application ApplicationStatus=ApplicationStatus include_view=True minimal=True only %}
             </td>
-            {% with game_count=game_counts|get:application.user_id %}
-            {% include 'stave/partials/application_table_row.html' with form=form application=application game_count=game_count only %}
-            {% endwith %}
+            {% include 'stave/partials/application_table_row.html' with form=form entry=entry only %}
         </tr>
         {% endfor %}
 {% endpartialdef %}
@@ -43,7 +41,7 @@
         </tr>
     </thead>
     <tbody>
-        {% with applications_action as applications %}
+        {% with applications_action as entries %}
         {% partial application-table %}
         {% endwith %}
     </tbody>
@@ -55,7 +53,7 @@
         </tr>
     </thead>
     <tbody>
-        {% with applications_inprogress as applications %}
+        {% with applications_inprogress as entries %}
         {% partial application-table %}
         {% endwith %}
     </tbody>
@@ -67,7 +65,7 @@
         </tr>
     </thead>
     <tbody>
-        {% with applications_staffed as applications %}
+        {% with applications_staffed as entries %}
         {% partial application-table %}
         {% endwith %}
     </tbody>
@@ -79,7 +77,7 @@
         </tr>
     </thead>
     <tbody>
-        {% with applications_closed as applications %}
+        {% with applications_closed as entries %}
         {% partial application-table %}
         {% endwith %}
     </tbody>
