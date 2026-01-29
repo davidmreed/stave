@@ -41,7 +41,11 @@ ALLOWED_HOSTS = [
     "localhost",
 ]
 
-CSRF_TRUSTED_ORIGINS = ["https://*.kcabi3mb.up.railway.app", "https://*.stave.app"]
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.kcabi3mb.up.railway.app",
+    "https://*.stave.app",
+    "https://stave.app",
+]
 
 # Application definition - Base apps used in all environments
 INSTALLED_APPS = [
