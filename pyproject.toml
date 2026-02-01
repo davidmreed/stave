@@ -27,6 +27,7 @@ dependencies = [
     "sentry-sdk[django]>=2.24.0",
     "django-anymail[amazon-ses]>=13.0",
     "django-meta>=2.5.0",
+    "django-ftl>=0.14",
 ]
 
 [dependency-groups]

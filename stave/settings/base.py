@@ -10,6 +10,27 @@ import django_stubs_ext
 import dotenv
 import sentry_sdk
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {
+            "format": "[{asctime}] [{process:d}] [{levelname}] [{name}] {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+}
+
 # Sentry initialization should happen before importing Django apps/middleware
 # to ensure errors are captured correctly.
 if sentry_dsn := os.environ.get("SENTRY_DSN"):
@@ -56,6 +77,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_ftl.apps.DjangoFtlConfig",
     "allauth",
     "allauth.account",
     "allauth.mfa",
@@ -81,6 +103,9 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
+    "stave.middleware.LocaleRewriteMiddleware",
+    "django_ftl.middleware.activate_from_request_language_code",
 ]
 
 # Authentication

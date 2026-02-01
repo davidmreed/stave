@@ -1,3 +1,5 @@
+{% load ftl %}
+{% ftlconf bundle='stave.fluent_bundles.base' %}
 {% load static %}
 {% load meta %}
 <!doctype html>
@@ -11,7 +13,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="color-scheme" content="light dark">
-        <title>{% block title %}Stave{% endblock %}</title>
+        <title>{% block title %}{% ftlmsg 'application-name' %}{% endblock %}</title>
         {% include 'meta/meta.html' %}
         {% block resources %}{% endblock %}
         {% block extra_head %}
@@ -22,20 +24,20 @@
         <nav>
             <div>
             <ul>
-                <li><a href="{% url 'home' %}"><strong>Stave</strong></a> <small><strong style="color: darkred;">BETA</strong></small></li>
-                <li><a href="{% url 'league-list' %}">Leagues</a></li>
-                <li><a href="{% url 'event-list' %}">Events</a></li>
-                <li><a target="_blank" href="https://docs.stave.app/">Docs</a></li>
+                <li><a href="{% url 'home' %}"><strong>{% ftlmsg 'application-name' %}</strong></a> <small><strong style="color: darkred;">BETA</strong></small></li>
+                <li><a href="{% url 'league-list' %}">{% ftlmsg 'navbar-leagues' %}</a></li>
+                <li><a href="{% url 'event-list' %}">{% ftlmsg 'navbar-events' %}</a></li>
+                <li><a target="_blank" href="https://docs.stave.app/">{% ftlmsg 'navbar-docs' %}</a></li>
             </ul>
             </div>
             <div>
                 <ul>
                 {% if request.user.is_authenticated %}
-                <li><a href="{% url 'profile' %}">My Account</a></li>
-                <li><a href="{% url 'account_logout' %}">Logout</a></li>
+                <li><a href="{% url 'profile' %}">{% ftlmsg 'navbar-my-account' %}</a></li>
+                <li><a href="{% url 'account_logout' %}">{% ftlmsg 'navbar-logout' %}</a></li>
                 {% else %}
-                <li><a href="{% url 'account_signup' %}">Sign Up</a></li>
-                <li><a href="{% url 'account_login' %}{% querystring next=request.path %}">Login</a></li>
+                <li><a href="{% url 'account_signup' %}">{% ftlmsg 'navbar-signup' %}</a></li>
+                <li><a href="{% url 'account_login' %}{% querystring next=request.path %}">{% ftlmsg 'navbar-login' %}</a></li>
                 {% endif %}
                 </ul>
             </div>
@@ -55,10 +57,10 @@
     </main>
     <footer class="container">
         <small>
-            Stave &copy; 2025 <a href="https://ktema.org">David "Stacktrace" Reed</a>.
-            <a target="_blank" href="https://github.com/davidmreed/stave">Free and open source</a> for the roller derby community.
-            <a target="_blank" href="https://docs.stave.app/about.html">About</a>
-            <a target="_blank" href="https://docs.stave.app/privacy-policy.html">Privacy</a>
+            {% ftlmsg 'application-name' %} &copy; 2025 <a href="https://ktema.org">David "Stacktrace" Reed</a>.
+            {% ftlmsg 'footer-free-and-open-source-html' %}
+            <a target="_blank" href="https://docs.stave.app/about.html">{% ftlmsg 'footer-about' %}</a>
+            <a target="_blank" href="https://docs.stave.app/privacy-policy.html">{% ftlmsg 'footer-privacy' %}</a>
         </small>
     </footer>
     </body>
