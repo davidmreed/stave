@@ -4,11 +4,9 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0056_alter_crewassignment_user'),
-        ('stave', '0058_merge_20260125_2347'),
+        ("stave", "0056_alter_crewassignment_user"),
+        ("stave", "0058_merge_20260125_2347"),
     ]
 
-    operations = [
-    ]
+    operations = []

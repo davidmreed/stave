@@ -2,7 +2,7 @@ import functools
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterable,Generator, Tuple
+from typing import Iterable, Generator, Tuple
 from uuid import UUID
 import enum
 
@@ -20,8 +20,10 @@ class ConflictKind(enum.Enum):
 
 ConflictKind.do_not_call_in_templates = True
 
+
 class UserNotAvailableException(Exception):
     pass
+
 
 @dataclass
 class ApplicationEntry:
@@ -64,31 +66,30 @@ class UserAvailabilityEntry:
             else:
                 return ConflictKind.NONE
         elif has_times:
-                # This is a comparison between two override crews, which always
-                # have defined start and end times, or between two assigned static crews
-                # or an assigned static crew and an override crew, which will
-                # also have times.
-                time_overlap = (
-                    self.start_time < other.end_time
-                    and self.end_time > other.start_time
-                )
+            # This is a comparison between two override crews, which always
+            # have defined start and end times, or between two assigned static crews
+            # or an assigned static crew and an override crew, which will
+            # also have times.
+            time_overlap = (
+                self.start_time < other.end_time and self.end_time > other.start_time
+            )
 
-                if time_overlap:
-                    if (
-                        other.crew.role_group in swappable_role_groups
-                        or other.crew.role_group == self.crew.role_group
-                    ):
-                        return ConflictKind.SWAPPABLE_CONFLICT
-                    else:
-                        return ConflictKind.NON_SWAPPABLE_CONFLICT
-
-        elif self.crew.kind == other.crew.kind:
-                # This comparison is between static crews _without_ assignments
-                # or between event crews. No times involved.
-                if other.crew.role_group in swappable_role_groups:
+            if time_overlap:
+                if (
+                    other.crew.role_group in swappable_role_groups
+                    or other.crew.role_group == self.crew.role_group
+                ):
                     return ConflictKind.SWAPPABLE_CONFLICT
                 else:
                     return ConflictKind.NON_SWAPPABLE_CONFLICT
+
+        elif self.crew.kind == other.crew.kind:
+            # This comparison is between static crews _without_ assignments
+            # or between event crews. No times involved.
+            if other.crew.role_group in swappable_role_groups:
+                return ConflictKind.SWAPPABLE_CONFLICT
+            else:
+                return ConflictKind.NON_SWAPPABLE_CONFLICT
 
         return ConflictKind.NONE
 
@@ -303,7 +304,9 @@ class AvailabilityManager:
         ]
 
     @property
-    def game_crew_assignments(self) -> Generator[Tuple[models.Game, models.CrewAssignment]]:
+    def game_crew_assignments(
+        self,
+    ) -> Generator[Tuple[models.Game, models.CrewAssignment]]:
         for game in self.application_form.event.games.all():
             for rgca in game.role_group_crew_assignments.all():
                 for ca in rgca.effective_crew_by_role_id().values():
@@ -314,7 +317,7 @@ class AvailabilityManager:
     def user_availability(self) -> dict[UUID, list[UserAvailabilityEntry]]:
         user_assigned_times_map = defaultdict(list)
 
-        for (game, assignment) in self.game_crew_assignments:
+        for game, assignment in self.game_crew_assignments:
             if assignment.user_id:
                 user_assigned_times_map[assignment.user_id].append(
                     UserAvailabilityEntry(
@@ -523,16 +526,24 @@ class AvailabilityManager:
         return applications
 
     def get_application_by_id(self, id: UUID) -> models.Application | None:
-            for application in self.applications:
-                if application.id== id and application.status != models.ApplicationStatus.WITHDRAWN:
-                    return application
+        for application in self.applications:
+            if (
+                application.id == id
+                and application.status != models.ApplicationStatus.WITHDRAWN
+            ):
+                return application
 
     def get_application_for_user(self, user: models.User) -> models.Application | None:
-            for application in self.applications:
-                if application.user == user and application.status != models.ApplicationStatus.WITHDRAWN:
-                    return application
+        for application in self.applications:
+            if (
+                application.user == user
+                and application.status != models.ApplicationStatus.WITHDRAWN
+            ):
+                return application
 
-    def get_application_for_assignment(self, assignment: models.CrewAssignment) -> models.Application | None:
+    def get_application_for_assignment(
+        self, assignment: models.CrewAssignment
+    ) -> models.Application | None:
         # There should be exactly one or zero non-withdrawn applications for this user.
         if assignment.user:
             return self.get_application_for_user(assignment.user)
@@ -598,10 +609,7 @@ class AvailabilityManager:
                     cas = {
                         ca
                         for (_, ca) in self.game_crew_assignments
-                        if (
-                            ca.crew == avail_entry.crew
-                            and ca.user == user
-                        )
+                        if (ca.crew == avail_entry.crew and ca.user == user)
                     }
                     if keep_nonexclusive:
                         cas = {ca for ca in cas if not ca.role.nonexclusive}
