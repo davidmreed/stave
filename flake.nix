@@ -9,7 +9,7 @@
       let pkgs = import nixpkgs { system = system; config.allowUnfree = true; }; in
       {
         devShells.default = pkgs.mkShell {
-          packages = with pkgs; [ python313 git just uv railway sqlite mdbook mdbook-mermaid ];
+          packages = with pkgs; [ python313 git just uv railway sqlite mdbook mdbook-mermaid postgresql_16 ];
         };
       }
     );
