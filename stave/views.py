@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import logging
 from collections import defaultdict
 from dataclasses import is_dataclass
 from datetime import datetime, time, timedelta
@@ -36,7 +35,13 @@ from meta.views import Meta
 from stave.templates.stave import contexts
 
 from . import forms, models, settings
-from .avail import AvailabilityManager, ScheduleManager, ConflictKind, ApplicationEntry, UserNotAvailableException
+from .avail import (
+    AvailabilityManager,
+    ScheduleManager,
+    ConflictKind,
+    ApplicationEntry,
+    UserNotAvailableException,
+)
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
@@ -1349,33 +1354,33 @@ class FormApplicationsView(
             form=form,
             applications_action=[
                 ApplicationEntry(
-                                       application=a,
-                                       user_game_count=am.get_game_count_for_user(a.user),
-                                       availability_status=ConflictKind.NONE
+                    application=a,
+                    user_game_count=am.get_game_count_for_user(a.user),
+                    availability_status=ConflictKind.NONE,
                 )
                 for a in am.get_applications_in_statuses(models.OPEN_STATUSES)
             ],
             applications_inprogress=[
                 ApplicationEntry(
-                                       application=a,
-                                       user_game_count=am.get_game_count_for_user(a.user),
-                                       availability_status=ConflictKind.NONE
+                    application=a,
+                    user_game_count=am.get_game_count_for_user(a.user),
+                    availability_status=ConflictKind.NONE,
                 )
                 for a in am.get_applications_in_statuses(models.IN_PROGRESS_STATUSES)
             ],
             applications_staffed=[
                 ApplicationEntry(
-                                       application=a,
-                                       user_game_count=am.get_game_count_for_user(a.user),
-                                       availability_status=ConflictKind.NONE
+                    application=a,
+                    user_game_count=am.get_game_count_for_user(a.user),
+                    availability_status=ConflictKind.NONE,
                 )
                 for a in am.get_applications_in_statuses(models.STAFFED_STATUSES)
             ],
             applications_closed=[
                 ApplicationEntry(
-                                       application=a,
-                                       user_game_count=am.get_game_count_for_user(a.user),
-                                       availability_status=ConflictKind.NONE
+                    application=a,
+                    user_game_count=am.get_game_count_for_user(a.user),
+                    availability_status=ConflictKind.NONE,
                 )
                 for a in am.get_applications_in_statuses(models.CLOSED_STATUSES)
             ],
@@ -1799,15 +1804,15 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
 
             user = None
             if user_id:
-                user = get_object_or_404(
-                    models.User,
-                    pk=user_id
-                )
+                user = get_object_or_404(models.User, pk=user_id)
 
             try:
                 am.set_assignment(role, crew, user)
             except UserNotAvailableException:
-                messages.info(request, _("The selected user is not available for the chosen slot."))
+                messages.info(
+                    request,
+                    _("The selected user is not available for the chosen slot."),
+                )
 
             # Redirect the user to the Crew Builder for this crew
             context = crew.get_context()

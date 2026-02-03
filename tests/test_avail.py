@@ -26,6 +26,7 @@ def existing_static_crew_entry(db):
         exclusive=True,
     )
 
+
 @fixture
 def existing_event_crew_entry(db):
     return UserAvailabilityEntry(
@@ -50,6 +51,7 @@ def test_user_availability_entry__full_overlap_same_crew_exclusive(existing_entr
         == ConflictKind.SWAPPABLE_CONFLICT
     )
 
+
 def test_user_availability_entry__abutting_left_same_crew_exclusive(existing_entry):
     assert (
         existing_entry.overlaps(
@@ -64,6 +66,7 @@ def test_user_availability_entry__abutting_left_same_crew_exclusive(existing_ent
         == ConflictKind.NONE
     )
 
+
 def test_user_availability_entry__abutting_right_same_crew_exclusive(existing_entry):
     assert (
         existing_entry.overlaps(
@@ -77,6 +80,7 @@ def test_user_availability_entry__abutting_right_same_crew_exclusive(existing_en
         )
         == ConflictKind.NONE
     )
+
 
 def test_user_availability_entry__full_overlap_same_crew_nonexclusive(existing_entry):
     assert (
@@ -139,7 +143,9 @@ def test_user_availability_entry__partial_overlap(existing_entry):
     )
 
 
-def test_user_availability_entry__overlap_same_static_crew_exclusive(existing_static_crew_entry):
+def test_user_availability_entry__overlap_same_static_crew_exclusive(
+    existing_static_crew_entry,
+):
     assert (
         existing_static_crew_entry.overlaps(
             UserAvailabilityEntry(
@@ -154,7 +160,9 @@ def test_user_availability_entry__overlap_same_static_crew_exclusive(existing_st
     )
 
 
-def test_user_availability_entry__overlap_same_static_crew_nonexclusive(existing_static_crew_entry):
+def test_user_availability_entry__overlap_same_static_crew_nonexclusive(
+    existing_static_crew_entry,
+):
     assert (
         existing_static_crew_entry.overlaps(
             UserAvailabilityEntry(
@@ -206,7 +214,10 @@ def test_user_availability_entry__overlap_other_static_crew_swappable(
 
 def test_user_availability_entry__override_of_static_crew(): ...
 
-def test_user_availability_entry__overlap_same_event_crew_exclusive(existing_event_crew_entry):
+
+def test_user_availability_entry__overlap_same_event_crew_exclusive(
+    existing_event_crew_entry,
+):
     assert (
         existing_event_crew_entry.overlaps(
             UserAvailabilityEntry(
@@ -220,7 +231,10 @@ def test_user_availability_entry__overlap_same_event_crew_exclusive(existing_eve
         == ConflictKind.SWAPPABLE_CONFLICT
     )
 
-def test_user_availability_entry__overlap_same_event_crew_nonexclusive(existing_event_crew_entry):
+
+def test_user_availability_entry__overlap_same_event_crew_nonexclusive(
+    existing_event_crew_entry,
+):
     assert (
         existing_event_crew_entry.overlaps(
             UserAvailabilityEntry(
@@ -234,7 +248,10 @@ def test_user_availability_entry__overlap_same_event_crew_nonexclusive(existing_
         == ConflictKind.NONE
     )
 
-def test_user_availability_entry__overlap_other_event_crew_non_swappable(existing_event_crew_entry):
+
+def test_user_availability_entry__overlap_other_event_crew_non_swappable(
+    existing_event_crew_entry,
+):
     assert (
         existing_event_crew_entry.overlaps(
             UserAvailabilityEntry(
@@ -248,7 +265,10 @@ def test_user_availability_entry__overlap_other_event_crew_non_swappable(existin
         == ConflictKind.NON_SWAPPABLE_CONFLICT
     )
 
-def test_user_availability_entry__overlap_other_event_crew_swappable(existing_event_crew_entry):
+
+def test_user_availability_entry__overlap_other_event_crew_swappable(
+    existing_event_crew_entry,
+):
     other_crew = CrewFactory(kind=models.CrewKind.EVENT_CREW)
     assert (
         existing_event_crew_entry.overlaps(
@@ -262,6 +282,7 @@ def test_user_availability_entry__overlap_other_event_crew_swappable(existing_ev
         )
         == ConflictKind.SWAPPABLE_CONFLICT
     )
+
 
 def test_user_availability_entry__non_meaningful(existing_event_crew_entry):
     other_crew = CrewFactory(kind=models.CrewKind.GAME_CREW)
@@ -306,47 +327,55 @@ def test_availability_manager__applications(tournament):
     # TODO: test that prefetches cache
     #
 
+
 def test_availability_manager__applications_by_status(db):
-        application_form = ApplicationFormFactory()
-        for status in models.ApplicationStatus:
-            for _ in range(3):
-                ApplicationFactory(form=application_form, status=status)
+    application_form = ApplicationFormFactory()
+    for status in models.ApplicationStatus:
+        for _ in range(3):
+            ApplicationFactory(form=application_form, status=status)
 
-        am = AvailabilityManager.with_application_form(application_form)
-        by_status = am.applications_by_status()
+    am = AvailabilityManager.with_application_form(application_form)
+    by_status = am.applications_by_status()
 
-        assert keys(by_status) == list(models.ApplicationStatus)
-        assert all(len(v) == 3 for v in by_status.values())
+    assert keys(by_status) == list(models.ApplicationStatus)
+    assert all(len(v) == 3 for v in by_status.values())
+
 
 def test_availability_manager__get_applications_in_statuses(db):
-        application_form = ApplicationFormFactory()
-        for status in models.ApplicationStatus:
-            for i in range(3):
-                ApplicationFactory(user__preferred_name="CBA"[i], form=application_form, status=status)
+    application_form = ApplicationFormFactory()
+    for status in models.ApplicationStatus:
+        for i in range(3):
+            ApplicationFactory(
+                user__preferred_name="CBA"[i], form=application_form, status=status
+            )
 
-        am = AvailabilityManager.with_application_form(application_form)
-        in_statuses = am.get_applications_in_statuses((models.ApplicationStatus.APPLIED, models.ApplicationStatus.ASSIGNED))
+    am = AvailabilityManager.with_application_form(application_form)
+    in_statuses = am.get_applications_in_statuses(
+        (models.ApplicationStatus.APPLIED, models.ApplicationStatus.ASSIGNED)
+    )
 
-        assert len(in_statuses) == 6
-        assert in_statuses == sorted(in_statuses, key=lambda a: a.user.preferred_name)
+    assert len(in_statuses) == 6
+    assert in_statuses == sorted(in_statuses, key=lambda a: a.user.preferred_name)
+
 
 def test_availability_manager__static_crews(db):
-        application_form = ApplicationFormFactory()
-        crew = CrewFactory(event=application_form.event, kind=models.CrewKind.GAME_CREW)
-        CrewFactory(event=application_form.event, kind=models.CrewKind.EVENT_CREW)
-        CrewFactory(kind=models.CrewKind.GAME_CREW)
-        am = AvailabilityManager.with_application_form(application_form)
+    application_form = ApplicationFormFactory()
+    crew = CrewFactory(event=application_form.event, kind=models.CrewKind.GAME_CREW)
+    CrewFactory(event=application_form.event, kind=models.CrewKind.EVENT_CREW)
+    CrewFactory(kind=models.CrewKind.GAME_CREW)
+    am = AvailabilityManager.with_application_form(application_form)
 
-        assert am.static_crews == [crew]
+    assert am.static_crews == [crew]
+
 
 def test_availability_manager__event_crews(db):
-        application_form = ApplicationFormFactory()
-        crew = CrewFactory(event=application_form.event, kind=models.CrewKind.EVENT_CREW)
-        CrewFactory(event=application_form.event, kind=models.CrewKind.GAME_CREW)
-        CrewFactory(kind=models.CrewKind.EVENT_CREW)
-        am = AvailabilityManager.with_application_form(application_form)
+    application_form = ApplicationFormFactory()
+    crew = CrewFactory(event=application_form.event, kind=models.CrewKind.EVENT_CREW)
+    CrewFactory(event=application_form.event, kind=models.CrewKind.GAME_CREW)
+    CrewFactory(kind=models.CrewKind.EVENT_CREW)
+    am = AvailabilityManager.with_application_form(application_form)
 
-        assert am.event_crews == [crew]
+    assert am.event_crews == [crew]
 
 
 def test_set_assignment__override_crew_ex_nihilo(db):
