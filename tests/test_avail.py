@@ -417,7 +417,10 @@ def test_get_application_for_assignment(): ...
 def test_get_assignment(): ...
 
 def test_set_assignment__open_slot(db):
-    application = ApplicationFactory()
+    application = ApplicationFactory(
+        status=models.ApplicationStatus.APPLIED,
+        form__application_kind=models.ApplicationKind.ASSIGN_ONLY
+    )
     role = application.roles.first()
     crew = CrewFactory(
         event=application.form.event,
@@ -428,17 +431,25 @@ def test_set_assignment__open_slot(db):
     am.set_assignment(role, crew, application.user)
 
     assert crew.get_assignments_by_role_id()[role.id].user == application.user
+    application.refresh_from_db()
+    assert application.status == models.ApplicationStatus.ASSIGNMENT_PENDING
 
 def test_set_assignment__replace_existing(db):
-    application = ApplicationFactory()
+    application = ApplicationFactory(
+        status=models.ApplicationStatus.ASSIGNMENT_PENDING,
+        form__application_kind=models.ApplicationKind.ASSIGN_ONLY
+    )
     role = application.roles.first()
-    other_application = ApplicationFactory(form=application.form)
+    other_application = ApplicationFactory(
+        form=application.form,
+        status=models.ApplicationStatus.APPLIED
+    )
     other_application.roles.set([role])
     crew = CrewFactory(
         event=application.form.event,
         role_group=role.role_group
     )
-    CrewAssignment.objects.create(
+    models.CrewAssignment.objects.create(
         user=application.user,
         crew=crew,
         role=role
@@ -451,12 +462,17 @@ def test_set_assignment__replace_existing(db):
     assert not models.CrewAssignment.objects.filter(
         user=application.user
     ).exists()
+    application.refresh_from_db()
+    assert application.status == models.ApplicationStatus.APPLIED
+    other_application.refresh_from_db()
+    assert other_application.status == models.ApplicationStatus.ASSIGNMENT_PENDING
 
 def test_set_assignment__remove_existing(db):
-    application = ApplicationFactory()
+    application = ApplicationFactory(
+        status=models.ApplicationStatus.ASSIGNMENT_PENDING,
+        form__application_kind=models.ApplicationKind.ASSIGN_ONLY
+    )
     role = application.roles.first()
-    other_application = ApplicationFactory(form=application.form)
-    other_application.roles.set([role])
     crew = CrewFactory(
         event=application.form.event,
         role_group=role.role_group
@@ -474,5 +490,18 @@ def test_set_assignment__remove_existing(db):
     assert not models.CrewAssignment.objects.filter(
         user=application.user
     ).exists()
+    application.refresh_from_db()
+    assert application.status == models.ApplicationStatus.APPLIED
+
+def test_set_assignment__swap_roles_override_crew(db):...
+
+
+def test_set_assignment__swap_roles_static_crew_to_override_crew(db): ...
+def test_set_assignment__swap_roles_static_crew_to_blank(db): ...
+def test_set_assignment__swap_roles_event_crew(db): ...
+
+def test_set_assignment__swap_roles_static_crew_to_override_crew_keep_nonexclusive(db): ...
+def test_set_assignment__swap_roles_event_crew_keep_nonexclusive(db): ...
+def test_set_assignment__static_crew_override_replace_blank_with_original(db): ...
 
 def test_set_crew_assignment(): ...
