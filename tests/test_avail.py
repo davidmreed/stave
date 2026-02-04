@@ -1,4 +1,4 @@
-from tests.factories import ApplicationFactory, CrewFactory, ApplicationFormFactory, UserFactory
+from tests.factories import ApplicationFactory, CrewFactory, ApplicationFormFactory, UserFactory, RoleFactory
 from datetime import datetime, timedelta, timezone
 from stave.avail import AvailabilityManager, UserAvailabilityEntry, ConflictKind
 from pytest import fixture
@@ -486,14 +486,52 @@ def test_set_assignment__remove_existing(db):
     am = AvailabilityManager.with_application_form(application.form)
     am.set_assignment(role, crew, None)
 
-    assert role.id not in crew.get_assignments_by_role_id()
     assert not models.CrewAssignment.objects.filter(
         user=application.user
     ).exists()
     application.refresh_from_db()
     assert application.status == models.ApplicationStatus.APPLIED
+    assert crew.get_assignments_by_role_id()[role.id].user is None
 
-def test_set_assignment__swap_roles_override_crew(db):...
+def test_set_assignment__swap_roles_override_crew(db):
+    application = ApplicationFactory(
+        status=models.ApplicationStatus.ASSIGNMENT_PENDING,
+        form__application_kind=models.ApplicationKind.ASSIGN_ONLY
+    )
+    role = application.roles.first()
+    other_role = RoleFactory(role_group=role.role_group)
+    other_application = ApplicationFactory(
+        form=application.form,
+        status=models.ApplicationStatus.ASSIGNMENT_PENDING
+    )
+    other_application.roles.set([role, other_role])
+    crew = CrewFactory(
+        event=application.form.event,
+        role_group=role.role_group
+    )
+    models.CrewAssignment.objects.create(
+        user=application.user,
+        crew=crew,
+        role=role
+    )
+    models.CrewAssignment.objects.create(
+        user=other_application.user,
+        crew=crew,
+        role=other_role
+    )
+
+    am = AvailabilityManager.with_application_form(application.form)
+    am.set_assignment(role, crew, other_application.user)
+
+    assert not models.CrewAssignment.objects.filter(
+        user=application.user
+    ).exists()
+    application.refresh_from_db()
+    assert application.status == models.ApplicationStatus.APPLIED
+    other_application.refresh_from_db()
+    assert other_application.status == models.ApplicationStatus.ASSIGNMENT_PENDING
+    assert crew.get_assignments_by_role_id()[role.id].user == other_application.user
+    assert crew.get_assignments_by_role_id()[other_role.id].user is None
 
 
 def test_set_assignment__swap_roles_static_crew_to_override_crew(db): ...
