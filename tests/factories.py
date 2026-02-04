@@ -65,6 +65,7 @@ class LeagueFactory(factory.django.DjangoModelFactory):
 class EventFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "stave.Event"
+        skip_postgeneration_save = True
 
     class Params:
         status_open = factory.Trait(status=EventStatus.OPEN)
@@ -78,6 +79,16 @@ class EventFactory(factory.django.DjangoModelFactory):
         start_date=factory.SelfAttribute("..start_date"),
         end_date="+30d",
     )
+
+    @factory.post_generation
+    def role_groups(obj, create, extracted, **kwargs):
+        event_role_groups = obj.league.role_groups.all()
+        obj.role_groups.set(
+            random.sample(
+                list(event_role_groups),
+                random.randrange(1, len(event_role_groups)) if len(event_role_groups) > 1 else 1
+            )
+        )
 
 
 class GameFactory(factory.django.DjangoModelFactory):
@@ -168,13 +179,22 @@ class ApplicationFormFactory(factory.django.DjangoModelFactory):
         league_template=None,
     )
 
-    # TODO: applicationformtemplates
-    # TODO: role groups
-    questions = factory.RelatedFactoryList(
+    form_questions = factory.RelatedFactoryList(
         "tests.factories.QuestionFactory",
         factory_related_name="application_form",
         size=lambda: random.randint(1, 10),
     )
+
+    # TODO: applicationformtemplates
+    @factory.post_generation
+    def role_groups(obj, create, extracted, **kwargs):
+        event_role_groups = obj.event.role_groups.all()
+        obj.role_groups.set(
+            random.sample(
+                list(event_role_groups),
+                random.randrange(1, len(event_role_groups)) if len(event_role_groups) > 1 else 1
+            )
+        )
 
 
 class QuestionFactory(factory.django.DjangoModelFactory):
@@ -222,6 +242,7 @@ class ApplicationResponseFactory(factory.django.DjangoModelFactory):
 class ApplicationFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "stave.Application"
+        skip_postgeneration_save = True
 
     user = factory.SubFactory(UserFactory)
     form = factory.SubFactory(ApplicationFormFactory)
@@ -229,6 +250,15 @@ class ApplicationFactory(factory.django.DjangoModelFactory):
     status = models.ApplicationStatus.APPLIED
 
     # Roles
+    @factory.post_generation
+    def roles(obj, create, extracted, **kwargs):
+        available_roles = models.Role.objects.filter(role_group__in=obj.form.event.role_groups.all())
+        obj.roles.set(
+            random.sample(
+                list(available_roles),
+                random.randrange(1, len(available_roles)) if len(available_roles) > 1 else 1
+            )
+        )
 
     # Questions
 
