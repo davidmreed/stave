@@ -335,9 +335,11 @@ def test_availability_manager__applications_by_status(db):
             ApplicationFactory(form=application_form, status=status)
 
     am = AvailabilityManager.with_application_form(application_form)
-    by_status = am.applications_by_status()
+    by_status = am.applications_by_status
 
-    assert keys(by_status) == list(models.ApplicationStatus)
+    # AvailabilityManager doesn't pull apps in statuses
+    # that have no effect on availability, like Withdrawn
+    assert set(by_status.keys()).issubset(set(v.value for v in models.ApplicationStatus))
     assert all(len(v) == 3 for v in by_status.values())
 
 
@@ -360,8 +362,12 @@ def test_availability_manager__get_applications_in_statuses(db):
 
 def test_availability_manager__static_crews(db):
     application_form = ApplicationFormFactory()
-    crew = CrewFactory(event=application_form.event, kind=models.CrewKind.GAME_CREW)
-    CrewFactory(event=application_form.event, kind=models.CrewKind.EVENT_CREW)
+    application_form.role_groups.set(application_form.event.league.role_groups.all())
+
+    # The AvailabilityManager requires crews to share one of
+    # the AppForm's Role Groups.
+    crew = CrewFactory(event=application_form.event, role_group=application_form.role_groups.first(), kind=models.CrewKind.GAME_CREW)
+    CrewFactory(event=application_form.event, role_group=application_form.role_groups.first(), kind=models.CrewKind.EVENT_CREW)
     CrewFactory(kind=models.CrewKind.GAME_CREW)
     am = AvailabilityManager.with_application_form(application_form)
 
@@ -370,8 +376,9 @@ def test_availability_manager__static_crews(db):
 
 def test_availability_manager__event_crews(db):
     application_form = ApplicationFormFactory()
-    crew = CrewFactory(event=application_form.event, kind=models.CrewKind.EVENT_CREW)
-    CrewFactory(event=application_form.event, kind=models.CrewKind.GAME_CREW)
+    application_form.role_groups.set(application_form.event.league.role_groups.all())
+    crew = CrewFactory(event=application_form.event, role_group=application_form.role_groups.first(), kind=models.CrewKind.EVENT_CREW)
+    CrewFactory(event=application_form.event, role_group=application_form.role_groups.first(), kind=models.CrewKind.GAME_CREW)
     CrewFactory(kind=models.CrewKind.EVENT_CREW)
     am = AvailabilityManager.with_application_form(application_form)
 
