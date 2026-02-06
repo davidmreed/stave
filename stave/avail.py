@@ -582,6 +582,7 @@ class AvailabilityManager:
                     raise UserNotAvailableException("There is no application for user")
 
                 # FIXME: old_availability_entries is empty
+                # And it's because crew.get_context() is None
                 old_availability_entries = self.get_swappable_assignments(
                     user, crew, crew.get_context(), role
                 )
