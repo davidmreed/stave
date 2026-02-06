@@ -35,7 +35,13 @@ from meta.views import Meta
 from stave.templates.stave import contexts
 
 from . import forms, models, settings
-from .avail import AvailabilityManager, ScheduleManager
+from .avail import (
+    AvailabilityManager,
+    ScheduleManager,
+    ConflictKind,
+    ApplicationEntry,
+    UserNotAvailableException,
+)
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
@@ -1346,15 +1352,38 @@ class FormApplicationsView(
         am = AvailabilityManager.with_application_form(form)
         return contexts.FormApplicationsInputs(
             form=form,
-            applications_action=am.get_applications_in_statuses(models.OPEN_STATUSES),
-            applications_inprogress=am.get_applications_in_statuses(
-                models.IN_PROGRESS_STATUSES
-            ),
-            applications_staffed=am.get_applications_in_statuses(
-                models.STAFFED_STATUSES
-            ),
-            applications_closed=am.get_applications_in_statuses(models.CLOSED_STATUSES),
-            game_counts=am.game_counts_by_user,
+            applications_action=[
+                ApplicationEntry(
+                    application=a,
+                    user_game_count=am.get_game_count_for_user(a.user),
+                    availability_status=ConflictKind.NONE,
+                )
+                for a in am.get_applications_in_statuses(models.OPEN_STATUSES)
+            ],
+            applications_inprogress=[
+                ApplicationEntry(
+                    application=a,
+                    user_game_count=am.get_game_count_for_user(a.user),
+                    availability_status=ConflictKind.NONE,
+                )
+                for a in am.get_applications_in_statuses(models.IN_PROGRESS_STATUSES)
+            ],
+            applications_staffed=[
+                ApplicationEntry(
+                    application=a,
+                    user_game_count=am.get_game_count_for_user(a.user),
+                    availability_status=ConflictKind.NONE,
+                )
+                for a in am.get_applications_in_statuses(models.STAFFED_STATUSES)
+            ],
+            applications_closed=[
+                ApplicationEntry(
+                    application=a,
+                    user_game_count=am.get_game_count_for_user(a.user),
+                    availability_status=ConflictKind.NONE,
+                )
+                for a in am.get_applications_in_statuses(models.CLOSED_STATUSES)
+            ],
             ApplicationStatus=models.ApplicationStatus,
         )
 
@@ -1418,25 +1447,38 @@ class SetGameCrewView(LoginRequiredMixin, views.View):
         role_group_id: UUID,
         crew_id: UUID | None = None,
     ) -> HttpResponse:
-        game: models.Game = get_object_or_404(
-            models.Game.objects.manageable(request.user),
-            pk=game_id,
-        )
-        rgca: models.RoleGroupCrewAssignment = get_object_or_404(
-            game.role_group_crew_assignments.all(), role_group_id=role_group_id
-        )
-        if crew_id:
-            crew = get_object_or_404(
-                models.Crew.objects.filter(
-                    event=game.event, kind=models.CrewKind.GAME_CREW
-                ),
-                pk=crew_id,
+        with transaction.atomic():
+            game: models.Game = get_object_or_404(
+                models.Game.objects.manageable(request.user),
+                pk=game_id,
             )
-        else:
-            crew = None
+            rgca: models.RoleGroupCrewAssignment = get_object_or_404(
+                game.role_group_crew_assignments.all(), role_group_id=role_group_id
+            )
+            if crew_id:
+                crew = get_object_or_404(
+                    models.Crew.objects.filter(
+                        event=game.event, kind=models.CrewKind.GAME_CREW
+                    ),
+                    pk=crew_id,
+                )
+            else:
+                crew = None
 
-        rgca.crew = crew
-        rgca.save()
+            # FIXME: if overwriting existing crew, remove null overrides.
+            # FIXME: check availability for all crew members. Add null overrides if needed.
+            rgca.crew = crew
+            rgca.save()
+
+            if not rgca.crew:
+                # Remove any CrewAssignments we used to
+                # set a static crew member to a blank.
+                models.CrewAssignment.objects.filter(
+                    user=None,
+                    crew__kind=models.CrewKind.OVERRIDE_CREW,
+                    crew__role_group_override_assignments__game=game,
+                    crew__role_group_id=role_group_id,
+                ).delete()
 
         redirect_url = request.POST.get("redirect_url")
         if redirect_url and url_has_allowed_host_and_scheme(
@@ -1712,10 +1754,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             game = crew.get_context()
         else:
             game = None
-        applications = am.get_available_applications(crew, game, role)
-        game_counts = {
-            a.user.id: am.get_game_count_for_user(a.user) for a in applications
-        }
+        applications = am.get_application_entries(crew, game, role)
 
         # TODO: get the Game from AM to reduce queries.
         return render(
@@ -1728,7 +1767,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
                     game=game,
                     event=am.application_form.event,
                     role=role,
-                    game_counts=game_counts,
+                    ConflictKind=ConflictKind,
                 )
             ),
         )
@@ -1742,113 +1781,52 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         crew_id: UUID,
         role_id: UUID,
     ) -> HttpResponse:
-        application_id = request.POST.get("application_id")
+        with transaction.atomic():
+            user_id = request.POST.get("user_id")
+            application_form: models.ApplicationForm = get_object_or_404(
+                models.ApplicationForm.objects.manageable(request.user),
+                slug=application_form_slug,
+                event__slug=event_slug,
+                event__league__slug=league,
+            )
+            # TODO: we can reduce DB round-trips by getting these from am.
+            role = get_object_or_404(
+                models.Role.objects.filter(
+                    role_group__in=application_form.role_groups.all()
+                ),
+                pk=role_id,
+            )
+            crew = get_object_or_404(
+                application_form.event.crews.filter(role_group=role.role_group),
+                pk=crew_id,
+            )
+            am = AvailabilityManager.with_application_form(application_form)
 
-        application_form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user),
-            slug=application_form_slug,
-            event__slug=event_slug,
-            event__league__slug=league,
-        )
-        role = get_object_or_404(
-            models.Role.objects.filter(
-                role_group__in=application_form.role_groups.all()
-            ),
-            pk=role_id,
-        )
-        crew = get_object_or_404(
-            application_form.event.crews.filter(role_group=role.role_group), pk=crew_id
-        )
+            user = None
+            if user_id:
+                user = get_object_or_404(models.User, pk=user_id)
 
-        if application_id:
-            applications = application_form.applications.filter(
-                id=application_id,
-                roles__name=role.name,
-            ).exclude(status=models.ApplicationStatus.WITHDRAWN)
-            if len(applications) == 0:
-                return HttpResponseBadRequest("invalid application_id")
-        else:
-            applications = []
-
-        # Delete existing assignment, if present
-        if assignment := models.CrewAssignment.objects.filter(
-            role=role,
-            crew=crew,
-        ).first():
-            # Delete the assignment
-            assignment.delete()
-
-            # Find the application corresponding to the existing assignment.
-            existing_application = (
-                application_form.applications.filter(
-                    user=assignment.user, roles__name=role.name
+            try:
+                am.set_assignment(role, crew, user)
+            except UserNotAvailableException:
+                messages.info(
+                    request,
+                    _("The selected user is not available for the chosen slot."),
                 )
-                .exclude(status=models.ApplicationStatus.WITHDRAWN)
-                .first()
-            )
-            # There should be exactly one.
-            if existing_application and not existing_application.has_assignments():
-                # Reset its status appropriately.
-                if (
-                    existing_application.status
-                    == models.ApplicationStatus.ASSIGNMENT_PENDING
-                ):
-                    if (
-                        application_form.application_kind
-                        == models.ApplicationKind.CONFIRM_THEN_ASSIGN
-                    ):
-                        existing_application.status = models.ApplicationStatus.CONFIRMED
-                    else:
-                        existing_application.status = models.ApplicationStatus.APPLIED
-                elif (
-                    existing_application.status
-                    == models.ApplicationStatus.INVITATION_PENDING
-                ):
-                    existing_application.status = models.ApplicationStatus.APPLIED
-                existing_application.save()
 
-        # Add a new assignment, if requested
-        if applications:
-            models.CrewAssignment.objects.create(
-                role=role, crew=crew, user=applications[0].user
-            )
-
-            # Update the status of the application
-            if (
-                applications[0].form.application_kind
-                == models.ApplicationKind.ASSIGN_ONLY
-            ):
-                # Note that this sends apps in ASSIGNED status backwards,
-                # so they'll get an update email.
-                applications[0].status = models.ApplicationStatus.ASSIGNMENT_PENDING
+            # Redirect the user to the Crew Builder for this crew
+            context = crew.get_context()
+            if isinstance(context, models.Game):
+                fragment = context.id
             else:
-                # for CONFIRM_THEN_ASSIGN events, our status update depends on the current status as well.
-                match applications[0].status:
-                    case models.ApplicationStatus.APPLIED:
-                        applications[
-                            0
-                        ].status = models.ApplicationStatus.INVITATION_PENDING
-                    case models.ApplicationStatus.CONFIRMED:
-                        applications[
-                            0
-                        ].status = models.ApplicationStatus.ASSIGNMENT_PENDING
-                    case _:
-                        # All other cases do not update.
-                        pass
+                fragment = crew.id
 
-            applications[0].save()
-
-        # Redirect the user to the base Crew Builder for this crew
-        context = crew.get_context()
-        if isinstance(context, models.Game):
-            fragment = context.id
-        else:
-            fragment = crew.id
-
-        return HttpResponseRedirect(
-            reverse("crew-builder", args=[league, event_slug, application_form_slug])
-            + f"#ctx-{fragment}"
-        )
+            return HttpResponseRedirect(
+                reverse(
+                    "crew-builder", args=[league, event_slug, application_form_slug]
+                )
+                + f"#ctx-{fragment}"
+            )
 
 
 class ApplicationFormView(views.View):

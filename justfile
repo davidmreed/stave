@@ -32,8 +32,8 @@ seed: migrate
     uv run manage.py seed
 
 # Run tests
-test:
-    uv run pytest
+test arguments="":
+    uv run pytest -n logical {{arguments}}
 
 # Run behavioral tests
 behave arguments="":
