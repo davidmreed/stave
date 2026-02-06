@@ -45,7 +45,7 @@ def send_message_from_messagetemplate(
     application: models.Application,
     sender: models.User | None,
     kind: models.SendEmailContextType,
-    reply_to: str | None,
+    reply_to: str | None = None,
 ):
     message_template = application.form.get_template_for_context_type(kind)
     if message_template:
@@ -65,7 +65,7 @@ def send_message(
     kind: models.SendEmailContextType | None,
     subject: str,
     content: str,
-    reply_to: str | None,
+    reply_to: str | None = None,
 ):
     context = models.MergeContext(
         league=application.form.event.league,

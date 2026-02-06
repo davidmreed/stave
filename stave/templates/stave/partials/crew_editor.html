@@ -38,7 +38,7 @@
         <form action="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug crew.id role.id %}"
               method="POST">
         <a class="icon-button" role="button" href="{% url 'crew-builder-detail' form.event.league.slug form.event.slug form.slug crew.id role.id %}">
-            {% if assignment %}{% if assignment.crew.id == crew.id %}<abbr title="Reassign">🔄</abbr>{% else %}Override{% endif %}{% else %}<abbr title="Assign">🔍</abbr>{% endif %}
+            {% if assignment %}{% if assignment.crew.id == crew.id %}<abbr title="Reassign">🔄</abbr>{% else %}<abbr title="Override">⬇️{% endif %}{% else %}<abbr title="Assign">🔍</abbr>{% endif %}
         </a>
             <input type="hidden" value="{{ crew.id }}" id="crew_id" name="crew_id">
             <input type="hidden" value="" id="application_id" name="application_id">

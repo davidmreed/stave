@@ -2,20 +2,20 @@
 
 {% inputs 'ApplicationActionsInputs' %}
 
-<div class="inline">
+<div class="inline" {% if minimal %}role="group"{% endif %}>
     {% if not minimal %}
     <p>
     <small>Emails sent from this page will include <code>{{ user.email }}</code> as the reply-to address unless you use Customize.</small>
     </p>
     {% endif %}
     {% if include_view %}
-        <a role="button" href="{% url 'view-application' application.id %}">View</a>
+        <a {% if minimal %}class="icon-button"{% endif %} role="button" href="{% url 'view-application' application.id %}">{% if minimal %}<abbr title="View">🔍</abbr>{% else %}View{% endif %}</a>
     {% endif %}
     {% if user == application.user and application.status != application.ApplicationStatus.WITHDRAWN %}
-        <a role="button" href="{% url 'update-application' application.id %}">Edit</a>
+        <a {% if minimal %}class="icon-button"{% endif %} role="button" href="{% url 'update-application' application.id %}">{% if minimal %}<abbr title="Edit">✏️</abbr>{% else %}Edit{% endif %}</a>
     {% endif %}
     {% if user != application.user %}
-        <a role="button" href="mailto:{{ application.user.email }}">
+        <a {% if minimal %}class="icon-button"{% endif %} role="button" href="mailto:{{ application.user.email }}">
             {% if minimal %}
             <abbr title="Email Outside Stave">✉️</abbr>
             {% else %}

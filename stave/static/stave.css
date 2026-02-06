@@ -167,3 +167,7 @@ table details {
 table details[open] summary span {
     display: none;
 }
+
+.icon-button abbr {
+    border-bottom: none;
+}
