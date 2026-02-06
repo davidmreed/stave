@@ -3,7 +3,7 @@
 {% inputs 'ApplicationActionsInputs' %}
 
 <div class="inline" {% if minimal %}role="group"{% endif %}>
-    {% if not minimal %}
+    {% if not minimal and user != application.user %}
     <p>
     <small>Emails sent from this page will include <code>{{ user.email }}</code> as the reply-to address unless you use Customize.</small>
     </p>
