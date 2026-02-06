@@ -14,6 +14,15 @@
     {% if user == application.user and application.status != application.ApplicationStatus.WITHDRAWN %}
         <a role="button" href="{% url 'update-application' application.id %}">Edit</a>
     {% endif %}
+    {% if user != application.user %}
+        <a role="button" href="mailto:{{ application.user.email }}">
+            {% if minimal %}
+            <abbr title="Email Outside Stave">✉️</abbr>
+            {% else %}
+            Email Outside Stave
+            {% endif %}
+        </a>
+    {% endif %}
     {% with states=application|get_legal_state_changes:user %}
     {% if application.ApplicationStatus.APPLIED in states and not minimal %}
     <input type="submit"
@@ -25,7 +34,7 @@
     <input type="submit"
            formaction="{% url 'application-status' application.id application.ApplicationStatus.INVITATION_PENDING %}"
            {% if minimal %}
-           value="✉️" title="Mark for Invitation" class="icon-button"
+           value="✅" title="Mark for Invitation" class="icon-button"
            {% else %}
            value="Mark for Invitation"
            {% endif %}
