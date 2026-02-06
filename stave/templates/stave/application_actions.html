@@ -3,6 +3,11 @@
 {% inputs 'ApplicationActionsInputs' %}
 
 <div class="inline">
+    {% if not minimal %}
+    <p>
+    <small>Emails sent from this page will include <code>{{ user.email }}</code> as the reply-to address unless you use Customize.</small>
+    </p>
+    {% endif %}
     {% if include_view %}
         <a role="button" href="{% url 'view-application' application.id %}">View</a>
     {% endif %}

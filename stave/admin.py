@@ -53,7 +53,7 @@ class MessageTemplateAdmin(admin.ModelAdmin):
 
 @admin.register(models.Message)
 class MessageAdmin(admin.ModelAdmin):
-    list_display = ("sent_date", "sent", "user", "subject")
+    list_display = ("id", "sent_date", "sent", "reply_to", "user", "subject")
 
 
 class ApplicationResponseInline(admin.TabularInline):

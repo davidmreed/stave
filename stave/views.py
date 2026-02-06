@@ -2083,7 +2083,7 @@ class CommCenterView(LoginRequiredMixin, views.View):
                 .first()
             )
             emails.send_message_from_messagetemplate(
-                application, request.user, email_type
+                application, request.user, email_type, request.user.email
             )
 
         messages.info(request, gettext_lazy("Your emails are being sent"))
@@ -2130,7 +2130,7 @@ class SendEmailView(LoginRequiredMixin, views.View):
             sender=models.User(),
         )
 
-        initial = {}
+        initial = {"reply_to": request.user.email}
 
         # If we have a GET param with a user id in it, filter down to that.
         # (Supplying the applicant query if we do not have a member_queryset or email_type)
@@ -2224,6 +2224,7 @@ class SendEmailView(LoginRequiredMixin, views.View):
             # Construct and render the template and persist a Message for each user.
             content: str = email_form.cleaned_data["content"]
             subject: str = email_form.cleaned_data["subject"]
+            reply_to: str = email_form.cleaned_data.get("reply_to", "").strip()
             with transaction.atomic():
                 from . import emails  # avoid circular import
 
@@ -2237,7 +2238,12 @@ class SendEmailView(LoginRequiredMixin, views.View):
                         .first()
                     )
                     emails.send_message(
-                        application, request.user, email_type, subject, content
+                        application,
+                        request.user,
+                        email_type,
+                        subject,
+                        content,
+                        reply_to,
                     )
 
                 if recipients:
