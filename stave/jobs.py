@@ -20,6 +20,9 @@ def send_emails():
                 to=[message.user.email],
                 body=message.content_plain_text,
             )
+            if message.reply_to:
+                email.reply_to = [message.reply_to]
+
             email.attach_alternative(message.content_html, "text/html")
 
             email.send()

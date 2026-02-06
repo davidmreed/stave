@@ -1383,6 +1383,7 @@ class SendEmailRecipientsForm(forms.Form):
 
 class SendEmailForm(forms.Form):
     subject = forms.CharField(max_length=256)
+    reply_to = forms.EmailField(max_length=256)
     content = forms.CharField(max_length=10240, widget=forms.Textarea)  # TODO
 
     def __init__(self, *args, **kwargs):

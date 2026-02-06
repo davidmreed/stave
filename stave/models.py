@@ -995,6 +995,7 @@ class Message(models.Model):
     sent = models.BooleanField(default=False)
     sent_date = models.DateTimeField(null=True)
     tries = models.IntegerField(default=0)
+    reply_to = models.CharField(max_length=256, null=True, blank=True)
 
 
 # Application models

@@ -6,12 +6,15 @@
 {% include 'stave/partials/staffing_header.html' with form=application_form request=request only %}
 
 <aside>
+    <p>
     <a target="_blank" href="https://docs.stave.app/staffing.html#sending-communications">Learn how to use this page</a>.
     {% if application_form.application_kind == application_form.ApplicationKind.CONFIRM_THEN_ASSIGN %}
     This application form is using the Confirm, then Assign model.
     {% else %}
     This application form is using the Confirm Only model.
     {% endif %}
+    </p>
+    <p>Emails will include <code>{{ request.user.email }}</code> as the reply-to address unless you use Customize.</p>
 </aside>
 
 <header>
