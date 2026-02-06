@@ -1,4 +1,4 @@
-from tests.factories import ApplicationFactory, ApplicationFormFactory, CrewFactory, RoleFactory
+from tests.factories import ApplicationFactory, ApplicationFormFactory, CrewFactory, RoleFactory, GameFactory
 from datetime import datetime, timedelta, timezone
 from stave.avail import AvailabilityManager, UserAvailabilityEntry, ConflictKind
 from pytest import fixture
@@ -472,7 +472,16 @@ def test_set_assignment__swap_roles_override_crew(db):
     )
     other_application.roles.set([role, other_role])
     crew = CrewFactory(
+        kind=models.CrewKind.OVERRIDE_CREW,
         event=application.form.event,
+        role_group=role.role_group
+    )
+    # Swapping roles requires the Crew have a non-None
+    # get_context()
+    game = GameFactory(event=application.form.event)
+    models.RoleGroupCrewAssignment.objects.create(
+        crew_overrides=crew,
+        game=game,
         role_group=role.role_group
     )
     models.CrewAssignment.objects.create(
