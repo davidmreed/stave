@@ -1,7 +1,5 @@
 from pytest_factoryboy import register
 
-from stave.management.commands.create_templates import create_templates
-import random
 from datetime import datetime, date, time
 from django.contrib.auth.models import AnonymousUser
 
@@ -21,27 +19,14 @@ register(factories.CrewFactory)
 register(factories.QuestionFactory)
 register(factories.RoleGroupFactory)
 register(factories.RoleFactory)
+register(factories.LeagueUserPermissionFactory)
+register(factories.GameFactory)
+register(factories.RoleGroupCrewAssignmentFactory)
 
 
 @pytest.fixture
-def base_template(db) -> models.LeagueTemplate:
-    return create_templates()
-
-
-@pytest.fixture
-def enabled_league(base_template):
-    return base_template.clone(
-        name=f"{random.randint(0, 100000)} Roller Derby",
-        location="Ceres Station, The Belt",
-        description="The **best** roller derby in the Belt and Outer Planets",
-        website="https://derby.ceres.belt",
-        enabled=True,
-    )
-
-
-@pytest.fixture
-def tournament_template(enabled_league):
-    return models.EventTemplate.objects.get(league=enabled_league, name="Tournament")
+def enabled_league(db, league_factory):
+    return league_factory(enabled=True)
 
 
 @pytest.fixture
@@ -50,30 +35,35 @@ def timezone(enabled_league):
 
 
 @pytest.fixture
-def role_group_nso(enabled_league):
-    return enabled_league.role_groups.get(name="NSO")
+def role_group_nso(enabled_league, role_group_factory):
+    return role_group_factory(name="NSO", league=enabled_league)
 
 
 @pytest.fixture
-def role_group_so(enabled_league):
-    return enabled_league.role_groups.get(name="SO")
+def role_group_so(enabled_league, role_group_factory):
+    return role_group_factory(name="SO", league=enabled_league)
 
 
 @pytest.fixture
-def role_group_tho(enabled_league):
-    return enabled_league.role_groups.get(name="THO")
+def role_group_tho(enabled_league, role_group_factory):
+    return role_group_factory(name="THO", league=enabled_league, event_only=True)
 
 
 @pytest.fixture
 def tournament(
-    tournament_template,
     enabled_league,
     timezone,
     role_group_so,
     role_group_nso,
     role_group_tho,
+    event_factory,
+    game_factory,
+    application_form_factory,
+    role_group_crew_assignment_factory,
+    question_factory,
 ):
-    tournament = tournament_template.clone(
+    tournament = event_factory(
+        league=enabled_league,
         name="Outer Planets Throwdown",
         status=models.EventStatus.OPEN,
         slug="outer-planets-throwdown",
@@ -81,91 +71,90 @@ def tournament(
         end_date=date(2218, 5, 26),
         location="Ceres Station Level 6",
     )
-    tournament_game_1 = models.Game.objects.create(
-        event=tournament,
-        name="Game 1",
-        home_league="Ceres Roller Derby",
-        home_team="Miners",
-        visiting_league="Ganymede",
-        visiting_team="Green Sprouts",
-        association=models.GameAssociation.WFTDA,
-        kind=models.GameKind.REG,
-        start_time=datetime.combine(tournament.start_date, time(10, 00), timezone),
-        end_time=datetime.combine(tournament.start_date, time(12, 00), timezone),
-        order_key=1,
-    )
-    tournament_game_2 = models.Game.objects.create(
-        event=tournament,
-        name="Game 2",
-        home_league="Tycho Station",
-        home_team="Gearheads",
-        visiting_league="Rockhoppers",
-        visiting_team="All Stars",
-        association=models.GameAssociation.WFTDA,
-        kind=models.GameKind.REG,
-        start_time=datetime.combine(tournament.start_date, time(12, 00), timezone),
-        end_time=datetime.combine(tournament.start_date, time(14, 00), timezone),
-        order_key=2,
-    )
-    tournament_game_3 = models.Game.objects.create(
-        event=tournament,
-        name="Game 3",
-        home_league="Ceres Roller Derby",
-        home_team="Nuggets",
-        visiting_league="Pallas Station",
-        visiting_team="Thin Airs",
-        association=models.GameAssociation.JRDA,
-        kind=models.GameKind.REG,
-        start_time=datetime.combine(tournament.start_date, time(16, 00), timezone),
-        end_time=datetime.combine(tournament.start_date, time(18, 00), timezone),
-        order_key=3,
-    )
-    tournament_game_4 = models.Game.objects.create(
-        event=tournament,
-        name="Game 4",
-        home_league="Ceres Roller Derby",
-        home_team="Miners",
-        visiting_league="Tycho Station",
-        visiting_team="Gearheads",
-        association=models.GameAssociation.WFTDA,
-        kind=models.GameKind.REG,
-        start_time=datetime.combine(tournament.end_date, time(12, 00), timezone),
-        end_time=datetime.combine(tournament.end_date, time(14, 00), timezone),
-        order_key=4,
-    )
-    tournament_game_5 = models.Game.objects.create(
-        event=tournament,
-        name="Game 5",
-        home_league="Ganymede",
-        home_team="Green Sprouts",
-        visiting_league="Rockhoppers",
-        visiting_team="All Stars",
-        association=models.GameAssociation.WFTDA,
-        kind=models.GameKind.REG,
-        start_time=datetime.combine(tournament.end_date, time(14, 00), timezone),
-        end_time=datetime.combine(tournament.end_date, time(16, 00), timezone),
-        order_key=5,
-    )
+    games = [
+        game_factory(
+            event=tournament,
+            name="Game 1",
+            home_league="Ceres Roller Derby",
+            home_team="Miners",
+            visiting_league="Ganymede",
+            visiting_team="Green Sprouts",
+            association=models.GameAssociation.WFTDA,
+            kind=models.GameKind.REG,
+            start_time=datetime.combine(tournament.start_date, time(10, 00), timezone),
+            end_time=datetime.combine(tournament.start_date, time(12, 00), timezone),
+            order_key=1,
+        ),
+        game_factory(
+            event=tournament,
+            name="Game 2",
+            home_league="Tycho Station",
+            home_team="Gearheads",
+            visiting_league="Rockhoppers",
+            visiting_team="All Stars",
+            association=models.GameAssociation.WFTDA,
+            kind=models.GameKind.REG,
+            start_time=datetime.combine(tournament.start_date, time(12, 00), timezone),
+            end_time=datetime.combine(tournament.start_date, time(14, 00), timezone),
+            order_key=2,
+        ),
+        game_factory(
+            event=tournament,
+            name="Game 3",
+            home_league="Ceres Roller Derby",
+            home_team="Nuggets",
+            visiting_league="Pallas Station",
+            visiting_team="Thin Airs",
+            association=models.GameAssociation.JRDA,
+            kind=models.GameKind.REG,
+            start_time=datetime.combine(tournament.start_date, time(16, 00), timezone),
+            end_time=datetime.combine(tournament.start_date, time(18, 00), timezone),
+            order_key=3,
+        ),
+        game_factory(
+            event=tournament,
+            name="Game 4",
+            home_league="Ceres Roller Derby",
+            home_team="Miners",
+            visiting_league="Tycho Station",
+            visiting_team="Gearheads",
+            association=models.GameAssociation.WFTDA,
+            kind=models.GameKind.REG,
+            start_time=datetime.combine(tournament.end_date, time(12, 00), timezone),
+            end_time=datetime.combine(tournament.end_date, time(14, 00), timezone),
+            order_key=4,
+        ),
+        game_factory(
+            event=tournament,
+            name="Game 5",
+            home_league="Ganymede",
+            home_team="Green Sprouts",
+            visiting_league="Rockhoppers",
+            visiting_team="All Stars",
+            association=models.GameAssociation.WFTDA,
+            kind=models.GameKind.REG,
+            start_time=datetime.combine(tournament.end_date, time(14, 00), timezone),
+            end_time=datetime.combine(tournament.end_date, time(16, 00), timezone),
+            order_key=5,
+        ),
+    ]
 
-    for game in [
-        tournament_game_1,
-        tournament_game_2,
-        tournament_game_3,
-        tournament_game_4,
-        tournament_game_5,
-    ]:
+    for game in games:
         for role_group in [role_group_so, role_group_nso]:
-            models.RoleGroupCrewAssignment.objects.create(
-                game=game, role_group=role_group
-            )
+            role_group_crew_assignment_factory(game=game, role_group=role_group)
 
     ## Create application forms for the tournament
-    app_form = tournament.application_forms.filter(slug="apply-nso-so").first()
-    app_form.intro_text = "Join the best teams in the Belt! **For beltalowda!**"
-    app_form.requires_profile_fields = ["preferred_name"]
-    app_form.save()
+    app_form = application_form_factory(
+        event=tournament,
+        slug="apply-nso-so",
+        application_kind=models.ApplicationKind.CONFIRM_THEN_ASSIGN,
+        application_availability_kind=models.ApplicationAvailabilityKind.BY_DAY,
+        intro_text="Join the best teams in the Belt! **For beltalowda!**",
+        requires_profile_fields=["preferred_name"],
+    )
+    app_form.role_groups.set([role_group_nso, role_group_so])
 
-    models.Question.objects.create(
+    question_factory(
         application_form=app_form,
         content="What is your affiliated faction?",
         kind=models.QuestionKind.SELECT_ONE,
@@ -173,7 +162,7 @@ def tournament(
         required=True,
         order_key=1,
     )
-    models.Question.objects.create(
+    question_factory(
         application_form=app_form,
         content="What kinds of kibble do you like?",
         kind=models.QuestionKind.SELECT_MANY,
@@ -182,30 +171,30 @@ def tournament(
         required=True,
         order_key=2,
     )
-    models.Question.objects.create(
+    question_factory(
         application_form=app_form,
         content="What are your special skills?",
         kind=models.QuestionKind.LONG_TEXT,
         order_key=3,
     )
-    models.Question.objects.create(
+    question_factory(
         application_form=app_form,
         content="What do you think of Marco Inaros?",
         kind=models.QuestionKind.SHORT_TEXT,
         order_key=4,
     )
 
-    app_form_tho = models.ApplicationForm.objects.get(
+    app_form_tho = application_form_factory(
         event=tournament,
         slug="apply-tho",
+        application_kind=models.ApplicationKind.ASSIGN_ONLY,
+        application_availability_kind=models.ApplicationAvailabilityKind.WHOLE_EVENT,
+        intro_text="Join the best teams in the Belt as a tournament leader. **For beltalowda!**",
+        requires_profile_fields=["preferred_name"],
     )
-    app_form_tho.intro_text = (
-        "Join the best teams in the Belt as a tournament leader. **For beltalowda!**"
-    )
-    app_form_tho.requires_profile_fields = ["preferred_name"]
-    app_form_tho.save()
+    app_form_tho.role_groups.set([role_group_tho])
 
-    models.Question.objects.create(
+    question_factory(
         application_form=app_form_tho,
         content="What do you want to do?",
         kind=models.QuestionKind.LONG_TEXT,
@@ -217,37 +206,38 @@ def tournament(
 
 
 @pytest.fixture
-def league_manager_user(enabled_league, user_factory):
-    user = user_factory.create(preferred_name="League Manager User")
-    models.LeagueUserPermission.objects.create(
-        user=user,
+def league_manager_user(enabled_league, league_user_permission_factory):
+    permission = league_user_permission_factory(
+        user__preferred_name="League Manager User",
         league=enabled_league,
         permission=models.UserPermission.LEAGUE_MANAGER,
     )
-    return user
+    return permission.user
 
 
 @pytest.fixture
-def event_manager_user(enabled_league, user_factory):
-    user = user_factory.create(preferred_name="Event Manager User")
-    models.LeagueUserPermission.objects.create(
-        user=user, league=enabled_league, permission=models.UserPermission.EVENT_MANAGER
+def event_manager_user(enabled_league, league_user_permission_factory):
+    permission = league_user_permission_factory(
+        user__preferred_name="Event Manager User",
+        league=enabled_league,
+        permission=models.UserPermission.EVENT_MANAGER,
     )
-    return user
+    return permission.user
 
 
 @pytest.fixture
-def full_privilege_user(enabled_league, user_factory):
-    user = user_factory.create(preferred_name="Full Privilege User")
-    models.LeagueUserPermission.objects.create(
-        user=user, league=enabled_league, permission=models.UserPermission.EVENT_MANAGER
+def full_privilege_user(enabled_league, league_user_permission_factory):
+    event_perm = league_user_permission_factory(
+        user__preferred_name="Full Privilege User",
+        league=enabled_league,
+        permission=models.UserPermission.EVENT_MANAGER,
     )
-    models.LeagueUserPermission.objects.create(
-        user=user,
+    league_user_permission_factory(
+        user=event_perm.user,
         league=enabled_league,
         permission=models.UserPermission.LEAGUE_MANAGER,
     )
-    return user
+    return event_perm.user
 
 
 @pytest.fixture
