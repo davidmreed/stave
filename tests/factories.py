@@ -41,7 +41,7 @@ class RoleGroupFactory(factory.django.DjangoModelFactory):
     roles = factory.RelatedFactoryList(
         RoleFactory,
         factory_related_name="role_group",
-        size=lambda: random.randint(1, 10),
+        size=lambda: random.randint(2, 10),
     )
     league = factory.SubFactory("tests.factories.LeagueFactory")
     league_template = factory.SubFactory("tests.factories.LeagueTemplateFactory")
@@ -119,6 +119,14 @@ class CrewFactory(factory.django.DjangoModelFactory):
     event = factory.SubFactory(EventFactory)
     role_group = factory.SubFactory(RoleGroupFactory)
     kind = factory.fuzzy.FuzzyChoice(models.CrewKind)
+
+
+class RoleGroupCrewAssignmentFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "stave.RoleGroupCrewAssignment"
+
+    role_group = factory.SubFactory(RoleGroupFactory)
+    game = factory.SubFactory(GameFactory)
 
 
 class UserFactory(factory.django.DjangoModelFactory):
