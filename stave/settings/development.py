@@ -28,7 +28,7 @@ INTERNAL_IPS = [
 ]
 
 # Development email backend - Use console backend for local development
-if not os.environ.get("EMAIL_BACKEND"):
+if not os.environ.get("EMAIL_BACKEND"):  # pragma: no cover
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Allow verbose error pages
@@ -40,7 +40,7 @@ DEBUG_PROPAGATE_EXCEPTIONS = True
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 # Don't use Sentry in development unless explicitly configured
-if not os.environ.get("SENTRY_DSN"):
+if not os.environ.get("SENTRY_DSN"):  # pragma: no cover
     import sentry_sdk
 
     sentry_sdk.init(dsn="")  # Disable Sentry

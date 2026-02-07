@@ -15,7 +15,7 @@ def before_all(context):
 
 
 def after_step(context, step):
-    if BEHAVE_DEBUG_ON_ERROR and step.status == "failed":
+    if BEHAVE_DEBUG_ON_ERROR and step.status == "failed":  # pragma: no cover
         import sys
         import pdb
 
