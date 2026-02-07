@@ -34,6 +34,11 @@ if not os.environ.get("EMAIL_BACKEND"):
 # Allow verbose error pages
 DEBUG_PROPAGATE_EXCEPTIONS = True
 
+# Speed up password hashing in development/testing (don't use this in production!)
+# Any time the factory creates a user with a password,
+# it will be hashed using MD5, which is much faster than the default PBKDF2.
+PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
 # Don't use Sentry in development unless explicitly configured
 if not os.environ.get("SENTRY_DSN"):
     import sentry_sdk
