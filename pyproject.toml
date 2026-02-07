@@ -49,6 +49,18 @@ reportImplicitOverride = false
 reportUninitializedInstanceVariable = false
 reportExplicitAny = false
 
+[tool.coverage.run]
+branch = true
+omit = [
+    "*/migrations/*",  # logic may not always apply for data migrations
+]
+parallel = true
+
+[tool.coverage.report]
+exclude_also = [
+    "if __name__ == .__main__.:",
+]
+
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "stave.settings"
 
