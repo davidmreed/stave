@@ -42,6 +42,7 @@ dev = [
     "prek>=0.3.2",
     "ruff>=0.15.0",
     "editorconfig-checker>=3.6.0",
+    "coverage>=7.13.3",
 ]
 
 [tool.pytest.ini_options]
