@@ -43,6 +43,7 @@ dev = [
     "ruff>=0.15.0",
     "editorconfig-checker>=3.6.0",
     "coverage>=7.13.3",
+    "django-coverage-plugin>=3.2.0",
 ]
 
 [tool.coverage.run]
@@ -51,6 +52,9 @@ omit = [
     "*/migrations/*",  # logic may not always apply for data migrations
 ]
 parallel = true
+plugins = [
+    "django_coverage_plugin",  # template coverage
+]
 
 [tool.coverage.report]
 exclude_also = [
