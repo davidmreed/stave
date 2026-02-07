@@ -130,6 +130,15 @@ class UserFactory(factory.django.DjangoModelFactory):
     password = factory.django.Password("password123")  # Default password for all users
 
 
+class LeagueUserPermissionFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "stave.LeagueUserPermission"
+
+    user = factory.SubFactory(UserFactory)
+    league = factory.SubFactory(LeagueFactory)
+    permission = factory.fuzzy.FuzzyChoice(models.UserPermission)
+
+
 class ApplicationFormFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "stave.ApplicationForm"

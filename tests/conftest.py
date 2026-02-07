@@ -21,6 +21,7 @@ register(factories.CrewFactory)
 register(factories.QuestionFactory)
 register(factories.RoleGroupFactory)
 register(factories.RoleFactory)
+register(factories.LeagueUserPermissionFactory)
 
 
 @pytest.fixture
@@ -217,37 +218,38 @@ def tournament(
 
 
 @pytest.fixture
-def league_manager_user(enabled_league, user_factory):
-    user = user_factory.create(preferred_name="League Manager User")
-    models.LeagueUserPermission.objects.create(
-        user=user,
+def league_manager_user(enabled_league, league_user_permission_factory):
+    permission = league_user_permission_factory(
+        user__preferred_name="League Manager User",
         league=enabled_league,
         permission=models.UserPermission.LEAGUE_MANAGER,
     )
-    return user
+    return permission.user
 
 
 @pytest.fixture
-def event_manager_user(enabled_league, user_factory):
-    user = user_factory.create(preferred_name="Event Manager User")
-    models.LeagueUserPermission.objects.create(
-        user=user, league=enabled_league, permission=models.UserPermission.EVENT_MANAGER
+def event_manager_user(enabled_league, league_user_permission_factory):
+    permission = league_user_permission_factory(
+        user__preferred_name="Event Manager User",
+        league=enabled_league,
+        permission=models.UserPermission.EVENT_MANAGER,
     )
-    return user
+    return permission.user
 
 
 @pytest.fixture
-def full_privilege_user(enabled_league, user_factory):
-    user = user_factory.create(preferred_name="Full Privilege User")
-    models.LeagueUserPermission.objects.create(
-        user=user, league=enabled_league, permission=models.UserPermission.EVENT_MANAGER
+def full_privilege_user(enabled_league, league_user_permission_factory):
+    event_perm = league_user_permission_factory(
+        user__preferred_name="Full Privilege User",
+        league=enabled_league,
+        permission=models.UserPermission.EVENT_MANAGER,
     )
-    models.LeagueUserPermission.objects.create(
-        user=user,
+    league_user_permission_factory(
+        user=event_perm.user,
         league=enabled_league,
         permission=models.UserPermission.LEAGUE_MANAGER,
     )
-    return user
+    return event_perm.user
 
 
 @pytest.fixture
