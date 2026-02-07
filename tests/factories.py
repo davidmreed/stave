@@ -41,7 +41,7 @@ class RoleGroupFactory(factory.django.DjangoModelFactory):
     roles = factory.RelatedFactoryList(
         RoleFactory,
         factory_related_name="role_group",
-        size=lambda: random.randint(1, 10),
+        size=lambda: random.randint(2, 10),
     )
     league = factory.SubFactory("tests.factories.LeagueFactory")
     league_template = factory.SubFactory("tests.factories.LeagueTemplateFactory")
@@ -121,6 +121,14 @@ class CrewFactory(factory.django.DjangoModelFactory):
     kind = factory.fuzzy.FuzzyChoice(models.CrewKind)
 
 
+class RoleGroupCrewAssignmentFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "stave.RoleGroupCrewAssignment"
+
+    role_group = factory.SubFactory(RoleGroupFactory)
+    game = factory.SubFactory(GameFactory)
+
+
 class UserFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "stave.User"
@@ -128,6 +136,15 @@ class UserFactory(factory.django.DjangoModelFactory):
     preferred_name = factory.Faker("first_name")
     email = factory.Faker("email")
     password = factory.django.Password("password123")  # Default password for all users
+
+
+class LeagueUserPermissionFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "stave.LeagueUserPermission"
+
+    user = factory.SubFactory(UserFactory)
+    league = factory.SubFactory(LeagueFactory)
+    permission = factory.fuzzy.FuzzyChoice(models.UserPermission)
 
 
 class ApplicationFormFactory(factory.django.DjangoModelFactory):
