@@ -39,6 +39,7 @@ dev = [
     "pre-commit>=4.0.0",
     "factory-boy>=3.3.3",
     "pytest-factoryboy>=2.8.1",
+    "coverage>=7.13.3",
 ]
 
 [tool.basedpyright]
