@@ -12,7 +12,6 @@
           NIX_LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
             pkgs.glibc
           ];
-            NIX_LD = builtins.readFile "${stdenv.cc}/nix-support/dynamic-linker";
           packages = with pkgs; [ git just uv railway sqlite mdbook mdbook-mermaid ];
         };
       }

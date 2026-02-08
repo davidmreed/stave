@@ -39,14 +39,9 @@ dev = [
     "factory-boy>=3.3.3",
     "pytest-factoryboy>=2.8.1",
     "prek>=0.3.2",
+    "ruff>=0.15.0",
+    "editorconfig-checker>=3.6.0",
 ]
-
-[tool.basedpyright]
-venv = ".venv"
-reportUnannotatedClassAttribute = false
-reportImplicitOverride = false
-reportUninitializedInstanceVariable = false
-reportExplicitAny = false
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "stave.settings"
