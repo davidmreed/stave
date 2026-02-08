@@ -6,10 +6,13 @@
 
   outputs = { self, nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
-      let pkgs = import nixpkgs { system = system; config.allowUnfree = true; }; in
+      let pkgs = import nixpkgs { system = system; }; in
       {
         devShells.default = pkgs.mkShell {
-          packages = with pkgs; [ python313 git just uv railway sqlite mdbook mdbook-mermaid ];
+          NIX_LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
+            pkgs.glibc
+          ];
+          packages = with pkgs; [ git just uv railway sqlite mdbook mdbook-mermaid ];
         };
       }
     );

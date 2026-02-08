@@ -36,17 +36,12 @@ dev = [
     "django-debug-toolbar>=5.2.0",
     "django-extensions>=3.2.3",
     "pytest-django>=4.11.1",
-    "pre-commit>=4.0.0",
     "factory-boy>=3.3.3",
     "pytest-factoryboy>=2.8.1",
+    "prek>=0.3.2",
+    "ruff>=0.15.0",
+    "editorconfig-checker>=3.6.0",
 ]
-
-[tool.basedpyright]
-venv = ".venv"
-reportUnannotatedClassAttribute = false
-reportImplicitOverride = false
-reportUninitializedInstanceVariable = false
-reportExplicitAny = false
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "stave.settings"

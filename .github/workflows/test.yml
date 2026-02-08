@@ -22,5 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
-      - uses: pre-commit/action@v3.0.1
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          prune-cache: false  # store the downloaded wheels in cache
+          # See https://github.com/astral-sh/setup-uv/issues/745
+      - uses: j178/prek-action@v1

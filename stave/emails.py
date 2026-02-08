@@ -21,7 +21,7 @@ def substitute(
 ) -> str:
     # Substitute values for any of the user's tags.
     return MERGE_FIELD_PATTERN.sub(
-        lambda match: (context.get_merge_field_value(match.group(1)) or match.group()),
+        lambda match: context.get_merge_field_value(match.group(1)) or match.group(),
         content,
     )
 
