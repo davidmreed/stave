@@ -202,6 +202,11 @@ urlpatterns = [
         name="event-edit",
     ),
     path(
+        "_/<slug:league_slug>/events/<slug:event_slug>/publish/",
+        view=views.EventPublishView.as_view(),
+        name="event-publish",
+    ),
+    path(
         "_/<slug:league_slug>/events/<slug:event_slug>/create-form/<int:kind>/",
         views.ApplicationFormCreateUpdateView.as_view(),
         name="form-create-question",

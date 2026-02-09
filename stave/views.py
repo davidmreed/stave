@@ -1007,6 +1007,29 @@ class EventCreateView(
         return HttpResponseRedirect(url)
 
 
+class EventPublishView(LoginRequiredMixin, views.View):
+    def post(
+        self, request: HttpRequest, league_slug: str, event_slug: str
+    ) -> HttpResponse:
+        event = get_object_or_404(
+            models.Event.objects.manageable(request.user).filter(
+                league__slug=league_slug,
+            ),
+            slug=event_slug,
+        )
+
+        event.status = models.EventStatus.OPEN
+        event.save()
+
+        redirect_url = request.POST.get("redirect_url")
+        if redirect_url and url_has_allowed_host_and_scheme(
+            redirect_url, settings.ALLOWED_HOSTS
+        ):
+            return HttpResponseRedirect(redirect_url)
+
+        return HttpResponseRedirect(event.get_absolute_url())
+
+
 class CrewCreateView(LoginRequiredMixin, views.View):
     def post(
         self, request: HttpRequest, league_slug: str, event_slug: str, form_slug: str

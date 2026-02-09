@@ -14,7 +14,9 @@
 {% endif %}
 
 {% if event.status == event.EventStatus.DRAFTING %}
-<div class="disabled-warning">This event is in Drafting status and cannot be viewed by other users.</div>
+<div class="disabled-warning">
+    This event is in Drafting status and is only visible to league administrators.
+</div>
 {% endif %}
 
 {% include "stave/event.html" with item=event user=request.user card_kind="stave/page_card.html" csrf_token=csrf_token only %}

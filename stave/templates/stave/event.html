@@ -5,6 +5,13 @@
 {% block actions %}
 {% with can_manage_this_event=user|can_manage_event:item %}
 {% if can_manage_this_event %}
+{% if item.status == item.EventStatus.DRAFTING %}
+<form action="{% url 'event-publish' item.league.slug item.slug %}" method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="redirect_url" value="{{ request.path }}">
+    <input type="submit" value="Publish">
+</form>
+{% endif %}
 <a href="{% url 'event-edit' item.league.slug item.slug %}" role="button">Edit Event</a>
 {% endif %}
 {% endwith %}
