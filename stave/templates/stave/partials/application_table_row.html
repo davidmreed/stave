@@ -21,7 +21,9 @@
         <abbr title="Send Email">✉️</abbr>
     </a>
     {% else %}
-    {{ application.get_user_data|get:field }}
+    {% with application.get_user_data|get:field as text %}
+    {% include "stave/partials/abbrev.html" with text=text only %}
+    {% endwith %}
     {% endif %}
     </small>
 </td>
@@ -94,16 +96,7 @@
     {% with application.responses_by_question|get:question.id as response %}
         <td>
             <small>
-            {% if response|stringformat:"s"|length > 25 %}
-            <details>
-            <summary>
-            <span>{{ response|stringformat:"s"|truncatechars:25 }}</span>
-            </summary>
-            {{ response }}
-            </details>
-            {% else %}
-            {{ response }}
-            {% endif %}
+            {% include "stave/partials/abbrev.html" with text=response only %}
             </small>
         </td>
     {% endwith %}
