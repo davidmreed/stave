@@ -14,7 +14,7 @@
 
 {% if league.logo %}
 <div style="float: right; max-width: 20%; max-height: 20%;">
-<img src="{{ league.logo.url }}" alt="{{ league.name }} logo">
+<img src="{% url 'league-logo' league.logo.name %}" alt="{{ league.name }} logo">
 </div>
 {% endif %}
 

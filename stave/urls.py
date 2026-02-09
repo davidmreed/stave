@@ -6,7 +6,16 @@ from django.views.generic.base import RedirectView
 from . import calendars, settings, views
 
 urlpatterns = [
-    path(f"{settings.MEDIA_URL}<str:path>", view=views.MediaView.as_view()),
+    path(
+        f"{settings.MEDIA_URL}league-logos/<path:path>",
+        view=views.LeagueLogoView.as_view(),
+        name="league-logo",
+    ),
+    path(
+        f"{settings.MEDIA_URL}event-banners/<path:path>",
+        view=views.EventBannerView.as_view(),
+        name="event-banner",
+    ),
     path("", views.HomeView.as_view(), name="home"),
     path(
         "about",

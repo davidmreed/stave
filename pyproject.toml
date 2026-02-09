@@ -28,6 +28,7 @@ dependencies = [
     "django-anymail[amazon-ses]>=13.0",
     "django-meta>=2.5.0",
     "django-ftl>=0.14",
+    "django-storages[s3]>=1.14.6",
 ]
 
 [dependency-groups]

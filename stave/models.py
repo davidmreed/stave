@@ -233,6 +233,10 @@ class LeagueQuerySet(models.QuerySet["League"]):
         ).distinct()
 
 
+def upload_to(instance: models.Model, filename: str) -> str:
+    return f"{instance.id}/{filename}"
+
+
 class League(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     enabled = models.BooleanField(default=False)
@@ -242,7 +246,7 @@ class League(models.Model):
         )
     )
     name = models.CharField(max_length=256)
-    logo = models.ImageField(null=True, blank=True)
+    logo = models.ImageField(null=True, blank=True, upload_to=upload_to)
     location = models.CharField(max_length=256)
     description = models.TextField(null=True, blank=True)
     website = models.URLField(null=True, blank=True)
@@ -732,7 +736,7 @@ class Event(models.Model):
             "The version of the event's name used in web addresses. Should be alphanumeric and contain no spaces, e.g., Summer Throwdown->summer-throwdown"
         )
     )
-    banner = models.ImageField(blank=True, null=True)
+    banner = models.ImageField(blank=True, null=True, upload_to=upload_to)
     start_date = models.DateField()
     end_date = models.DateField()
     location = models.TextField()

@@ -20,7 +20,8 @@ SESSION_COOKIE_SAMESITE = "Lax"
 # Production static files storage with compression and hashing
 STORAGES = {
     "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {"bucket_name": "stave-league-graphics"},
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
