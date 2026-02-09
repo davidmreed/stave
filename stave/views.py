@@ -7,6 +7,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from django import views
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -94,12 +95,15 @@ class TenantedGenericDeleteView[T](
 class LeagueLogoView(views.View):
     def get(self, request: HttpRequest, path: str) -> HttpResponse:
         league_id = path.split("/")[0]
-        league = get_object_or_404(
-            models.League.objects.visible(request.user), pk=league_id
-        )
+        try:
+            league = get_object_or_404(
+                models.League.objects.visible(request.user), pk=league_id
+            )
+        except ValidationError:
+            raise HttpResponseNotFound
         file_value = league.logo
         if path != file_value.name:
-            raise HttpResponseNotFound()
+            raise HttpResponseNotFound
 
         return FileResponse(file_value.open("rb"))
 
@@ -107,12 +111,15 @@ class LeagueLogoView(views.View):
 class EventBannerView(views.View):
     def get(self, request: HttpRequest, path: str) -> HttpResponse:
         event_id = path.split("/")[0]
-        event = get_object_or_404(
-            models.Event.objects.visible(request.user), pk=event_id
-        )
+        try:
+            event = get_object_or_404(
+                models.Event.objects.visible(request.user), pk=event_id
+            )
+        except ValidationError:
+            raise HttpResponseNotFound
         file_value = event.banner
         if path != file_value.name:
-            raise HttpResponseNotFound()
+            raise HttpResponseNotFound
 
         return FileResponse(file_value.open("rb"))
 
