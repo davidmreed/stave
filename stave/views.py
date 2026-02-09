@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import is_dataclass
 from datetime import datetime, time, timedelta
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -92,17 +91,30 @@ class TenantedGenericDeleteView[T](
         return reverse(self.list_view_name, args=[self.league.slug])
 
 
-class MediaView(views.View):
-    # TODO: do not serve files unless associated with a viewable
-    # league or application form.
-
+class LeagueLogoView(views.View):
     def get(self, request: HttpRequest, path: str) -> HttpResponse:
-        file_path = Path(settings.MEDIA_ROOT) / path
+        league_id = path.split("/")[0]
+        league = get_object_or_404(
+            models.League.objects.visible(request.user), pk=league_id
+        )
+        file_value = league.logo
+        if path != file_value.name:
+            raise HttpResponseNotFound()
 
-        if file_path.exists():
-            return FileResponse(file_path.open("rb"))
+        return FileResponse(file_value.open("rb"))
 
-        return HttpResponseNotFound()
+
+class EventBannerView(views.View):
+    def get(self, request: HttpRequest, path: str) -> HttpResponse:
+        event_id = path.split("/")[0]
+        event = get_object_or_404(
+            models.Event.objects.visible(request.user), pk=event_id
+        )
+        file_value = event.banner
+        if path != file_value.name:
+            raise HttpResponseNotFound()
+
+        return FileResponse(file_value.open("rb"))
 
 
 class OpenApplicationsListView(generic.ListView):
@@ -1907,9 +1919,13 @@ class ApplicationFormView(views.View):
             use_og=True,
         )
         if app_form.event.banner:
-            meta.image_object = {"url": app_form.event.banner.url}
+            meta.image_object = {
+                "url": reverse("event-banner", args=[app_form.event.banner.name])
+            }
         elif app_form.event.league.logo:
-            meta.image_object = {"url": app_form.event.league.logo.url}
+            meta.image_object = {
+                "url": reverse("league-logo", args=[app_form.event.league.logo.name])
+            }
 
         return render(
             request,

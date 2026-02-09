@@ -1,5 +1,5 @@
 {% if event.banner %}
     <div style="width: 100%; display: flex; justify-content: center; margin-bottom: 0.5rem;">
-    <img src="{{ event.banner.url }}" alt="banner image for {{ event.name }}">
+    <img src="{% url 'event-banner' event.banner.name %}" alt="banner image for {{ event.name }}">
     </div>
 {% endif %}

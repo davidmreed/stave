@@ -146,15 +146,6 @@ DATABASES = {
     )
 }
 
-# File storage
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
 
 MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "images")
 MEDIA_URL = "media/"
