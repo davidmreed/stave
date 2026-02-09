@@ -100,10 +100,10 @@ class LeagueLogoView(views.View):
                 models.League.objects.visible(request.user), pk=league_id
             )
         except ValidationError:
-            raise HttpResponseNotFound
+            return HttpResponseNotFound()
         file_value = league.logo
         if path != file_value.name:
-            raise HttpResponseNotFound
+            return HttpResponseNotFound()
 
         return FileResponse(file_value.open("rb"))
 
@@ -116,10 +116,10 @@ class EventBannerView(views.View):
                 models.Event.objects.visible(request.user), pk=event_id
             )
         except ValidationError:
-            raise HttpResponseNotFound
+            return HttpResponseNotFound()
         file_value = event.banner
         if path != file_value.name:
-            raise HttpResponseNotFound
+            return HttpResponseNotFound()
 
         return FileResponse(file_value.open("rb"))
 
