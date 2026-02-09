@@ -1,0 +1,10 @@
+{% if text|stringformat:"s"|length > 25 %}
+<details>
+<summary>
+<span>{{ text|stringformat:"s"|truncatechars:25 }}</span>
+</summary>
+{{ text }}
+</details>
+{% else %}
+{{ text }}
+{% endif %}
