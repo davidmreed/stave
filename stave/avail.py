@@ -208,7 +208,7 @@ class AvailabilityManager:
         for status in statuses:
             apps.extend(self.applications_by_status.get(status, []))
 
-        return sorted(apps, key=lambda a: a.user.preferred_name)
+        return sorted(apps, key=lambda a: a.user.preferred_name.lower())
 
     @property
     @functools.cache
