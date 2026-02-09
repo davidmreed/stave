@@ -127,7 +127,7 @@ class EventBannerView(views.View):
 class OpenApplicationsListView(generic.ListView):
     template_name = "stave/open_applications_list.html"
     model = models.Event
-    paginate_by = 10
+    paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.Event]:
         return models.Event.objects.open_applications_grouped_by_subscription(
@@ -138,7 +138,7 @@ class OpenApplicationsListView(generic.ListView):
 class MyApplicationsView(LoginRequiredMixin, generic.ListView):
     template_name = "stave/my_applications.html"
     model = models.Application
-    paginate_by = 10
+    paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.Application]:
         return (
@@ -152,7 +152,7 @@ class MyApplicationsView(LoginRequiredMixin, generic.ListView):
 class MyEventsView(LoginRequiredMixin, generic.ListView):
     template_name = "stave/my_events_list.html"
     model = models.Event
-    paginate_by = 10
+    paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.Event]:
         return models.Event.objects.manageable(self.request.user)
@@ -161,7 +161,7 @@ class MyEventsView(LoginRequiredMixin, generic.ListView):
 class MyLeaguesView(LoginRequiredMixin, generic.ListView):
     template_name = "stave/my_leagues_list.html"
     model = models.League
-    paginate_by = 10
+    paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.League]:
         return models.League.objects.manageable(self.request.user)
@@ -170,7 +170,7 @@ class MyLeaguesView(LoginRequiredMixin, generic.ListView):
 class MyLeagueGroupsView(LoginRequiredMixin, generic.ListView):
     template_name = "stave/my_league_groups_list.html"
     model = models.LeagueGroup
-    paginate_by = 10
+    paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.LeagueGroup]:
         return models.LeagueGroup.objects.owned(self.request.user)
@@ -286,11 +286,11 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
             )
 
         return contexts.HomeInputs(
-            application_forms=Paginator(application_form_queryset, 10).page(1),
-            applications=Paginator(application_queryset, 10).get_page(1),
-            events=Paginator(event_queryset, 10).get_page(1),
-            leagues=Paginator(league_queryset, 10).get_page(1),
-            league_groups=Paginator(league_group_queryset, 10).get_page(1),
+            application_forms=Paginator(application_form_queryset, 5).page(1),
+            applications=Paginator(application_queryset, 5).get_page(1),
+            events=Paginator(event_queryset, 5).get_page(1),
+            leagues=Paginator(league_queryset, 5).get_page(1),
+            league_groups=Paginator(league_group_queryset, 5).get_page(1),
             subscribed_leagues=subscribed_leagues,
             subscribed_league_groups=subscribed_league_groups,
         )
@@ -463,7 +463,7 @@ class LeagueGroupCreateUpdateView(ParentChildCreateUpdateFormView):
 class LeagueGroupListView(generic.ListView):
     template_name = "stave/league_group_list.html"
     model = models.LeagueGroup
-    paginate_by = 10
+    paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.MessageTemplate]:
         return models.LeagueGroup.objects.visible(self.request.user)
@@ -599,7 +599,7 @@ class MessageTemplateListView(
 ):
     template_name = "stave/message_template_list.html"
     model = models.MessageTemplate
-    paginate_by = 10
+    paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.MessageTemplate]:
         return self.league.message_templates.all()
@@ -610,7 +610,7 @@ class MessageTemplateCreateView(
 ):
     template_name = "stave/message_template_edit.html"
     form_class = forms.MessageTemplateForm
-    paginate_by = 10
+    paginate_by = 25
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
@@ -678,7 +678,7 @@ class MessageTemplateDeleteView(TenantedGenericDeleteView[models.MessageTemplate
 class RoleGroupListView(LoginRequiredMixin, TenantedObjectMixin, generic.ListView):
     template_name = "stave/role_group_list.html"
     model = models.RoleGroup
-    paginate_by = 10
+    paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.RoleGroup]:
         return self.league.role_groups.all()
@@ -741,7 +741,7 @@ class RoleGroupDeleteView(TenantedGenericDeleteView[models.RoleGroup]):
 class EventTemplateListView(LoginRequiredMixin, TenantedObjectMixin, generic.ListView):
     template_name = "stave/event_template_list.html"
     model = models.EventTemplate
-    paginate_by = 10
+    paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.EventTemplate]:
         return self.league.event_templates.all()
@@ -799,7 +799,7 @@ class ApplicationFormTemplateListView(
 ):
     template_name = "stave/application_form_template_list.html"
     model = models.ApplicationFormTemplate
-    paginate_by = 10
+    paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.ApplicationFormTemplate]:
         return self.league.application_form_templates.all()
@@ -1120,7 +1120,7 @@ class LeagueDetailView(
 class LeagueListView(generic.ListView):
     template_name = "stave/league_list.html"
     model = models.League
-    paginate_by = 10
+    paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.League]:
         return models.League.objects.visible(self.request.user)
@@ -1128,7 +1128,7 @@ class LeagueListView(generic.ListView):
 
 class MySubscriptionsView(LoginRequiredMixin, generic.ListView):
     template_name = "stave/my_subscriptions_list.html"
-    paginate_by = 10
+    paginate_by = 25
     model = models.League  # or LeagueGroup, below
 
     def get_queryset(self) -> QuerySet[models.League | models.LeagueGroup]:
@@ -1156,7 +1156,7 @@ class MySubscriptionsView(LoginRequiredMixin, generic.ListView):
 class EventListView(generic.ListView):
     template_name = "stave/event_list.html"
     model = models.Event
-    paginate_by = 10
+    paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.Event]:
         return (
