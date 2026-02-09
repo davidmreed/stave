@@ -12,7 +12,7 @@
     {% endfor %}
     {# Roles per Role Group #}
     {% for role_group in form.role_groups.all %}
-    <th>{{ role_group.name }}</th>
+    <th>{% include "stave/partials/abbrev.html" with text=role_group.name only %}</th>
     {% endfor %}
     {# Availability #}
     {% if form.application_availability_kind == form.ApplicationAvailabilityKind.BY_DAY %}
@@ -24,20 +24,8 @@
     {% for question in form.form_questions.all %}
     <th>
         <small>
-            {% if question.content|length > 25 %}
-            <details>
-            <summary>
-            <span>
-            {{ question.content|truncatechars:25 }}
-            </span>
-            </summary>
-            {{ question.content }}
-            </details>
-            {% else %}
-            {{ question.content }}
-            {% endif %}
+            {% include "stave/partials/abbrev.html" with text=question.content only %}
         </small>
     </th>
-
     {% endfor %}
 </thead>
