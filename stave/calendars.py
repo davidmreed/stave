@@ -2,7 +2,7 @@ import abc
 from datetime import date, datetime
 from uuid import UUID
 
-from django.db.models import Q, QuerySet
+from django.db.models import QuerySet
 from django.http import (
     HttpRequest,
 )
@@ -60,20 +60,23 @@ class MyEventsFeed(StaveEventFeed):
         return get_object_or_404(models.User, id=user_id)
 
     def items(self, obj: models.User) -> QuerySet[models.Event]:
+        applications = models.Application.objects.filter(
+            user=obj,
+        ).exclude(
+            status__in=[
+                models.ApplicationStatus.REJECTED,
+                models.ApplicationStatus.WITHDRAWN,
+            ]
+        )
+
         return (
             (
                 models.Event.objects.manageable(obj)
                 | models.Event.objects.filter(
-                    Q(application_forms__applications__user=obj)
-                    & ~Q(
-                        application_forms__applications__status=models.ApplicationStatus.REJECTED,
-                    )
-                    & ~Q(
-                        application_forms__applications__status=models.ApplicationStatus.WITHDRAWN
-                    )
+                    application_forms__applications__id__in=applications
                 ).distinct()
             )
-            .filter(~Q(status=models.EventStatus.CANCELED))
+            .exclude(status=models.EventStatus.CANCELED)
             .distinct()
             .prefetch_for_display()
         )
