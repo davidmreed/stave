@@ -955,7 +955,6 @@ class EventTemplateCreateUpdateForm(ParentChildForm):
         return formset
 
     def clean(self):
-        super().clean()
         self.parent_form.instance.league = self.league
 
         for index, child_form in enumerate(
@@ -965,7 +964,14 @@ class EventTemplateCreateUpdateForm(ParentChildForm):
                 if child_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
             ]
         ):
-            child_form.instance.order_key = index + 1
+            new_order_key = index + 1
+            if child_form.instance.order_key != new_order_key:
+                child_form.instance.order_key = new_order_key
+                # force super to save this form, even if the user did not
+                # edit it.
+                child_form.has_changed = lambda: True
+
+        super().clean()
 
     def get_redirect_url(self) -> str:
         return reverse("event-template-list", args=[self.league.slug])
@@ -1194,7 +1200,12 @@ class RoleGroupCreateUpdateForm(ParentChildForm):
                 if child_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
             ]
         ):
-            child_form.instance.order_key = index + 1
+            new_order_key = index + 1
+            if child_form.instance.order_key != new_order_key:
+                child_form.instance.order_key = new_order_key
+                # force super to save this form, even if the user did not
+                # edit it.
+                child_form.has_changed = lambda: True
 
     def get_redirect_url(self) -> str:
         return reverse("role-group-list", args=[self.league.slug])
