@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
-{% load markdownify %}
-{% load stave_tags %}
+{% load markdownify stave_tags %}
 
 {% block content %}
 
@@ -32,4 +31,4 @@ There aren't any events for leagues in this group yet.
 
 {% include "stave/partials/pagination.html" with page_obj=events only %}
 
-{% endblock %}
+{% endblock content %}

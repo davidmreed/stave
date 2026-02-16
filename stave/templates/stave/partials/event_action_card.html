@@ -1,4 +1,5 @@
 {% extends "stave/event.html" %}
+
 {% block navigation %}
 {% for application_form in item.application_forms.all %}
 <div>
@@ -21,4 +22,4 @@
     {% endif %}
 </div>
 {% endfor %}
-{% endblock %}
+{% endblock navigation %}

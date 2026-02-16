@@ -49,7 +49,7 @@
            value="Send Invitation Now"
     >
     {% endif %}
-    <a role="button" href="{% url 'send-email' application.form.event.league.slug application.form.event.slug application.form.slug 'invitation'%}{% querystring recipient=application.user_id redirect_url=request.path %}">Customize Invitation Now</a>
+    <a role="button" href="{% url 'send-email' application.form.event.league.slug application.form.event.slug application.form.slug 'invitation' %}{% querystring recipient=application.user_id redirect_url=request.path %}">Customize Invitation Now</a>
     {% endif %}
     {% if application.ApplicationStatus.REJECTION_PENDING in states %}
     <input type="submit"
@@ -70,7 +70,7 @@
            value="Send Rejection Now"
     >
     {% endif %}
-    <a role="button" href="{% url 'send-email' application.form.event.league.slug application.form.event.slug application.form.slug 'rejection'%}{% querystring recipient=application.user_id redirect_url=request.path %}">Customize Rejection Now</a>
+    <a role="button" href="{% url 'send-email' application.form.event.league.slug application.form.event.slug application.form.slug 'rejection' %}{% querystring recipient=application.user_id redirect_url=request.path %}">Customize Rejection Now</a>
     {% endif %}
     {% if application.ApplicationStatus.CONFIRMED in states and not minimal %}
     <input type="submit"

@@ -5,7 +5,7 @@
 
 {% block content %}
 
-{% with can_manage_this_event=user|can_manage_event:event%}
+{% with can_manage_this_event=user|can_manage_event:event %}
 
 {% include "stave/partials/event_banner.html" with event=event only %}
 
@@ -40,7 +40,7 @@
     <h2>Games</h2>
     {% if can_manage_this_event %}
     <div class="inline">
-        <a href="{% url 'event-edit' event.league.slug event.slug %}{% querystring action='add'%}" role="button">Create Game</a>
+        <a href="{% url 'event-edit' event.league.slug event.slug %}{% querystring action='add' %}" role="button">Create Game</a>
     </div>
     {% endif %}
 </header>
@@ -52,4 +52,4 @@ No games scheduled yet.
 </section>
 
 {% endwith %}
-{% endblock %}
+{% endblock content %}

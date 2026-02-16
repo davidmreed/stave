@@ -42,3 +42,7 @@ cover/
 /backups
 /images
 /static
+
+# IDE
+.idea/
+.vscode/

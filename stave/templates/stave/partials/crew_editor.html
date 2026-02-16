@@ -13,7 +13,7 @@
 {% for role in role_group.roles.all %}
 <tr>
     <td>{{ role.name }}</td>
-    {% with crew_assignments|get:role.id as assignment %}
+    {% with assignment=crew_assignments|get:role.id %}
     <td
         {% if role.id not in crew_assignments %}class="highlighted-cell"{% endif %}
         {% if assignment and assignment.user_id == focus_user_id %}class="highlighted-cell-user"{% endif %}

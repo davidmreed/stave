@@ -1,12 +1,11 @@
 {% extends card_kind %}
-{% load stave_tags %}
-{% load tz %}
+{% load stave_tags tz %}
 
 {% block header %}
 {% timezone item.event.league.time_zone %}
 Game {{ item.order_key }} ({{ item.start_time|time }}&ndash;{{ item.end_time|time }} {{ item.start_time|tzname }})
 {% endtimezone %}
-{% endblock %}
+{% endblock header %}
 
 {% block actions %}
 {% with can_manage_this_event=user|can_manage_event:item.event %}
@@ -14,7 +13,7 @@ Game {{ item.order_key }} ({{ item.start_time|time }}&ndash;{{ item.end_time|tim
 <a role="button" href="{% url 'event-edit' item.event.league.slug item.event.slug %}">Edit</a>
 {% endif %}
 {% endwith %}
-{% endblock %}
+{% endblock actions %}
 
 {% block metadata %}
 <dl>
@@ -28,14 +27,14 @@ Game {{ item.order_key }} ({{ item.start_time|time }}&ndash;{{ item.end_time|tim
     </div>
     <div>
         <dt>Home</dt>
-        <dd>{{ item.home_league}} {{ item.home_team }}</dd>
+        <dd>{{ item.home_league }} {{ item.home_team }}</dd>
     </div>
     <div>
         <dt>Visitor</dt>
-        <dd>{{ item.visiting_league}} {{ item.visiting_team }}</dd>
+        <dd>{{ item.visiting_league }} {{ item.visiting_team }}</dd>
     </div>
 </dl>
-{% endblock %}
+{% endblock metadata %}
 
 {% block navigation %}
-{% endblock %}
+{% endblock navigation %}
