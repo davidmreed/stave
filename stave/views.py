@@ -591,6 +591,28 @@ class LeagueUnsubscribeView(LoginRequiredMixin, views.View):
 
 # League management views
 
+## Permissions
+
+class LeaguePermissionListView(LoginRequiredMixin, TenantedObjectMixin, generic.ListView):
+    template_name = "stave/league_permissions.html"
+    model = models.LeagueUserPermission
+
+    def get_queryset(self) -> QuerySet[models.LeagueUserPermission]:
+        return self.league.user_permissions.all().order_by(["user", "permission"])
+
+class LeaguePermissionEditView(LoginRequiredMixin, TenantedObjectMixin, generic.edit.DetailView):
+    template_name = "stave/league_permission_edit.html"
+    form_class = forms.LeaguePermissionForm
+
+class LeaguePermissionInviteView(LoginRequiredMixin, generic.edit.FormView):
+    ...
+
+class LeaguePermissionRevokeInviteView(LoginRequiredMixin, generic.TemplateView):
+    ...
+
+class LeaguePermissionRespondInviteView(LoginRequiredMixin, generic.TemplateView):
+    ...
+
 ## Message Templates
 
 

@@ -47,6 +47,7 @@
 
 {% block navigation %}
 {% if user|can_manage_league:item %}
+<a href="{% url 'league-permission-list' item.slug %}">Users and Permissions</a>
 <a href="{% url 'role-group-list' item.slug %}">Roles</a>
 <a href="{% url 'message-template-list' item.slug %}">Message Templates</a>
 <a href="{% url 'event-template-list' item.slug %}">Event Templates</a>

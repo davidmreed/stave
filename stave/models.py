@@ -1953,6 +1953,16 @@ class LeagueGroupSubscription(models.Model):
         LeagueGroup, on_delete=models.CASCADE, related_name="subscriptions"
     )
 
+class LeagueUserInvitation(models.Model):
+    class Meta:
+        constraints = []
+
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+    email = models.CharField(max_length=256)
+    league = models.ForeignKey(League, on_delete=models.CASCADE, related_name="invitations")
+    permissions = models.JSONField(default=list)
+    expiration_date = models.DateField()
+
 
 class GameHistory:
     game: Game
