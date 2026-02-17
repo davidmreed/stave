@@ -38,3 +38,20 @@ test *arguments="":
 # Run behavioral tests
 behave arguments="":
     uv run manage.py behave {{arguments}}
+
+# Run tests with coverage and generate data file
+coverage-run:
+    uv run coverage run manage.py behave
+    uv run coverage run -m pytest tests/
+    uv run coverage combine --quiet
+
+[private]
+coverage-html: coverage-run
+    uv run coverage html
+
+[private]
+coverage-open: coverage-html
+    open htmlcov/index.html
+
+# Run tests, generate coverage HTML report, then open it in the browser
+coverage: coverage-open
