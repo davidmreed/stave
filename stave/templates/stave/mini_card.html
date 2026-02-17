@@ -3,15 +3,15 @@
         <strong>
         {% block header %}
         <a href="{{ item.get_absolute_url }}">{{ item }}</a>
-        {% endblock %}
+        {% endblock header %}
         </strong>
     </header>
     <small>
     {% block description %}
-    {% endblock %}
+    {% endblock description %}
     <nav>
     {% block navigation %}
-    {% endblock %}
+    {% endblock navigation %}
     </nav>
     </small>
 </section>

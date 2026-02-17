@@ -1,8 +1,6 @@
 {% extends "base.html" %}
 
-{% load markdownify %}
-{% load stave_tags %}
-{% load tz %}
+{% load markdownify stave_tags tz %}
 
 {% inputs 'ViewApplicationContext' %}
 
@@ -179,7 +177,7 @@ This application's status is <strong>{{ application.get_status_display }}</stron
 
 {% for role_group_form in form.role_group_forms %}
 <fieldset>
-    <legend>{{role_group.name}}</legend>
+    <legend>{{ role_group.name }}</legend>
     {{ role_group_form }}
 </fieldset>
 {% endfor %}
@@ -193,4 +191,4 @@ This application's status is <strong>{{ application.get_status_display }}</stron
 {% endif %}
 <input type="submit" {% if not editable %} disabled {% endif %} value="Submit">
 </form>
-{% endblock %}
+{% endblock content %}

@@ -1,7 +1,6 @@
 {% extends card_kind %}
 
-{% load stave_tags %}
-{% load markdownify %}
+{% load markdownify stave_tags %}
 
 {% block actions %}
 {% if user|can_manage_league:item %}
@@ -22,11 +21,11 @@
     </form>
     {% endif %}
 {% endif %}
-{% endblock %}
+{% endblock actions %}
 
 {% block description %}
 {{ item.description|markdownify|truncatewords:"20" }}
-{% endblock %}
+{% endblock description %}
 
 {% block metadata %}
 <dl>
@@ -43,7 +42,7 @@
     </div>
     {% endif %}
 </dl>
-{% endblock %}
+{% endblock metadata %}
 
 {% block navigation %}
 {% if user|can_manage_league:item %}
@@ -52,4 +51,4 @@
 <a href="{% url 'event-template-list' item.slug %}">Event Templates</a>
 <a href="{% url 'application-form-template-list' item.slug %}">Application Form Templates</a>
 {% endif %}
-{% endblock %}
+{% endblock navigation %}

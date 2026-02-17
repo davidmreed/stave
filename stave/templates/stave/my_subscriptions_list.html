@@ -39,7 +39,7 @@
         <input type="hidden" name="redirect_url" value="{{ request.path }}">
     <input type="submit" value="Unsubscribe">
     </form>
-    {% else%}
+    {% else %}
     <form action="{% url 'league-group-subscribe' item.id %}" method="POST">
     {% csrf_token %}
         <input type="hidden" name="redirect_url" value="{{ request.path }}">
@@ -55,4 +55,4 @@ You don't have any subscriptions right now.
 
 {% include "stave/partials/pagination.html" with page_obj=page_obj only %}
 
-{% endblock %}
+{% endblock content %}

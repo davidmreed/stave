@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
-{% load stave_tags %}
-{% load markdownify %}
+{% load markdownify stave_tags %}
 
 {% inputs 'TemplateSelectorInputs' %}
 
@@ -49,4 +48,4 @@
     <input type="submit" value="{% if not selected_template and require_template_selection_first %}Next{% else %}Create{% endif %}">
 </form>
 
-{% endblock %}
+{% endblock content %}
