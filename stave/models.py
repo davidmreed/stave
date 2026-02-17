@@ -1224,13 +1224,12 @@ class ApplicationFormQuerySet(models.QuerySet["ApplicationForm"]):
     def listed(self, user: User | AnonymousUser) -> models.QuerySet["ApplicationForm"]:
         """ApplicationForms that are listed on the homepage and other timelines"""
         return (
-            self.manageable(user)
-            | self.filter(
+            self.filter(
                 closed=False,
                 hidden=False,
                 event__status=EventStatus.OPEN,
                 event__league__enabled=True,
-            ).distinct()
+            )
         ).order_by("close_date", "event__start_date")  # TODO: make this a CASE()
 
     def subscribed(self, user: User) -> models.QuerySet["ApplicationForm"]:
