@@ -189,3 +189,8 @@ class HomeInputs:
 @dataclass
 class LeagueGroupInputs:
     events: Page
+
+
+@dataclass
+class LeaguePermissionEditViewInputs:
+    league: models.League

@@ -6,16 +6,30 @@
     <h1><a href="{{ league.get_absolute_url }}">{{ league }}</a>: Users and Permissions</h1>
 </header>
 
-{% regroup page_obj by user as user_perms %}
+<header>
+    <h2>Invitations</h2>
+    <a role="button" href="{% url 'league-permission-invite' league.slug %}">Invite</a>
+</header>
+
+{% for invitation in invitations %}
+{% empty %}
+You haven't sent any invitations to manage this league or its events.
+{% endfor %}
+
+<header>
+    <h2>Managers</h2>
+</header>
+
+{% regroup leagueuserpermission_list by user as user_perms %}
 {% for entry in user_perms %}
 <article>
     <header>
-        <h2>{{ entry.grouper }}</h2>
+        <h3>{{ entry.grouper }}</h3>
         <a role="button" href="{% url 'league-permission-edit' league.slug entry.grouper.id %}">Edit</a>
     </header>
     <ul>
         {% for perm in entry.list %}
-        <li>{{ perm.permission.label }}</li>
+        <li>{{ perm.permission_value.label }}</li>
         {% endfor %}
     </ul>
 </article>

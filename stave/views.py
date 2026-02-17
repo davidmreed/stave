@@ -593,25 +593,50 @@ class LeagueUnsubscribeView(LoginRequiredMixin, views.View):
 
 ## Permissions
 
-class LeaguePermissionListView(LoginRequiredMixin, TenantedObjectMixin, generic.ListView):
+
+class LeaguePermissionListView(
+    LoginRequiredMixin, TenantedObjectMixin, generic.ListView
+):
     template_name = "stave/league_permissions.html"
     model = models.LeagueUserPermission
 
     def get_queryset(self) -> QuerySet[models.LeagueUserPermission]:
-        return self.league.user_permissions.all().order_by(["user", "permission"])
+        return self.league.user_permissions.all().order_by("user", "permission")
 
-class LeaguePermissionEditView(LoginRequiredMixin, TenantedObjectMixin, generic.edit.DetailView):
+
+class LeaguePermissionEditView(
+    LoginRequiredMixin,
+    TenantedObjectMixin,
+    TypedContextMixin[contexts.LeaguePermissionEditViewInputs],
+    generic.edit.UpdateView,
+):
     template_name = "stave/league_permission_edit.html"
     form_class = forms.LeaguePermissionForm
 
-class LeaguePermissionInviteView(LoginRequiredMixin, generic.edit.FormView):
-    ...
+    def get_context(self) -> contexts.LeaguePermissionEditViewInputs:
+        return contexts.LeaguePermissionEditViewInputs(league=self.league)
 
-class LeaguePermissionRevokeInviteView(LoginRequiredMixin, generic.TemplateView):
-    ...
 
-class LeaguePermissionRespondInviteView(LoginRequiredMixin, generic.TemplateView):
-    ...
+class LeaguePermissionInviteView(
+    LoginRequiredMixin,
+    TenantedObjectMixin,
+    TypedContextMixin[contexts.LeaguePermissionEditViewInputs],
+    generic.edit.FormView,
+):
+    form_class = forms.LeaguePermissionInviteForm
+    template_name = "stave/league_permission_invite.html"
+
+    def form_valid(self, form: forms.LeaguePermissionInviteForm) -> HttpResponse: ...
+
+    def get_context(self) -> contexts.LeaguePermissionEditViewInputs:
+        return contexts.LeaguePermissionEditViewInputs(league=self.league)
+
+
+class LeaguePermissionRevokeInviteView(LoginRequiredMixin, generic.TemplateView): ...
+
+
+class LeaguePermissionRespondInviteView(LoginRequiredMixin, generic.TemplateView): ...
+
 
 ## Message Templates
 

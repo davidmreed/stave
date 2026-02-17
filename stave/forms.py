@@ -1482,14 +1482,17 @@ class LeagueGroupCreateUpdateForm(ParentChildForm):
 
             return ret
 
+
 class LeaguePermissionForm(forms.Form):
     def __init__(self, *args, **kwargs):
         # Dynamically add fields for the permissions we have defined.
 
+        self.fields = {}
         for perm in models.UserPermission:
-            self.fields[perm.value] = forms.BooleanField(label=perm.label)
+            self.fields[perm.name.lower()] = forms.BooleanField(label=perm.label)
 
         super().__init__(*args, **kwargs)
 
-class LeaguePermissionInviteForm(forms.Form):
-    email =
+
+class LeaguePermissionInviteForm(LeaguePermissionForm):
+    email = forms.CharField(max_length=256)
