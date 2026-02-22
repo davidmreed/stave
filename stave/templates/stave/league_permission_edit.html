@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load stave_tags %}
+
+{% block content %}
+<header>
+    <h1><a href="{{ league.get_absolute_url }}">{{ league }}</a>: Editing Permissions for {{ user }}</h1>
+</header>
+
+<form action="{{ request.path }}" method="POST">
+{% csrf_token %}
+{{ form }}
+<input type="submit" value="Save">
+</form>
+
+{% endblock content %}

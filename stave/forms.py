@@ -1435,6 +1435,7 @@ class LeagueGroupCreateUpdateForm(ParentChildForm):
 
     def __init__(self, *args, user: models.User, **kwargs):
         self.user = user
+        kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
     def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
@@ -1485,13 +1486,24 @@ class LeagueGroupCreateUpdateForm(ParentChildForm):
 
 class LeaguePermissionForm(forms.Form):
     def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
         # Dynamically add fields for the permissions we have defined.
-
-        self.fields = {}
-        for perm in models.UserPermission:
-            self.fields[perm.name.lower()] = forms.BooleanField(label=perm.label)
-
         super().__init__(*args, **kwargs)
+        helps = {
+            "league_manager": _(
+                "League managers control permissions, league branding, and templates."
+            ),
+            "event_manager": _(
+                "Event managers build events and staff with application forms."
+            ),
+        }
+        for perm in models.UserPermission:
+            self.fields[perm.name.lower()] = forms.BooleanField(
+                label=_(perm.label),
+                required=False,
+                help_text=helps[perm.name.lower()],
+                widget=forms.CheckboxInput(attrs={"role": "switch"}),
+            )
 
 
 class LeaguePermissionInviteForm(LeaguePermissionForm):

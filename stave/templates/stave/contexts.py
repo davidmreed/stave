@@ -194,3 +194,9 @@ class LeagueGroupInputs:
 @dataclass
 class LeaguePermissionEditViewInputs:
     league: models.League
+    user: models.User
+
+
+@dataclass
+class LeaguePermissionInviteViewInputs:
+    league: models.League

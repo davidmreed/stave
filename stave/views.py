@@ -608,13 +608,50 @@ class LeaguePermissionEditView(
     LoginRequiredMixin,
     TenantedObjectMixin,
     TypedContextMixin[contexts.LeaguePermissionEditViewInputs],
-    generic.edit.UpdateView,
+    generic.edit.FormView,
 ):
     template_name = "stave/league_permission_edit.html"
     form_class = forms.LeaguePermissionForm
 
+    def get_initial(self) -> dict:
+        with transaction.atomic():
+            user = get_object_or_404(models.User, id=self.kwargs["user_id"])
+            initial = {
+                perm.name.lower(): models.LeagueUserPermission.objects.filter(
+                    user=user, league=self.league, permission=perm
+                ).exists()
+                for perm in models.UserPermission
+            }
+
+            return initial
+
     def get_context(self) -> contexts.LeaguePermissionEditViewInputs:
-        return contexts.LeaguePermissionEditViewInputs(league=self.league)
+        user = get_object_or_404(models.User, id=self.kwargs["user_id"])
+        return contexts.LeaguePermissionEditViewInputs(league=self.league, user=user)
+
+    def form_valid(self, form: forms.LeaguePermissionForm) -> HttpResponse:
+        with transaction.atomic():
+            user = get_object_or_404(models.User, id=self.kwargs["user_id"])
+            for perm in models.UserPermission:
+                enabled = form.cleaned_data[perm.name.lower()]
+                if enabled:
+                    models.LeagueUserPermission.objects.get_or_create(
+                        user=user, league=self.league, permission=perm
+                    )
+                else:
+                    if (
+                        user == self.request.user
+                        and perm == models.UserPermission.LEAGUE_MANAGER
+                        and not enabled
+                    ):
+                        raise  # FIXME
+                    models.LeagueUserPermission.objects.filter(
+                        user=user, league=self.league, permission=perm
+                    ).delete()
+
+        return HttpResponseRedirect(
+            reverse("league-permission-list", args=[self.league.slug])
+        )
 
 
 class LeaguePermissionInviteView(
@@ -626,10 +663,25 @@ class LeaguePermissionInviteView(
     form_class = forms.LeaguePermissionInviteForm
     template_name = "stave/league_permission_invite.html"
 
-    def form_valid(self, form: forms.LeaguePermissionInviteForm) -> HttpResponse: ...
+    def form_valid(self, form: forms.LeaguePermissionInviteForm) -> HttpResponse:
+        perms = [
+            perm.value
+            for perm in models.UserPermission
+            if form.cleaned_data[perm.name.lower()]
+        ]
+        models.LeagueUserInvitation.objects.create(
+            email=form.cleaned_data["email"],
+            league=self.league,
+            permissions=perms,
+            expiration_date=datetime.now() + timedelta(days=7),
+        )
 
-    def get_context(self) -> contexts.LeaguePermissionEditViewInputs:
-        return contexts.LeaguePermissionEditViewInputs(league=self.league)
+        return HttpResponseRedirect(
+            reverse("league-permission-list", args=[self.league.slug])
+        )
+
+    def get_context(self) -> contexts.LeaguePermissionInviteViewInputs:
+        return contexts.LeaguePermissionInviteViewInputs(league=self.league)
 
 
 class LeaguePermissionRevokeInviteView(LoginRequiredMixin, generic.TemplateView): ...

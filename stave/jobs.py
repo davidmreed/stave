@@ -71,3 +71,10 @@ def clean_up_unconfirmed_users():
         .delete()
     )
     logging.info(f"Deleted {deleted} unconfirmed accounts")
+
+
+@close_old_connections
+def send_league_invitation_messages():
+    # League user invitations are valid for seven days
+    # We message users on days 1, 3, and 7, then expire on the 8th.
+    ...
