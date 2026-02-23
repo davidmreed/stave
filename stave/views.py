@@ -615,7 +615,7 @@ class LeaguePermissionEditView(
 
     def get_initial(self) -> dict:
         with transaction.atomic():
-            user = get_object_or_404(models.User, id=self.kwargs["user_id"])
+            user = get_object_or_404(self.get_queryset(), id=self.kwargs["user_id"])
             initial = {
                 perm.name.lower(): models.LeagueUserPermission.objects.filter(
                     user=user, league=self.league, permission=perm
@@ -625,13 +625,20 @@ class LeaguePermissionEditView(
 
             return initial
 
+    def get_queryset(self) -> QuerySet[models.User]:
+        return models.User.objects.filter(
+            league_permissions__league__in=models.League.objects.manageable(
+                self.request.user
+            )
+        ).distinct()
+
     def get_context(self) -> contexts.LeaguePermissionEditViewInputs:
-        user = get_object_or_404(models.User, id=self.kwargs["user_id"])
+        user = get_object_or_404(self.get_queryset(), id=self.kwargs["user_id"])
         return contexts.LeaguePermissionEditViewInputs(league=self.league, user=user)
 
     def form_valid(self, form: forms.LeaguePermissionForm) -> HttpResponse:
         with transaction.atomic():
-            user = get_object_or_404(models.User, id=self.kwargs["user_id"])
+            user = get_object_or_404(self.get_queryset(), id=self.kwargs["user_id"])
             for perm in models.UserPermission:
                 enabled = form.cleaned_data[perm.name.lower()]
                 if enabled:
@@ -687,7 +694,8 @@ class LeaguePermissionInviteView(
 class LeaguePermissionRevokeInviteView(LoginRequiredMixin, generic.TemplateView): ...
 
 
-class LeaguePermissionRespondInviteView(LoginRequiredMixin, generic.TemplateView): ...
+class LeaguePermissionRespondInviteView(generic.TemplateView):
+    template_name = "stave/league_permission_respond.html"
 
 
 ## Message Templates
