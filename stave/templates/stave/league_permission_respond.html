@@ -25,6 +25,12 @@
 
 {% elif not email_match %}
 
+<p>
+    To accept this invitation, you need to log into a Stave account that
+    has verified the email address it was sent to. You can
+    <a href="{{}}">add an email address to your account</a>.
+</p>
+
 {% else %}
 <p>
     You've been invited to manage {{ league }}, with the permissions
