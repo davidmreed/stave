@@ -1958,6 +1958,14 @@ class LeagueGroupSubscription(models.Model):
     )
 
 
+class LeagueUserInvitationStatus(models.IntegerChoices):
+    OPEN = 1, _("Open")
+    DECLINED = 2, _("Declined")
+    EXPIRED = 3, _("Expired")
+    ACCEPTED = 4, _("Accepted")
+    REVOKED = 5, _("Revoked")
+
+
 class LeagueUserInvitation(models.Model):
     class Meta:
         constraints = []
@@ -1969,6 +1977,10 @@ class LeagueUserInvitation(models.Model):
     )
     permissions = models.JSONField(default=list)
     expiration_date = models.DateField()
+    status = models.IntegerField(
+        choices=LeagueUserInvitationStatus.choices,
+        default=LeagueUserInvitationStatus.OPEN,
+    )
 
 
 class GameHistory:

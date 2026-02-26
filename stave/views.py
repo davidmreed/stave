@@ -32,6 +32,8 @@ from django.utils.translation import gettext, gettext_lazy
 from django.views import generic
 from meta.views import Meta
 
+import allauth
+
 from stave.templates.stave import contexts
 
 from . import forms, models, settings
@@ -694,8 +696,53 @@ class LeaguePermissionInviteView(
 class LeaguePermissionRevokeInviteView(LoginRequiredMixin, generic.TemplateView): ...
 
 
-class LeaguePermissionRespondInviteView(generic.TemplateView):
+class LeaguePermissionRespondInviteView(generic.DetailView):
     template_name = "stave/league_permission_respond.html"
+    model = models.LeagueUserInvitation
+
+    def get_queryset(self) -> QuerySet[models.LeagueUserInvitation]:
+        return models.LeagueUserInvitation.objects.filter(
+            status=models.LeagueUserInvitationStatus.OPEN
+        )
+
+    def get_context(self):
+        return contexts.LeaguePermissionRespondInviteViewInputs(
+            league=self.object.league,
+            perms=self.object.permissions,
+            email_match=self.email_match,
+        )
+
+    @property
+    def email_match(self) -> bool:
+        if self.request.user.is_authenticated:
+            return allauth.account.models.EmailAddress.objects.filter(
+                verified=True, email=self.object.email, user=self.request.user
+            ).exists()
+
+        return False
+
+    def post(self, request: HttpRequest) -> HttpResponse:
+        action = request.POST.get("action")
+
+        if action == "accept" and self.email_match:
+            with transaction.atomic():
+                self.object.status = models.LeagueUserInvitationStatus.ACCEPTED
+                self.object.save()
+                for perm in self.object.permissions:
+                    models.LeagueUserPermission.objects.get_or_create(
+                        user=self.request.user,
+                        league=self.object.league,
+                        permission=perm,
+                    )
+        elif action == "decline" and (
+            self.email_match or not request.user_is_authencticated
+        ):
+            self.object.status = models.LeagueUserInvitationStatus.DECLINED
+            self.object.save()
+        else:
+            return HttpResponseBadRequest()
+
+        return HttpResponseRedirect(self.object.league.get_absolute_url())
 
 
 ## Message Templates

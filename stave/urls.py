@@ -119,12 +119,12 @@ urlpatterns = [
     path(
         "_/<slug:league_slug>/user-permissions/",
         view=views.LeaguePermissionListView.as_view(),
-        name="league-permission-list"
+        name="league-permission-list",
     ),
     path(
         "_/<slug:league_slug>/user-permissions/<uuid:user_id>/",
         view=views.LeaguePermissionEditView.as_view(),
-        name="league-permission-edit"
+        name="league-permission-edit",
     ),
     path(
         "_/<slug:league_slug>/user-permissions/invite/",
@@ -134,12 +134,12 @@ urlpatterns = [
     path(
         "_/<slug:league_slug>/user-permissions/invite/<uuid:invitation_id>/revoke/",
         view=views.LeaguePermissionRevokeInviteView.as_view(),
-        name="league-permission-invite-revoke"
+        name="league-permission-invite-revoke",
     ),
     path(
-        "_/<slug:league_slug>/user-permissions/invite/<uuid:invitation_id>/",
+        "invitations/<uuid:id>/",
         view=views.LeaguePermissionRespondInviteView.as_view(),
-        name="league-permission-invite-respond"
+        name="league-permission-invite-respond",
     ),
     path(
         "_/<slug:league_slug>/message-templates/",
