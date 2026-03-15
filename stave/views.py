@@ -605,6 +605,21 @@ class LeaguePermissionListView(
     def get_queryset(self) -> QuerySet[models.LeagueUserPermission]:
         return self.league.user_permissions.all().order_by("user", "permission")
 
+    def get_context_data(self, *args, **kwargs) -> dict[str, Any]:
+        context = super().get_context_data(*args, **kwargs)
+        context["invitations"] = models.LeagueUserInvitation.objects.filter(
+            league=self.league,
+            status__in=[
+                models.LeagueUserInvitationStatus.OPEN,
+                models.LeagueUserInvitationStatus.EXPIRED,
+                models.LeagueUserInvitationStatus.DECLINED,
+                models.LeagueUserInvitationStatus.REVOKED,
+            ],
+        )
+        context["UserPermission"] = models.UserPermission
+
+        return context
+
 
 class LeaguePermissionEditView(
     LoginRequiredMixin,
@@ -693,7 +708,38 @@ class LeaguePermissionInviteView(
         return contexts.LeaguePermissionInviteViewInputs(league=self.league)
 
 
-class LeaguePermissionRevokeInviteView(LoginRequiredMixin, generic.TemplateView): ...
+class LeaguePermissionUpdateInviteView(LoginRequiredMixin, views.View):
+    def post(self, request: HttpRequest, league_slug: str, invitation_id: UUID):
+        # Revocation or deletion requires that the invitation be owned by
+        # a league for which the logged-in user has manager permission.
+
+        invitation = get_object_or_404(
+            models.LeagueUserInvitation.objects.filter(
+                league__in=models.League.objects.manageable(request.user),
+            ),
+            pk=invitation_id,
+        )
+
+        action = request.POST.get("action")
+
+        if (
+            action == "revoke"
+            and invitation.status == models.LeagueUserInvitationStatus.OPEN
+        ):
+            invitation.status = models.LeagueUserInvitationStatus.REVOKED
+            invitation.save()
+        elif action == "delete" and invitation.status in [
+            models.LeagueUserInvitationStatus.REVOKED,
+            models.LeagueUserInvitationStatus.EXPIRED,
+            models.LeagueUserInvitationStatus.DECLINED,
+        ]:
+            invitation.delete()
+        else:
+            return HttpResponseBadRequest()
+
+        return HttpResponseRedirect(
+            reverse("league-permission-list", args=[invitation.league.slug])
+        )
 
 
 class LeaguePermissionRespondInviteView(generic.DetailView):
@@ -707,9 +753,9 @@ class LeaguePermissionRespondInviteView(generic.DetailView):
 
     def get_context(self):
         return contexts.LeaguePermissionRespondInviteViewInputs(
-            league=self.object.league,
-            perms=self.object.permissions,
+            invitation=self.object,
             email_match=self.email_match,
+            UserPermission=models.UserPermission,
         )
 
     @property
@@ -735,7 +781,7 @@ class LeaguePermissionRespondInviteView(generic.DetailView):
                         permission=perm,
                     )
         elif action == "decline" and (
-            self.email_match or not request.user_is_authencticated
+            self.email_match or not request.user_is_authenticated
         ):
             self.object.status = models.LeagueUserInvitationStatus.DECLINED
             self.object.save()

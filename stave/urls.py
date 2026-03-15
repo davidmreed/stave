@@ -132,9 +132,9 @@ urlpatterns = [
         name="league-permission-invite",
     ),
     path(
-        "_/<slug:league_slug>/user-permissions/invite/<uuid:invitation_id>/revoke/",
-        view=views.LeaguePermissionRevokeInviteView.as_view(),
-        name="league-permission-invite-revoke",
+        "_/<slug:league_slug>/user-permissions/invite/<uuid:invitation_id>/update/",
+        view=views.LeaguePermissionUpdateInviteView.as_view(),
+        name="league-permission-invite-update",
     ),
     path(
         "invitations/<uuid:id>/",

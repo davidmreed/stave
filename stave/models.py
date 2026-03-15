@@ -1967,6 +1967,8 @@ class LeagueUserInvitationStatus(models.IntegerChoices):
 
 
 class LeagueUserInvitation(models.Model):
+    LeagueUserInvitationStatus = LeagueUserInvitationStatus
+
     class Meta:
         constraints = []
 

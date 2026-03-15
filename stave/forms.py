@@ -1505,6 +1505,13 @@ class LeaguePermissionForm(forms.Form):
                 widget=forms.CheckboxInput(attrs={"role": "switch"}),
             )
 
+    def clean(self):
+        super().clean()
+        if not any(
+            self.cleaned_data[perm.name.lower()] for perm in models.UserPermission
+        ):
+            self.add_error(None, _("Select at least one permission"))
+
 
 class LeaguePermissionInviteForm(LeaguePermissionForm):
     email = forms.CharField(max_length=256)

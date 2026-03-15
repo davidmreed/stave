@@ -1,14 +1,15 @@
 {% extends "base.html" %}
 
 {% load stave_tags %}
+{% inputs "LeaguePermissioNRespondInviteViewInputs" %}
 
 {% block content %}
 
-<h1>Invitation to Manage {{ league }}</h1>
+<h1>Invitation to Manage {{ invitation.league }}</h1>
 
 {% if not request.user.is_authenticated %}
 <p>
-    You've been invited to manage {{ league }} on Stave.
+    You've been invited to manage {{ invitation.league }} on Stave.
     To view and accept this invitation, you'll need a Stave account.
 </p>
 
@@ -33,11 +34,14 @@
 
 {% else %}
 <p>
-    You've been invited to manage {{ league }}, with the permissions
+    You've been invited to manage {{ invitation.league }}, with the permissions
 </p>
 <ul>
-    {% for perm in perms %}
-    <li>{{ perm }}</li>
+    {% for perm in UserPermission %}
+    {% if perm.value in invitation.perms %}
+    <li>{{ perm.label }}</li>
+    {% endif %}
+    {% endfor %}
 </ul>
 
 <form action="{{ request.path }}" method="POST">

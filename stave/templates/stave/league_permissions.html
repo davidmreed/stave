@@ -11,10 +11,13 @@
     <a role="button" href="{% url 'league-permission-invite' league.slug %}">Invite</a>
 </header>
 
+<section>
 {% for invitation in invitations %}
+{% include "stave/league_user_invitation.html" with item=invitation card_kind="stave/full_card.html" UserPermission=UserPermission csrf_token=csrf_token only %}
 {% empty %}
 You haven't sent any invitations to manage this league or its events.
 {% endfor %}
+</section>
 
 <header>
     <h2>Managers</h2>
