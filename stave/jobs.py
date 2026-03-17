@@ -75,6 +75,31 @@ def clean_up_unconfirmed_users():
 
 @close_old_connections
 def send_league_invitation_messages():
-    # League user invitations are valid for seven days
-    # We message users on days 1, 3, and 7, then expire on the 8th.
-    ...
+    # League user invitations are valid for seven days.
+    # We message users every three days, that is, on days 0, 3, and 6.
+    # On day 7, we expire the invitation.
+    with transaction.atomic():
+        for invitation in models.LeagueUserInvitation.objects.filter(
+            status=models.LeagueUserInvitationStatus.OPEN
+        ):
+            is_valid = invitation.expiration_date < datetime.now()
+            if not is_valid:
+                invitation.status = models.LeagueUserInvitationStatus.EXPIRED
+            else:
+                if (
+                    not invitation.last_message_sent_date
+                    or (datetime.now() - invitation.last_message_sent_date).hours >= 72
+                ):
+                    invitation.last_message_sent_date = datetime.now()
+                    emails.send_message(
+                        None,
+                        None,
+                        None,
+                        gettext("Invitation to manage {league} on Stave"),
+                        gettext(
+                            "You've been invited to manage {league} on Stave. "
+                            "To accept or decline this invitation, [click here]"
+                            "({link})."
+                            "Please don't reply to this message. It is not monitored."
+                        ),
+                    )

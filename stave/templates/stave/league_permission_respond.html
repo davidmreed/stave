@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 
 {% load stave_tags %}
-{% inputs "LeaguePermissioNRespondInviteViewInputs" %}
+{% inputs 'LeaguePermissionRespondInviteViewInputs' %}
 
 {% block content %}
 
 <h1>Invitation to Manage {{ invitation.league }}</h1>
 
+{% if invitation.status == invitation.LeagueUserInvitationStatus.OPEN %}
 {% if not request.user.is_authenticated %}
 <p>
     You've been invited to manage {{ invitation.league }} on Stave.
@@ -29,7 +30,7 @@
 <p>
     To accept this invitation, you need to log into a Stave account that
     has verified the email address it was sent to. You can
-    <a href="{{}}">add an email address to your account</a>.
+    <a href="{{ url '' }}">add an email address to your account</a>.
 </p>
 
 {% else %}
@@ -54,6 +55,15 @@
     <input type="hidden" name="action" value="decline">
     <input type="submit" value="Decline">
 </form>
+{% endif %}
+
+{% else if invitation.status == invitation.LeagueUserInvitationStatus.ACCEPTED or invitation.status == invitation.LeagueUserInvitationStatus.DECLINED %}
+
+<p>This invitation has already been acted upon.</p>
+
+{% else if invitation.status == invitation.LeagueUserInvitationStatus.REVOKED or invitation.status == invitation.LeagueUserInvitationStatus.EXPIRED %}
+
+<p>This invitation has expired or been revoked. Contact the league managers for more information.</p>
 {% endif %}
 
 {% endblock content %}

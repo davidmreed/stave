@@ -747,9 +747,8 @@ class LeaguePermissionRespondInviteView(generic.DetailView):
     model = models.LeagueUserInvitation
 
     def get_queryset(self) -> QuerySet[models.LeagueUserInvitation]:
-        return models.LeagueUserInvitation.objects.filter(
-            status=models.LeagueUserInvitationStatus.OPEN
-        )
+        # Note that filtering of information shown is done in the template.
+        return models.LeagueUserInvitation.objects.all()
 
     def get_context(self):
         return contexts.LeaguePermissionRespondInviteViewInputs(
@@ -780,9 +779,7 @@ class LeaguePermissionRespondInviteView(generic.DetailView):
                         league=self.object.league,
                         permission=perm,
                     )
-        elif action == "decline" and (
-            self.email_match or not request.user_is_authenticated
-        ):
+        elif action == "decline" and (not self.email_match):
             self.object.status = models.LeagueUserInvitationStatus.DECLINED
             self.object.save()
         else:

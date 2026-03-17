@@ -1979,10 +1979,14 @@ class LeagueUserInvitation(models.Model):
     )
     permissions = models.JSONField(default=list)
     expiration_date = models.DateField()
+    last_date_message_sent = models.DateField(null=True, blank=True)
     status = models.IntegerField(
         choices=LeagueUserInvitationStatus.choices,
         default=LeagueUserInvitationStatus.OPEN,
     )
+
+    def __str__(self):
+        return f"Invitation to {self.email}"
 
 
 class GameHistory:

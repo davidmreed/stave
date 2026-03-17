@@ -12,6 +12,7 @@
           NIX_LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
             pkgs.glibc
           ];
+          SSL_CERT_FILE="/etc/ssl/certs/ca-bundle.crt";
           packages = with pkgs; [ git just uv railway sqlite mdbook mdbook-mermaid ];
         };
       }

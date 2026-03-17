@@ -10,7 +10,7 @@
     <input type="hidden" name="action" value="revoke">
     <input type="submit" value="Revoke">
 </form>
-{% elif item.status == item.LeagueUserInvitationStatus.DECLINED or invitation.status == item.LeagueUserInvitationStatus.REVOKED or item.status == item.LeagueUserInvitationStatus.EXPIRED %}
+{% elif item.status == item.LeagueUserInvitationStatus.DECLINED or item.status == item.LeagueUserInvitationStatus.REVOKED or item.status == item.LeagueUserInvitationStatus.EXPIRED %}
 <form class="inline" method="POST" action="{% url 'league-permission-invite-update' item.league.slug item.id %}">
     {% csrf_token %}
     <input type="hidden" name="action" value="delete">
