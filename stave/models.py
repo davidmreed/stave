@@ -999,7 +999,10 @@ class Message(models.Model):
     subject = models.CharField(max_length=256)
     content_plain_text = models.TextField()
     content_html = models.TextField()
-    user = models.ForeignKey(User, related_name="messages", on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        User, related_name="messages", on_delete=models.CASCADE, blank=True, null=True
+    )
+    email = models.CharField(max_length=256, null=True, blank=True)
     sent = models.BooleanField(default=False)
     sent_date = models.DateTimeField(null=True)
     tries = models.IntegerField(default=0)
@@ -1978,8 +1981,8 @@ class LeagueUserInvitation(models.Model):
         League, on_delete=models.CASCADE, related_name="invitations"
     )
     permissions = models.JSONField(default=list)
-    expiration_date = models.DateField()
-    last_date_message_sent = models.DateField(null=True, blank=True)
+    expiration_date = models.DateTimeField()
+    last_date_message_sent = models.DateTimeField(null=True, blank=True)
     status = models.IntegerField(
         choices=LeagueUserInvitationStatus.choices,
         default=LeagueUserInvitationStatus.OPEN,

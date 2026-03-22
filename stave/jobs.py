@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, timezone
 import allauth.account.models
 from django.core.mail import EmailMultiAlternatives
 from django_apscheduler.util import close_old_connections
-
-from . import models, settings
+from django.db import transaction
+from . import models, settings, emails
 
 
 @close_old_connections
@@ -74,32 +74,29 @@ def clean_up_unconfirmed_users():
 
 
 @close_old_connections
-def send_league_invitation_messages():
+def send_reminder_emails():
+    for email_type in [emails.LeagueUserInvitationReminder]:
+        for item in email_type.get_queryset().select_for_update():
+            if email_type.is_due(item):
+                (subj, content, destination) = email_type.get_message(item)
+                emails.send_message_with_content(
+                    subj,
+                    content,
+                    destination,
+                )
+                email_type.update_for_sent_message(item)
+
+
+@close_old_connections
+def expire_league_user_invitations():
     # League user invitations are valid for seven days.
     # We message users every three days, that is, on days 0, 3, and 6.
     # On day 7, we expire the invitation.
     with transaction.atomic():
         for invitation in models.LeagueUserInvitation.objects.filter(
             status=models.LeagueUserInvitationStatus.OPEN
-        ):
+        ).select_for_update():
             is_valid = invitation.expiration_date < datetime.now()
             if not is_valid:
                 invitation.status = models.LeagueUserInvitationStatus.EXPIRED
-            else:
-                if (
-                    not invitation.last_message_sent_date
-                    or (datetime.now() - invitation.last_message_sent_date).hours >= 72
-                ):
-                    invitation.last_message_sent_date = datetime.now()
-                    emails.send_message(
-                        None,
-                        None,
-                        None,
-                        gettext("Invitation to manage {league} on Stave"),
-                        gettext(
-                            "You've been invited to manage {league} on Stave. "
-                            "To accept or decline this invitation, [click here]"
-                            "({link})."
-                            "Please don't reply to this message. It is not monitored."
-                        ),
-                    )
+                invitation.save()

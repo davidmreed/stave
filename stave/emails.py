@@ -1,6 +1,10 @@
+from collections import ABC
+from datetime import datetime, timedelta
 import re
 
-from django.urls import reverse_lazy
+from django.db import QuerySet
+from django.urls import reverse_lazy, reverse
+from django.utils.translation import gettext
 from markdownify.templatetags.markdownify import markdownify
 
 from . import models
@@ -59,6 +63,22 @@ def send_message_from_messagetemplate(
         )
 
 
+def send_message_with_content(
+    subject: str,
+    content: str,
+    destination: models.User | str,
+    reply_to: str,
+):
+    models.Message.objects.create(
+        subject=render_txt(subject),
+        content_plain_text=render_txt(content),
+        content_html=render_html(content),
+        user=destination if isinstance(models.User, destination) else None,
+        email=destination if isinstance(str, destination) else None,
+        reply_to=reply_to,
+    )
+
+
 def send_message(
     application: models.Application,
     sender: models.User | None,
@@ -82,14 +102,12 @@ def send_message(
     if sender and not final_reply_to:
         final_reply_to = sender.email
 
-    message = models.Message(
-        subject=render_txt(substitute(context, subject)),
-        content_plain_text=render_txt(substitute(context, content)),
-        content_html=render_html(substitute(context, content)),
+    send_message_with_content(
+        subject=substitute(context, subject),
+        content=substitute(context, content),
         user=application.user,
         reply_to=final_reply_to,
     )
-    message.save()
 
     # TODO: this logic probably belongs elsewhere.
     match kind:
@@ -107,3 +125,46 @@ def send_message(
             application.status = models.ApplicationStatus.ASSIGNED
 
     application.save()
+
+
+class ReminderEmail[T](ABC):
+    def get_queryset(self) -> QuerySet[T]: ...
+
+    def get_message(self, item: T) -> (str, str, str): ...
+
+    def is_due(self, item: T) -> bool: ...
+
+    def update_for_sent_message(self, item: T) -> None: ...
+
+
+class LeagueUserInvitationReminder(ReminderEmail[models.LeagueUserInvitation]):
+    def get_queryset(self) -> QuerySet[models.LeagueUserInvitation]:
+        return models.LeagueUserInvitation.objects.filter(
+            status=models.LeagueUserInvitationStatus.OPEN
+        )
+
+    def get_message(self, item: models.LeagueUserInvitation) -> (str, str, str):
+        return (
+            gettext("Invitation to manage {league} on Stave").format(
+                league=item.league
+            ),
+            gettext(
+                "You've been invited to manage {league} on Stave. "
+                "To accept or decline this invitation, [click here]"
+                "({link}). "
+                "Please don't reply to this message. It is not monitored."
+            ).format(
+                league=item.league,
+                link=reverse("league-permission-invite-respond", args=[item.id]),
+            ),
+            item.email,
+        )
+
+    def is_due(self, item: models.LeagueUserInvitation) -> bool:
+        return not item.date_last_message_sent or (
+            datetime.now() - item.date_last_message_sent
+        ) >= timedelta(hours=72)
+
+    def update_for_message_sent(self, item: models.LeagueUserInvitation) -> None:
+        item.last_message_sent_date = datetime.now()
+        item.save()
