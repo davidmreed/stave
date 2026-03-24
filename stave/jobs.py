@@ -76,15 +76,16 @@ def clean_up_unconfirmed_users():
 @close_old_connections
 def send_reminder_emails():
     for email_type in [emails.LeagueUserInvitationReminder]:
-        for item in email_type.get_queryset().select_for_update():
-            if email_type.is_due(item):
-                (subj, content, destination) = email_type.get_message(item)
-                emails.send_message_with_content(
-                    subj,
-                    content,
-                    destination,
-                )
-                email_type.update_for_sent_message(item)
+        with transaction.atomic():
+            for item in email_type.get_queryset().select_for_update():
+                if email_type.is_due(item):
+                    (subj, content, destination) = email_type.get_message(item)
+                    emails.send_message_with_content(
+                        subj,
+                        content,
+                        destination,
+                    )
+                    email_type.update_for_sent_message(item)
 
 
 @close_old_connections

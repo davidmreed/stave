@@ -89,6 +89,15 @@ class Command(BaseCommand):
         )
         logger.info("Added job 'send_reminder_emails'.")
 
+        scheduler.add_job(
+            jobs.expire_league_user_invitations,
+            trigger=CronTrigger(hour="*"),
+            id="expire_league_user_invitations",
+            max_instances=1,
+            replace_existing=True,
+        )
+        logger.info("Added job 'expire_league_user_invitations'.")
+
         try:
             logger.info("Starting scheduler...")
             scheduler.start()

@@ -73,8 +73,8 @@ def send_message_with_content(
         subject=render_txt(subject),
         content_plain_text=render_txt(content),
         content_html=render_html(content),
-        user=destination if isinstance(models.User, destination) else None,
-        email=destination if isinstance(str, destination) else None,
+        user=destination if isinstance(destination, models.User) else None,
+        email=destination if isinstance(destination, str) else None,
         reply_to=reply_to,
     )
 
