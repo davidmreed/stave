@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
-{% load markdownify %}
-{% load stave_tags %}
+{% load markdownify stave_tags %}
 {% inputs 'LeagueDetailViewInputs' %}
 
 {% block content %}
@@ -43,4 +42,4 @@
 </p>
 </section>
 {% endfor %}
-{% endblock %}
+{% endblock content %}

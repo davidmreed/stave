@@ -17,26 +17,31 @@ hooks = [
 
 [[repos]]
 repo = "local"
-hooks = [
-    {
-        id = "ruff-check",
-        name = "ruff-check",
-        language = "system",
-        entry = "uv run ruff check --fix",
-        files = "\\.py$",
-    },
-    {
-        id = "ruff-format",
-        name = "ruff-format",
-        language = "system",
-        entry = "uv run ruff format",
-        files = "\\.py$",
-    },
-    {
-        id = "editorconfig-checker",
-        name = "editorconfig-checker",
-        language = "system",
-        entry = "uv run ec",
-        files = ".*",
-    },
-]
+
+[[repos.hooks]]
+id = "ruff-check"
+name = "ruff-check"
+language = "system"
+entry = "uv run ruff check --fix"
+files = "\\.py$"
+
+[[repos.hooks]]
+id = "ruff-format"
+name = "ruff-format"
+language = "system"
+entry = "uv run ruff format"
+files = "\\.py$"
+
+[[repos.hooks]]
+id = "editorconfig-checker"
+name = "editorconfig-checker"
+language = "system"
+entry = "uv run ec"
+files = ".*"
+
+[[repos.hooks]]
+id = "djade"
+name = "djade"
+language = "system"
+entry = "uv run djade"
+files = "\\.html$"

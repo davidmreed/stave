@@ -6,3 +6,4 @@ Contributors are listed in chronological order.
 - Badelynn / Madelynn Blue
 - Ref In Peace / [Mike Fiedler](https://github.com/miketheman)
 - K.O. Belle / Charlie Humphreys (jeddai)
+- Trampling Bias / Mark Rogaski (https://github.com/mrogaski)

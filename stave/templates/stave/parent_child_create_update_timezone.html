@@ -1,7 +1,5 @@
-
 {% extends "base.html" %}
-{% load stave_tags %}
-{% load tz %}
+{% load stave_tags tz %}
 
 {% inputs 'ParentChildCreateUpdateTimezoneInputs' %}
 
@@ -16,4 +14,4 @@
 {% include 'stave/partials/parent_child_form.html' %}
 
 {% endtimezone %}
-{% endblock %}
+{% endblock content %}

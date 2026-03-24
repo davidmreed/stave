@@ -3,24 +3,24 @@
         <h3>
         {% block header %}
         {{ item }}
-        {% endblock %}
+        {% endblock header %}
         </h3>
         <div class="inline">
         {% block actions %}
-        {% endblock %}
+        {% endblock actions %}
         </div>
     </header>
     {% block metadata %}
-    {% endblock %}
+    {% endblock metadata %}
     <div>
     {% block description %}
-    {% endblock %}
+    {% endblock description %}
     </div>
     <nav>
     {% if item.get_absolute_url != request.path %}
     <a href="{{ item.get_absolute_url }}">View</a>
     {% endif %}
     {% block navigation %}
-    {% endblock %}
+    {% endblock navigation %}
     </nav>
 </article>

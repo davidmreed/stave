@@ -2,7 +2,7 @@
 {% load stave_tags %}
 {% block content %}
 <header>
-    <h1><a href="{{ league.get_absolute_url}}">{{ league }}</a>: Event Templates</h1>
+    <h1><a href="{{ league.get_absolute_url }}">{{ league }}</a>: Event Templates</h1>
     <a role="button" href="{% url 'event-template-create' league.slug %}">Create</a>
 </header>
 {% for event_template in page_obj %}
@@ -26,4 +26,4 @@
 {% endfor %}
 
 {% include "stave/partials/pagination.html" with page_obj=page_obj only %}
-{% endblock %}
+{% endblock content %}

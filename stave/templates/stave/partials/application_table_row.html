@@ -7,7 +7,7 @@
 <td>
     <small>
     {% if field == "game_history_url" %}
-    {% with application.get_user_data|get:field|valid_url as url %}
+    {% with url=application.get_user_data|get:field|valid_url %}
     {% if url %}
     <a href="{{ url }}" target="_blank">
         Open
@@ -21,7 +21,7 @@
         <abbr title="Send Email">✉️</abbr>
     </a>
     {% else %}
-    {% with application.get_user_data|get:field as text %}
+    {% with text=application.get_user_data|get:field %}
     {% include "stave/partials/abbrev.html" with text=text only %}
     {% endwith %}
     {% endif %}
@@ -93,7 +93,7 @@
 {% endif %}
 {# Application questions #}
 {% for question in form.form_questions.all %}
-    {% with application.responses_by_question|get:question.id as response %}
+    {% with response=application.responses_by_question|get:question.id %}
         <td>
             <small>
             {% include "stave/partials/abbrev.html" with text=response only %}

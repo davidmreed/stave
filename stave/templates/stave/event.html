@@ -1,6 +1,5 @@
 {% extends card_kind %}
-{% load stave_tags %}
-{% load tz %}
+{% load stave_tags tz %}
 
 {% block actions %}
 {% with can_manage_this_event=user|can_manage_event:item %}
@@ -15,7 +14,7 @@
 <a href="{% url 'event-edit' item.league.slug item.slug %}" role="button">Edit Event</a>
 {% endif %}
 {% endwith %}
-{% endblock %}
+{% endblock actions %}
 
 {% block description %}
 {% if card_kind == "stave/mini_card.html" %}
@@ -24,7 +23,7 @@
 {{ item.league }}
 {% endtimezone %}
 {% endif %}
-{% endblock %}
+{% endblock description %}
 
 {% block metadata %}
 {% timezone item.league.time_zone %}
@@ -68,7 +67,7 @@
     </div>
 </dl>
 {% endtimezone %}
-{% endblock %}
+{% endblock metadata %}
 
 {% block navigation %}
 {% if card_kind == "stave/page_card.html" %}
@@ -89,4 +88,4 @@
 </div>
 {% endfor %}
 {% endif %}
-{% endblock %}
+{% endblock navigation %}

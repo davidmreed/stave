@@ -2,7 +2,7 @@
 
 {% block content %}
 <header>
-    <h1><a href="{{ league.get_absolute_url}}">{{ league }}</a>: Role Groups</h1>
+    <h1><a href="{{ league.get_absolute_url }}">{{ league }}</a>: Role Groups</h1>
     <a role="button" href="{% url 'role-group-create' league.slug %}">Create</a>
 </header>
 {% for role_group in page_obj %}
@@ -21,4 +21,4 @@
 
 {% include "stave/partials/pagination.html" with page_obj=page_obj only %}
 
-{% endblock %}
+{% endblock content %}

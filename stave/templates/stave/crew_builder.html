@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
-{% load stave_tags %}
-{% load tz %}
+{% load stave_tags tz %}
 
 {% inputs 'CrewBuilderInputs' %}
 
@@ -62,7 +61,7 @@
     {% csrf_token %}
     <input type="hidden" name="redirect_url" value="{{ request.path }}">
     <input type="hidden" name="role_group_id" value="{{ role_group.id }}">
-    <input type="submit" value="Add {{role_group }} Crew">
+    <input type="submit" value="Add {{ role_group }} Crew">
 </form>
 {% endif %}
 </header>
@@ -127,12 +126,12 @@ No static crews yet.
                     {% endif %}
                     <div class="crews-container">
 
-                    {% with game.get_crew_assignments_by_role_group as role_group_assignments %}
+                    {% with role_group_assignments=game.get_crew_assignments_by_role_group %}
                     {% for role_group in role_groups %}
                     {% with counts=counts|get:role_group.id %}
                         <div class="crew-container">
-                            {% with role_group.id as role_group_id %}
-                            {% with role_group_assignments|get:role_group_id as rgca %}
+                            {% with role_group_id=role_group.id %}
+                            {% with rgca=role_group_assignments|get:role_group_id %}
                             {% if rgca %}
                                     <header>
                                         <h4>
@@ -182,4 +181,4 @@ No static crews yet.
     {# end of flex container for day #}
 {% endfor %}
 {% endtimezone %}
-{% endblock %}
+{% endblock content %}

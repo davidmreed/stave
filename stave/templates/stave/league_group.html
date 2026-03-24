@@ -1,7 +1,6 @@
 {% extends card_kind %}
 
-{% load stave_tags %}
-{% load markdownify %}
+{% load markdownify stave_tags %}
 
 {% block actions %}
 {% if item.owner == user %}
@@ -21,11 +20,11 @@
 <input type="submit" value="Subscribe">
 </form>
 {% endif %}
-{% endblock %}
+{% endblock actions %}
 
 {% block description %}
 {{ item.description|markdownify|truncatewords:"20" }}
-{% endblock %}
+{% endblock description %}
 
 {% block metadata %}
 <dl>
@@ -44,7 +43,7 @@
     </div>
     {% endif %}
 </dl>
-{% endblock %}
+{% endblock metadata %}
 
 {% block navigation %}
-{% endblock %}
+{% endblock navigation %}

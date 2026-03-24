@@ -1,10 +1,9 @@
 {% extends card_kind %}
-{% load stave_tags %}
-{% load markdownify %}
+{% load markdownify stave_tags %}
 
 {% block header %}
 {{ item.role_groups.all|commalist }}
-{% endblock %}
+{% endblock header %}
 
 {% block actions %}
 {% with can_manage_this_event=user|can_manage_event:item.event %}
@@ -22,11 +21,11 @@
 <a role="button" href="{% url 'form-delete' item.event.league.slug item.event.slug item.slug %}">Delete</a>
 {% endif %}
 {% endwith %}
-{% endblock %}
+{% endblock actions %}
 
 {% block description %}
-{{ item.intro_text|markdownify|truncatewords:"20"}}
-{% endblock %}
+{{ item.intro_text|markdownify|truncatewords:"20" }}
+{% endblock description %}
 
 {% block navigation %}
 {% with can_manage_this_event=user|can_manage_event:item.event is_staffed_on_event=user|is_staffed_on_event:item.event %}
@@ -53,4 +52,4 @@
 {% endif %}
 {% endif %}
 {% endwith %}
-{% endblock %}
+{% endblock navigation %}
