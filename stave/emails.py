@@ -105,7 +105,7 @@ def send_message(
     send_message_with_content(
         subject=substitute(context, subject),
         content=substitute(context, content),
-        user=application.user,
+        destination=application.user,
         reply_to=final_reply_to,
     )
 
