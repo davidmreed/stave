@@ -137,7 +137,7 @@ urlpatterns = [
         name="league-permission-invite-update",
     ),
     path(
-        "invitations/<uuid:id>/",
+        "invitations/<uuid:pk>/",
         view=views.LeaguePermissionRespondInviteView.as_view(),
         name="league-permission-invite-respond",
     ),

@@ -15,7 +15,7 @@
 {% for invitation in invitations %}
 {% include "stave/league_user_invitation.html" with item=invitation card_kind="stave/full_card.html" UserPermission=UserPermission csrf_token=csrf_token only %}
 {% empty %}
-You haven't sent any invitations to manage this league or its events.
+You don't have any open, expired, or revoked invitations to manage this league or its events.
 {% endfor %}
 </section>
 

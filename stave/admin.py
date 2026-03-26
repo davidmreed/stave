@@ -121,5 +121,6 @@ for model in [
     models.CrewAssignment,
     models.GameTemplate,
     models.LeagueTemplate,
+    models.LeagueUserInvitation,
 ]:
     admin.site.register(model)

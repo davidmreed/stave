@@ -1,8 +1,8 @@
-from collections import ABC
-from datetime import datetime, timedelta
+from abc import ABC
+from datetime import datetime, timedelta, timezone
 import re
 
-from django.db import QuerySet
+from django.db.models import QuerySet
 from django.urls import reverse_lazy, reverse
 from django.utils.translation import gettext
 from markdownify.templatetags.markdownify import markdownify
@@ -67,7 +67,7 @@ def send_message_with_content(
     subject: str,
     content: str,
     destination: models.User | str,
-    reply_to: str,
+    reply_to: str | None = None,
 ):
     models.Message.objects.create(
         subject=render_txt(subject),
@@ -151,7 +151,7 @@ class LeagueUserInvitationReminder(ReminderEmail[models.LeagueUserInvitation]):
             gettext(
                 "You've been invited to manage {league} on Stave. "
                 "To accept or decline this invitation, [click here]"
-                "({link}). "
+                "(https://stave.app{link}). "
                 "Please don't reply to this message. It is not monitored."
             ).format(
                 league=item.league,
@@ -161,10 +161,10 @@ class LeagueUserInvitationReminder(ReminderEmail[models.LeagueUserInvitation]):
         )
 
     def is_due(self, item: models.LeagueUserInvitation) -> bool:
-        return not item.date_last_message_sent or (
-            datetime.now() - item.date_last_message_sent
+        return not item.last_date_message_sent or (
+            datetime.now(tz=timezone.utc) - item.last_date_message_sent
         ) >= timedelta(hours=72)
 
     def update_for_message_sent(self, item: models.LeagueUserInvitation) -> None:
-        item.last_message_sent_date = datetime.now()
+        item.last_date_message_sent = datetime.now(tz=timezone.utc)
         item.save()

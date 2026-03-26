@@ -82,7 +82,7 @@ class Command(BaseCommand):
 
         scheduler.add_job(
             jobs.send_reminder_emails,
-            trigger=CronTrigger(hour="*"),
+            trigger=CronTrigger(minute="*"),
             id="send_reminder_emails",
             max_instances=1,
             replace_existing=True,

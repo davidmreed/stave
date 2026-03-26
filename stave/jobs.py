@@ -17,7 +17,7 @@ def send_emails():
             email = EmailMultiAlternatives(
                 subject=message.subject,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[message.user.email],
+                to=[message.user.email if message.user else message.email],
                 body=message.content_plain_text,
             )
             if message.reply_to:
@@ -77,15 +77,16 @@ def clean_up_unconfirmed_users():
 def send_reminder_emails():
     for email_type in [emails.LeagueUserInvitationReminder]:
         with transaction.atomic():
-            for item in email_type.get_queryset().select_for_update():
-                if email_type.is_due(item):
-                    (subj, content, destination) = email_type.get_message(item)
+            email_type_instance = email_type()
+            for item in email_type_instance.get_queryset().select_for_update():
+                if email_type_instance.is_due(item):
+                    (subj, content, destination) = email_type_instance.get_message(item)
                     emails.send_message_with_content(
                         subj,
                         content,
                         destination,
                     )
-                    email_type.update_for_sent_message(item)
+                    email_type_instance.update_for_message_sent(item)
 
 
 @close_old_connections
@@ -95,9 +96,8 @@ def expire_league_user_invitations():
     # On day 7, we expire the invitation.
     with transaction.atomic():
         for invitation in models.LeagueUserInvitation.objects.filter(
-            status=models.LeagueUserInvitationStatus.OPEN
+            status=models.LeagueUserInvitationStatus.OPEN,
+            expiration_date__lt=datetime.now(tz=timezone.utc),
         ).select_for_update():
-            is_valid = invitation.expiration_date < datetime.now()
-            if not is_valid:
-                invitation.status = models.LeagueUserInvitationStatus.EXPIRED
-                invitation.save()
+            invitation.status = models.LeagueUserInvitationStatus.EXPIRED
+            invitation.save()

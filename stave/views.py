@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import is_dataclass
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -668,7 +668,12 @@ class LeaguePermissionEditView(
                         and perm == models.UserPermission.LEAGUE_MANAGER
                         and not enabled
                     ):
-                        raise  # FIXME
+                        messages.error(
+                            self.request,
+                            gettext("You cannot remove yourself as a league manager."),
+                        )
+                        return HttpResponseRedirect(self.request.path)
+
                     models.LeagueUserPermission.objects.filter(
                         user=user, league=self.league, permission=perm
                     ).delete()
@@ -697,7 +702,7 @@ class LeaguePermissionInviteView(
             email=form.cleaned_data["email"],
             league=self.league,
             permissions=perms,
-            expiration_date=datetime.now() + timedelta(days=7),
+            expiration_date=datetime.now(tz=timezone.utc) + timedelta(days=7),
         )
 
         return HttpResponseRedirect(
@@ -742,7 +747,10 @@ class LeaguePermissionUpdateInviteView(LoginRequiredMixin, views.View):
         )
 
 
-class LeaguePermissionRespondInviteView(generic.DetailView):
+class LeaguePermissionRespondInviteView(
+    TypedContextMixin[contexts.LeaguePermissionRespondInviteViewInputs],
+    generic.DetailView,
+):
     template_name = "stave/league_permission_respond.html"
     model = models.LeagueUserInvitation
 
@@ -752,7 +760,7 @@ class LeaguePermissionRespondInviteView(generic.DetailView):
 
     def get_context(self):
         return contexts.LeaguePermissionRespondInviteViewInputs(
-            invitation=self.object,
+            invitation=self.get_object(),
             email_match=self.email_match,
             UserPermission=models.UserPermission,
         )
@@ -761,31 +769,34 @@ class LeaguePermissionRespondInviteView(generic.DetailView):
     def email_match(self) -> bool:
         if self.request.user.is_authenticated:
             return allauth.account.models.EmailAddress.objects.filter(
-                verified=True, email=self.object.email, user=self.request.user
+                verified=True, email=self.get_object().email, user=self.request.user
             ).exists()
 
         return False
 
-    def post(self, request: HttpRequest) -> HttpResponse:
+    def post(self, request: HttpRequest, pk: UUID) -> HttpResponse:
         action = request.POST.get("action")
 
-        if action == "accept" and self.email_match:
-            with transaction.atomic():
-                self.object.status = models.LeagueUserInvitationStatus.ACCEPTED
-                self.object.save()
-                for perm in self.object.permissions:
+        with transaction.atomic():
+            object = self.get_object()
+            if action == "accept" and self.email_match:
+                object.status = models.LeagueUserInvitationStatus.ACCEPTED
+                object.save()
+                for perm in object.permissions:
                     models.LeagueUserPermission.objects.get_or_create(
                         user=self.request.user,
-                        league=self.object.league,
+                        league=object.league,
                         permission=perm,
                     )
-        elif action == "decline" and (not self.email_match):
-            self.object.status = models.LeagueUserInvitationStatus.DECLINED
-            self.object.save()
-        else:
-            return HttpResponseBadRequest()
+            elif action == "decline" and (
+                self.email_match or not self.request.user.is_authenticated
+            ):
+                object.status = models.LeagueUserInvitationStatus.DECLINED
+                object.save()
+            else:
+                return HttpResponseBadRequest()
 
-        return HttpResponseRedirect(self.object.league.get_absolute_url())
+            return HttpResponseRedirect(object.league.get_absolute_url())
 
 
 ## Message Templates

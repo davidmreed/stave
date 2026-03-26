@@ -30,7 +30,7 @@
 <p>
     To accept this invitation, you need to log into a Stave account that
     has verified the email address it was sent to. You can
-    <a href="{{ url '' }}">add an email address to your account</a>.
+    <a href="{% url 'account_email' %}">add an email address to your account</a>.
 </p>
 
 {% else %}
@@ -39,7 +39,7 @@
 </p>
 <ul>
     {% for perm in UserPermission %}
-    {% if perm.value in invitation.perms %}
+    {% if perm.value in invitation.permissions %}
     <li>{{ perm.label }}</li>
     {% endif %}
     {% endfor %}
@@ -57,11 +57,11 @@
 </form>
 {% endif %}
 
-{% else if invitation.status == invitation.LeagueUserInvitationStatus.ACCEPTED or invitation.status == invitation.LeagueUserInvitationStatus.DECLINED %}
+{% elif invitation.status == invitation.LeagueUserInvitationStatus.ACCEPTED or invitation.status == invitation.LeagueUserInvitationStatus.DECLINED %}
 
 <p>This invitation has already been acted upon.</p>
 
-{% else if invitation.status == invitation.LeagueUserInvitationStatus.REVOKED or invitation.status == invitation.LeagueUserInvitationStatus.EXPIRED %}
+{% elif invitation.status == invitation.LeagueUserInvitationStatus.REVOKED or invitation.status == invitation.LeagueUserInvitationStatus.EXPIRED %}
 
 <p>This invitation has expired or been revoked. Contact the league managers for more information.</p>
 {% endif %}
