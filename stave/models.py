@@ -995,7 +995,10 @@ class Message(models.Model):
     subject = models.CharField(max_length=256)
     content_plain_text = models.TextField()
     content_html = models.TextField()
-    user = models.ForeignKey(User, related_name="messages", on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        User, related_name="messages", on_delete=models.CASCADE, blank=True, null=True
+    )
+    email = models.CharField(max_length=256, null=True, blank=True)
     sent = models.BooleanField(default=False)
     sent_date = models.DateTimeField(null=True)
     tries = models.IntegerField(default=0)
@@ -1952,6 +1955,37 @@ class LeagueGroupSubscription(models.Model):
     league_group = models.ForeignKey(
         LeagueGroup, on_delete=models.CASCADE, related_name="subscriptions"
     )
+
+
+class LeagueUserInvitationStatus(models.IntegerChoices):
+    OPEN = 1, _("Open")
+    DECLINED = 2, _("Declined")
+    EXPIRED = 3, _("Expired")
+    ACCEPTED = 4, _("Accepted")
+    REVOKED = 5, _("Revoked")
+
+
+class LeagueUserInvitation(models.Model):
+    LeagueUserInvitationStatus = LeagueUserInvitationStatus
+
+    class Meta:
+        constraints = []
+
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+    email = models.CharField(max_length=256)
+    league = models.ForeignKey(
+        League, on_delete=models.CASCADE, related_name="invitations"
+    )
+    permissions = models.JSONField(default=list)
+    expiration_date = models.DateTimeField()
+    last_date_message_sent = models.DateTimeField(null=True, blank=True)
+    status = models.IntegerField(
+        choices=LeagueUserInvitationStatus.choices,
+        default=LeagueUserInvitationStatus.OPEN,
+    )
+
+    def __str__(self):
+        return f"Invitation to {self.email}"
 
 
 class GameHistory:

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load stave_tags %}
+
+{% inputs 'LeaguePermissionInviteViewInputs' %}
+
+{% block content %}
+
+<header>
+    <h1>Invite Someone to Manage {{ league }}</h1>
+</header>
+<p>
+    Stave will send an email invitation to manage {{ league }} with the permissions you select.
+    The invitation is valid for seven days, and Stave will send reminders if the invitee
+    does not respond.
+</p>
+<form action="{{ request.path }}" method="POST">
+{% csrf_token %}
+<input type="hidden" name="redirect_url" value="{% url 'league-permission-list' league.slug %}">
+{{ form }}
+<input type="submit" value="Send">
+</form>
+
+{% endblock content %}

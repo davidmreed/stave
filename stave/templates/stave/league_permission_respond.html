@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% load stave_tags %}
+{% inputs 'LeaguePermissionRespondInviteViewInputs' %}
+
+{% block content %}
+
+<h1>Invitation to Manage {{ invitation.league }}</h1>
+
+{% if invitation.status == invitation.LeagueUserInvitationStatus.OPEN %}
+{% if not request.user.is_authenticated %}
+<p>
+    You've been invited to manage {{ invitation.league }} on Stave.
+    To view and accept this invitation, you'll need a Stave account.
+</p>
+
+{% include "stave/login_options.html" %}
+
+<p>
+    If you wish to decline the invitation, you can do so without logging in.
+    <form action="{{ request.path }}" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="decline">
+        <input type="submit" value="Decline">
+    </form>
+</p>
+
+{% elif not email_match %}
+
+<p>
+    To accept this invitation, you need to log into a Stave account that
+    has verified the email address it was sent to. You can
+    <a href="{% url 'account_email' %}">add an email address to your account</a>.
+</p>
+
+{% else %}
+<p>
+    You've been invited to manage {{ invitation.league }}, with the permissions
+</p>
+<ul>
+    {% for perm in UserPermission %}
+    {% if perm.value in invitation.permissions %}
+    <li>{{ perm.label }}</li>
+    {% endif %}
+    {% endfor %}
+</ul>
+
+<form action="{{ request.path }}" method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="accept">
+    <input type="submit" value="Accept">
+</form>
+<form action="{{ request.path }}" method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="decline">
+    <input type="submit" value="Decline">
+</form>
+{% endif %}
+
+{% elif invitation.status == invitation.LeagueUserInvitationStatus.ACCEPTED or invitation.status == invitation.LeagueUserInvitationStatus.DECLINED %}
+
+<p>This invitation has already been acted upon.</p>
+
+{% elif invitation.status == invitation.LeagueUserInvitationStatus.REVOKED or invitation.status == invitation.LeagueUserInvitationStatus.EXPIRED %}
+
+<p>This invitation has expired or been revoked. Contact the league managers for more information.</p>
+{% endif %}
+
+{% endblock content %}

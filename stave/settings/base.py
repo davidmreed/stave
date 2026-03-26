@@ -215,7 +215,6 @@ LOGIN_REDIRECT_URL = "/"
 EMAIL_BACKEND = os.environ.get(
     "EMAIL_BACKEND", "anymail.backends.amazon_ses.EmailBackend"
 )
-ANYMAIL = {"RESEND_API_KEY": os.environ.get("RESEND_API_KEY")}
 DEFAULT_FROM_EMAIL = "stave@stave.app"
 SERVER_EMAIL = "stave@stave.app"
 

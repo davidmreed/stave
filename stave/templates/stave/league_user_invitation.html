@@ -1,0 +1,50 @@
+{% extends card_kind %}
+
+{% load markdownify stave_tags %}
+
+{% block actions %}
+{% if item.status == item.LeagueUserInvitationStatus.OPEN %}
+<form class="inline" method="POST" action="{% url 'league-permission-invite-update' item.league.slug item.id %}">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="revoke">
+    <input type="submit" value="Revoke">
+</form>
+{% elif item.status == item.LeagueUserInvitationStatus.DECLINED or item.status == item.LeagueUserInvitationStatus.REVOKED or item.status == item.LeagueUserInvitationStatus.EXPIRED %}
+<form class="inline" method="POST" action="{% url 'league-permission-invite-update' item.league.slug item.id %}">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="delete">
+    <input type="submit" value="Delete">
+</form>
+{% endif %}
+{% endblock actions %}
+
+{% block description %}
+{% endblock description %}
+
+{% block metadata %}
+<dl>
+    <div>
+        <dt>Status</dt>
+        <dd>{{ item.get_status_display }}</dd>
+    </div>
+    <div>
+        <dt>Permissions</dt>
+        <dd>
+            {% for perm in UserPermission %}
+            {% if perm.value in item.permissions %}
+            {{ perm.label }}
+            {% endif %}
+            {% endfor %}
+        </dd>
+    </div>
+    <div>
+        <dt>Expiration Date</dt>
+        <dd>
+            {{ item.expiration_date }}
+        </dd>
+    </div>
+</dl>
+{% endblock metadata %}
+
+{% block navigation %}
+{% endblock navigation %}

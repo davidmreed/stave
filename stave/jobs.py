@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, timezone
 import allauth.account.models
 from django.core.mail import EmailMultiAlternatives
 from django_apscheduler.util import close_old_connections
-
-from . import models, settings
+from django.db import transaction
+from . import models, settings, emails
 
 
 @close_old_connections
@@ -17,7 +17,7 @@ def send_emails():
             email = EmailMultiAlternatives(
                 subject=message.subject,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[message.user.email],
+                to=[message.user.email if message.user else message.email],
                 body=message.content_plain_text,
             )
             if message.reply_to:
@@ -71,3 +71,33 @@ def clean_up_unconfirmed_users():
         .delete()
     )
     logging.info(f"Deleted {deleted} unconfirmed accounts")
+
+
+@close_old_connections
+def send_reminder_emails():
+    for email_type in [emails.LeagueUserInvitationReminder]:
+        with transaction.atomic():
+            email_type_instance = email_type()
+            for item in email_type_instance.get_queryset().select_for_update():
+                if email_type_instance.is_due(item):
+                    (subj, content, destination) = email_type_instance.get_message(item)
+                    emails.send_message_with_content(
+                        subj,
+                        content,
+                        destination,
+                    )
+                    email_type_instance.update_for_message_sent(item)
+
+
+@close_old_connections
+def expire_league_user_invitations():
+    # League user invitations are valid for seven days.
+    # We message users every three days, that is, on days 0, 3, and 6.
+    # On day 7, we expire the invitation.
+    with transaction.atomic():
+        for invitation in models.LeagueUserInvitation.objects.filter(
+            status=models.LeagueUserInvitationStatus.OPEN,
+            expiration_date__lt=datetime.now(tz=timezone.utc),
+        ).select_for_update():
+            invitation.status = models.LeagueUserInvitationStatus.EXPIRED
+            invitation.save()

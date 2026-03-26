@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import is_dataclass
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -31,6 +31,8 @@ from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.utils.translation import gettext, gettext_lazy
 from django.views import generic
 from meta.views import Meta
+
+import allauth
 
 from stave.templates.stave import contexts
 
@@ -590,6 +592,212 @@ class LeagueUnsubscribeView(LoginRequiredMixin, views.View):
 
 
 # League management views
+
+## Permissions
+
+
+class LeaguePermissionListView(
+    LoginRequiredMixin, TenantedObjectMixin, generic.ListView
+):
+    template_name = "stave/league_permissions.html"
+    model = models.LeagueUserPermission
+
+    def get_queryset(self) -> QuerySet[models.LeagueUserPermission]:
+        return self.league.user_permissions.all().order_by("user", "permission")
+
+    def get_context_data(self, *args, **kwargs) -> dict[str, Any]:
+        context = super().get_context_data(*args, **kwargs)
+        context["invitations"] = models.LeagueUserInvitation.objects.filter(
+            league=self.league,
+            status__in=[
+                models.LeagueUserInvitationStatus.OPEN,
+                models.LeagueUserInvitationStatus.EXPIRED,
+                models.LeagueUserInvitationStatus.DECLINED,
+                models.LeagueUserInvitationStatus.REVOKED,
+            ],
+        )
+        context["UserPermission"] = models.UserPermission
+
+        return context
+
+
+class LeaguePermissionEditView(
+    LoginRequiredMixin,
+    TenantedObjectMixin,
+    TypedContextMixin[contexts.LeaguePermissionEditViewInputs],
+    generic.edit.FormView,
+):
+    template_name = "stave/league_permission_edit.html"
+    form_class = forms.LeaguePermissionForm
+
+    def get_initial(self) -> dict:
+        with transaction.atomic():
+            user = get_object_or_404(self.get_queryset(), id=self.kwargs["user_id"])
+            initial = {
+                perm.name.lower(): models.LeagueUserPermission.objects.filter(
+                    user=user, league=self.league, permission=perm
+                ).exists()
+                for perm in models.UserPermission
+            }
+
+            return initial
+
+    def get_queryset(self) -> QuerySet[models.User]:
+        return models.User.objects.filter(
+            league_permissions__league__in=models.League.objects.manageable(
+                self.request.user
+            )
+        ).distinct()
+
+    def get_context(self) -> contexts.LeaguePermissionEditViewInputs:
+        user = get_object_or_404(self.get_queryset(), id=self.kwargs["user_id"])
+        return contexts.LeaguePermissionEditViewInputs(league=self.league, user=user)
+
+    def form_valid(self, form: forms.LeaguePermissionForm) -> HttpResponse:
+        with transaction.atomic():
+            user = get_object_or_404(self.get_queryset(), id=self.kwargs["user_id"])
+            for perm in models.UserPermission:
+                enabled = form.cleaned_data[perm.name.lower()]
+                if enabled:
+                    models.LeagueUserPermission.objects.get_or_create(
+                        user=user, league=self.league, permission=perm
+                    )
+                else:
+                    if (
+                        user == self.request.user
+                        and perm == models.UserPermission.LEAGUE_MANAGER
+                        and not enabled
+                    ):
+                        messages.error(
+                            self.request,
+                            gettext("You cannot remove yourself as a league manager."),
+                        )
+                        return HttpResponseRedirect(self.request.path)
+
+                    models.LeagueUserPermission.objects.filter(
+                        user=user, league=self.league, permission=perm
+                    ).delete()
+
+        return HttpResponseRedirect(
+            reverse("league-permission-list", args=[self.league.slug])
+        )
+
+
+class LeaguePermissionInviteView(
+    LoginRequiredMixin,
+    TenantedObjectMixin,
+    TypedContextMixin[contexts.LeaguePermissionEditViewInputs],
+    generic.edit.FormView,
+):
+    form_class = forms.LeaguePermissionInviteForm
+    template_name = "stave/league_permission_invite.html"
+
+    def form_valid(self, form: forms.LeaguePermissionInviteForm) -> HttpResponse:
+        perms = [
+            perm.value
+            for perm in models.UserPermission
+            if form.cleaned_data[perm.name.lower()]
+        ]
+        models.LeagueUserInvitation.objects.create(
+            email=form.cleaned_data["email"],
+            league=self.league,
+            permissions=perms,
+            expiration_date=datetime.now(tz=timezone.utc) + timedelta(days=7),
+        )
+
+        return HttpResponseRedirect(
+            reverse("league-permission-list", args=[self.league.slug])
+        )
+
+    def get_context(self) -> contexts.LeaguePermissionInviteViewInputs:
+        return contexts.LeaguePermissionInviteViewInputs(league=self.league)
+
+
+class LeaguePermissionUpdateInviteView(LoginRequiredMixin, views.View):
+    def post(self, request: HttpRequest, league_slug: str, invitation_id: UUID):
+        # Revocation or deletion requires that the invitation be owned by
+        # a league for which the logged-in user has manager permission.
+
+        invitation = get_object_or_404(
+            models.LeagueUserInvitation.objects.filter(
+                league__in=models.League.objects.manageable(request.user),
+            ),
+            pk=invitation_id,
+        )
+
+        action = request.POST.get("action")
+
+        if (
+            action == "revoke"
+            and invitation.status == models.LeagueUserInvitationStatus.OPEN
+        ):
+            invitation.status = models.LeagueUserInvitationStatus.REVOKED
+            invitation.save()
+        elif action == "delete" and invitation.status in [
+            models.LeagueUserInvitationStatus.REVOKED,
+            models.LeagueUserInvitationStatus.EXPIRED,
+            models.LeagueUserInvitationStatus.DECLINED,
+        ]:
+            invitation.delete()
+        else:
+            return HttpResponseBadRequest()
+
+        return HttpResponseRedirect(
+            reverse("league-permission-list", args=[invitation.league.slug])
+        )
+
+
+class LeaguePermissionRespondInviteView(
+    TypedContextMixin[contexts.LeaguePermissionRespondInviteViewInputs],
+    generic.DetailView,
+):
+    template_name = "stave/league_permission_respond.html"
+    model = models.LeagueUserInvitation
+
+    def get_queryset(self) -> QuerySet[models.LeagueUserInvitation]:
+        # Note that filtering of information shown is done in the template.
+        return models.LeagueUserInvitation.objects.all()
+
+    def get_context(self):
+        return contexts.LeaguePermissionRespondInviteViewInputs(
+            invitation=self.get_object(),
+            email_match=self.email_match,
+            UserPermission=models.UserPermission,
+        )
+
+    @property
+    def email_match(self) -> bool:
+        if self.request.user.is_authenticated:
+            return allauth.account.models.EmailAddress.objects.filter(
+                verified=True, email=self.get_object().email, user=self.request.user
+            ).exists()
+
+        return False
+
+    def post(self, request: HttpRequest, pk: UUID) -> HttpResponse:
+        action = request.POST.get("action")
+
+        with transaction.atomic():
+            object = self.get_object()
+            if action == "accept" and self.email_match:
+                object.status = models.LeagueUserInvitationStatus.ACCEPTED
+                object.save()
+                for perm in object.permissions:
+                    models.LeagueUserPermission.objects.get_or_create(
+                        user=self.request.user,
+                        league=object.league,
+                        permission=perm,
+                    )
+            elif action == "decline" and (
+                self.email_match or not self.request.user.is_authenticated
+            ):
+                object.status = models.LeagueUserInvitationStatus.DECLINED
+                object.save()
+            else:
+                return HttpResponseBadRequest()
+
+            return HttpResponseRedirect(object.league.get_absolute_url())
+
 
 ## Message Templates
 

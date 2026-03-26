@@ -1,5 +1,5 @@
 from dataclasses import dataclass, fields
-from typing import Tuple
+from typing import Tuple, Type
 from uuid import UUID
 
 from django.core.paginator import Page
@@ -189,3 +189,21 @@ class HomeInputs:
 @dataclass
 class LeagueGroupInputs:
     events: Page
+
+
+@dataclass
+class LeaguePermissionEditViewInputs:
+    league: models.League
+    user: models.User
+
+
+@dataclass
+class LeaguePermissionInviteViewInputs:
+    league: models.League
+
+
+@dataclass
+class LeaguePermissionRespondInviteViewInputs:
+    invitation: models.LeagueUserInvitation
+    email_match: bool
+    UserPermission: Type[models.UserPermission]

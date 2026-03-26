@@ -117,6 +117,31 @@ urlpatterns = [
         name="role-group-delete",
     ),
     path(
+        "_/<slug:league_slug>/user-permissions/",
+        view=views.LeaguePermissionListView.as_view(),
+        name="league-permission-list",
+    ),
+    path(
+        "_/<slug:league_slug>/user-permissions/<uuid:user_id>/",
+        view=views.LeaguePermissionEditView.as_view(),
+        name="league-permission-edit",
+    ),
+    path(
+        "_/<slug:league_slug>/user-permissions/invite/",
+        view=views.LeaguePermissionInviteView.as_view(),
+        name="league-permission-invite",
+    ),
+    path(
+        "_/<slug:league_slug>/user-permissions/invite/<uuid:invitation_id>/update/",
+        view=views.LeaguePermissionUpdateInviteView.as_view(),
+        name="league-permission-invite-update",
+    ),
+    path(
+        "invitations/<uuid:pk>/",
+        view=views.LeaguePermissionRespondInviteView.as_view(),
+        name="league-permission-invite-respond",
+    ),
+    path(
         "_/<slug:league_slug>/message-templates/",
         view=views.MessageTemplateListView.as_view(),
         name="message-template-list",
