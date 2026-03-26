@@ -31,8 +31,12 @@ You don't have any open, expired, or revoked invitations to manage this league o
         <a role="button" href="{% url 'league-permission-edit' league.slug entry.grouper.id %}">Edit</a>
     </header>
     <ul>
-        {% for perm in entry.list %}
-        <li>{{ perm.permission_value.label }}</li>
+        {% for perm in UserPermission %}
+        {% for item in entry.list %}
+        {% if item.permission == perm %}
+        <li>{{ perm.label }}</li>
+        {% endif %}
+        {% endfor %}
         {% endfor %}
     </ul>
 </article>

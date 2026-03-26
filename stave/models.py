@@ -286,10 +286,6 @@ class LeagueUserPermission(models.Model):
     )
     permission = models.IntegerField(choices=UserPermission.choices)
 
-    @property
-    def permission_value(self) -> UserPermission:
-        return UserPermission(self.permission)
-
     class Meta:
         constraints = [
             models.UniqueConstraint(
