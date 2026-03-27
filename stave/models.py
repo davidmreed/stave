@@ -1812,6 +1812,9 @@ class Application(models.Model):
                         states.extend(
                             [ApplicationStatus.ASSIGNED, ApplicationStatus.WITHDRAWN]
                         )
+                case ApplicationStatus.ASSIGNED:
+                    if user == self.user or can_manage:
+                        states.extend([ApplicationStatus.WITHDRAWN])
                 case ApplicationStatus.WITHDRAWN:
                     pass
 
