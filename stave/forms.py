@@ -1435,7 +1435,6 @@ class LeagueGroupCreateUpdateForm(ParentChildForm):
 
     def __init__(self, *args, user: models.User, **kwargs):
         self.user = user
-        kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
     def get_child_formset(self, *args, **kwargs) -> forms.BaseModelFormSet:
