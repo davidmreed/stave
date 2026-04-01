@@ -2,12 +2,12 @@
 {# Note that this works even if is_subscribed is null, i.e., the input is not annotated #}
 {% regroup page_obj by is_subscribed as events_by_subscription %}
 {% for event_group in events_by_subscription %}
-{% if events_by_subscription|length == 2 %}
+{% if has_subscriptions %}
 <h3>
     {% if event_group.grouper %}
-    Subscribed Leagues
+    Applications from My Subscribed Leagues
     {% else %}
-    Other Leagues
+    Applications from Other Leagues
     {% endif %}
 </h3>
 {% endif %}

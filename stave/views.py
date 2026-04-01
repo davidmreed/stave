@@ -131,6 +131,20 @@ class OpenApplicationsListView(generic.ListView):
     model = models.Event
     paginate_by = 25
 
+    def get_context_data(self, *args, **kwargs) -> dict:
+        context = super().get_context_data(*args, **kwargs)
+
+        context["has_subscriptions"] = (
+            models.LeagueGroup.get_subscriptions_group_for_user(
+                self.request.user
+            ).group_memberships.exists()
+            or models.LeagueGroup.objects.subscribed(self.request.user)
+            .exclude(is_subscriptions_group=True)
+            .exists()
+        )
+
+        return context
+
     def get_queryset(self) -> QuerySet[models.Event]:
         return models.Event.objects.open_applications_grouped_by_subscription(
             self.request.user
@@ -295,6 +309,7 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
             league_groups=Paginator(league_group_queryset, 5).get_page(1),
             subscribed_leagues=subscribed_leagues,
             subscribed_league_groups=subscribed_league_groups,
+            has_subscriptions=bool(subscribed_leagues or subscribed_league_groups),
         )
 
     def get_context_data(self, *args, **kwargs):

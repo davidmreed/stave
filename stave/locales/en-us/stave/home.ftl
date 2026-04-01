@@ -4,20 +4,20 @@ overview-getting-started-html=Getting started? Read the <a target="_blank" href=
 # HTML, do not translate anything within angle brackets (<>)
 overview-discord-html=Join our <a target="_blank" href="https://discord.gg/jwYGPa2EAK">Discord</a> for support and discussion.
 
-open-applications-title=Open Applications
+open-applications-title=Applications I Can Complete
 open-applications-none=There aren't any open applications for you right now.
 # Templated localization, do not translate the content within the curly braces ({})
 open-applications-showing-x-of-y=Showing { $x } of { $y }.
 open-applications-see-all=See all open applications
 
-my-applications-title=My Applications
+my-applications-title=Applications I've Sent
 my-applications-none-pending=You don't have any applications pending right now.
 # Templated localization, do not translate the content within the curly braces ({})
 my-applications-x-of-y=Showing { $x } of { $y }.
 my-applications-see-all=See all my applications
 
 my-events-title=Staffing
-my-events-none=You aren't managing any events.
+my-events-none=You aren't staffing any events.
 # Templated localization, do not translate the content within the curly braces ({})
 my-events-showing-x-of-y=Showing { $x } of { $y }.
 my-events-see-all=See all my events
