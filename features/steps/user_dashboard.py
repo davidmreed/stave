@@ -137,19 +137,20 @@ def then_user_sees_calendar(context):
     context.test.assertTrue(len(calendar_elements) > 0, "Calendar widget not found")
 
 
-@then('the user sees "{message}" in the My Applications section')
+@then('the user sees "{message}" in the Applications I\'ve Sent section')
 def then_user_sees_message_in_applications(context, message):
     soup = BeautifulSoup(context.response.content, "html.parser")
 
     # Find the My Applications section
-    my_apps_header = soup.find("h2", string="My Applications")
+    my_apps_header = soup.find("h2", string="Applications I've Sent")
     context.test.assertIsNotNone(my_apps_header)
 
     # Look for the message in the same article
     article = my_apps_header.find_parent("article")
     message_text = article.find(text=lambda t: t and message in t)
     context.test.assertIsNotNone(
-        message_text, f"Could not find message '{message}' in My Applications section"
+        message_text,
+        f"Could not find message '{message}' in Applications I've Sent section",
     )
 
 
@@ -174,14 +175,14 @@ def then_application_forms_grouped_by_event(context):
     soup = BeautifulSoup(context.response.content, "html.parser")
 
     # Find the Open Applications section
-    open_apps_header = soup.find("h2", string="Open Applications")
+    open_apps_header = soup.find("h2", string="Applications I Can Complete")
     context.test.assertIsNotNone(open_apps_header)
 
     # Look for event links in the same article
     article = open_apps_header.find_parent("article")
     event_links = article.find_all("a", href=True)
     context.test.assertTrue(
-        len(event_links) > 0, "No event links found in Open Applications"
+        len(event_links) > 0, "No event links found in Applications I Can Complete"
     )
 
 
@@ -222,19 +223,19 @@ def then_user_can_click_application_links(context):
     context.test.assertTrue(len(application_links) > 0, "No application links found")
 
 
-@then('the user sees their applications in the "My Applications" section')
+@then('the user sees their applications in the "Applications I\'ve Sent" section')
 def then_user_sees_their_applications(context):
     soup = BeautifulSoup(context.response.content, "html.parser")
 
     # Find the My Applications section
-    my_apps_header = soup.find("h2", string="My Applications")
+    my_apps_header = soup.find("h2", string="Applications I've Sent")
     context.test.assertIsNotNone(my_apps_header)
 
     # Look for application links in the same article
     article = my_apps_header.find_parent("article")
     app_links = article.find_all("a", href=True)
     context.test.assertTrue(
-        len(app_links) > 0, "No application links found in My Applications"
+        len(app_links) > 0, "No application links found in Applications I've Sent"
     )
 
 
@@ -243,7 +244,7 @@ def then_application_shows_event_name(context):
     soup = BeautifulSoup(context.response.content, "html.parser")
 
     # The event name should be in the application link text
-    my_apps_header = soup.find("h2", string="My Applications")
+    my_apps_header = soup.find("h2", string="Applications I've Sent")
     article = my_apps_header.find_parent("article")
 
     # Look for the test event name
@@ -265,7 +266,7 @@ def then_user_can_click_applications(context):
     soup = BeautifulSoup(context.response.content, "html.parser")
 
     # Find My Applications section and look for application/<uuid>/ URLs
-    my_apps_header = soup.find("h2", string="My Applications")
+    my_apps_header = soup.find("h2", string="Applications I've Sent")
     article = my_apps_header.find_parent("article")
 
     app_links = article.find_all("a", href=True)
@@ -337,18 +338,18 @@ def then_user_sees_join_now_section(context):
     )
 
 
-@then('the user does not see "My Applications" or "Staffing" sections')
+@then('the user does not see "Applications I\'ve Sent" or "Staffing" sections')
 def then_user_does_not_see_personal_sections(context):
     soup = BeautifulSoup(context.response.content, "html.parser")
 
-    my_apps_header = soup.find("h2", string="My Applications")
+    my_apps_header = soup.find("h2", string="Applications I've Sent")
     context.test.assertIsNone(
         my_apps_header,
         "My Applications section should not be visible to unauthenticated users",
     )
 
-    my_events_header = soup.find("h2", string="My Events")
+    my_events_header = soup.find("h2", string="Staffing")
     context.test.assertIsNone(
         my_events_header,
-        "My Events section should not be visible to unauthenticated users",
+        "Staffing section should not be visible to unauthenticated users",
     )

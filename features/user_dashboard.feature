@@ -11,16 +11,14 @@ Scenario: Authenticated user sees personalized dashboard sections
     When the user navigates to the home page
     And the user logs in with valid credentials
     Then the user home page is displayed
-    And the user sees the "Open Applications" section
-    And the user sees the "My Applications" section
-    And the user sees the "Staffing" section
+    And the user sees the "Applications I Can Complete" section
+    And the user sees the "Applications I've Sent" section
     And the user sees their calendar widget
 
 Scenario: User with no applications sees empty state messages
     When the user navigates to the home page
     And the user logs in with valid credentials
-    Then the user sees "You don't have any applications pending right now." in the My Applications section
-    And the user sees "You aren't managing any events." in the Staffing section
+    Then the user sees "You don't have any applications pending right now." in the Applications I've Sent section
 
 Scenario: User can access application links from Open Applications section
     Given there are open application forms available
@@ -35,7 +33,7 @@ Scenario: User can view their submitted applications
     Given the user has submitted applications
     When the user navigates to the home page
     And the user logs in with valid credentials
-    Then the user sees their applications in the "My Applications" section
+    Then the user sees their applications in the "Applications I've Sent" section
     And each application shows the event name
     And each application shows the current status
     And the user can click on applications to view details
@@ -51,6 +49,6 @@ Scenario: Event manager sees their managed events
 
 Scenario: Unauthenticated user sees limited content
     When an unauthenticated user navigates to the home page
-    Then the user sees the "Open Applications" section
+    Then the user sees the "Applications I Can Complete" section
     And the user sees the "Join Now" section instead of personalized content
-    And the user does not see "My Applications" or "Staffing" sections
+    And the user does not see "Applications I've Sent" or "Staffing" sections
