@@ -104,7 +104,6 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "django.middleware.locale.LocaleMiddleware",
-    "stave.middleware.LocaleRewriteMiddleware",
     "django_ftl.middleware.activate_from_request_language_code",
 ]
 
@@ -131,6 +130,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "django.template.context_processors.i18n",
                 "django.template.context_processors.request",
             ],
         },
@@ -167,6 +167,10 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
+LANGUAGES = [
+    ("en-us", "English (United States)"),
+    ("es", "Spanish"),
+]
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
