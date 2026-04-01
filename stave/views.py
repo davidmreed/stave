@@ -134,14 +134,14 @@ class OpenApplicationsListView(generic.ListView):
     def get_context_data(self, *args, **kwargs) -> dict:
         context = super().get_context_data(*args, **kwargs)
 
-        context["has_subscriptions"] = (
-            models.LeagueGroup.get_subscriptions_group_for_user(
-                self.request.user
-            ).group_memberships.exists()
-            or models.LeagueGroup.objects.subscribed(self.request.user)
-            .exclude(is_subscriptions_group=True)
-            .exists()
+        subscr_group = models.LeagueGroup.get_subscriptions_group_for_user(
+            self.request.user
         )
+        context["has_subscriptions"] = (
+            subscr_group and subscr_group.group_memberships.exists()
+        ) or models.LeagueGroup.objects.subscribed(self.request.user).exclude(
+            is_subscriptions_group=True
+        ).exists()
 
         return context
 
