@@ -10,10 +10,12 @@ class LocaleRewriteMiddleware:
     logger = logging.getLogger(__name__)
 
     def __init__(self, get_response):
-        self.logger.info("LocaleRewriteMiddleware initialized")
         self.get_response = get_response
 
     def __call__(self, request):
+        if request.LANGUAGE_CODE == "en":
+            request.LANGUAGE_CODE = "en-us"
+
         if request.LANGUAGE_CODE not in {"en-us", "es"}:
             self.logger.warning(
                 f'Language {request.LANGUAGE_CODE} does not have a translation yet. Defaulting to "en-us".'
