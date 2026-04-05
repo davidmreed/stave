@@ -45,6 +45,7 @@ dev = [
     "coverage>=7.13.3",
     "django-coverage-plugin>=3.2.0",
     "djade>=1.7.0",
+    "django-zeal>=2.1.0",
 ]
 
 [tool.coverage.run]
@@ -55,6 +56,10 @@ omit = [
 parallel = true
 plugins = [
     "django_coverage_plugin",  # template coverage
+]
+source = [
+    "stave",
+    "tests",
 ]
 
 [tool.coverage.report]
