@@ -427,7 +427,7 @@ class EventTemplate(models.Model):
         new_object.role_groups.set(new_role_group_ids)
 
         # Copy Game Templates
-        for game_template in self.game_templates.all():
+        for game_template in self.game_templates.prefetch_related("role_groups").all():
             game_template.clone_as_template(new_object, role_group_map)
 
         # Application Form Templates are copied at the League Template level
@@ -522,7 +522,7 @@ class GameTemplate(models.Model):
         new_role_group_ids = {
             role_group_map[role_group.id] for role_group in self.role_groups.all()
         }
-        new_object.role_groups.set(new_role_group_ids)
+        new_object.role_groups.add(*new_role_group_ids)
 
         return new_object
 
@@ -709,7 +709,10 @@ class EventQuerySet(models.QuerySet["Event"]):
                 id__in=ApplicationForm.objects.listed(user).values("event")
             )
             .select_related("league")
-            .prefetch_related("application_forms__role_groups")
+            .prefetch_related(
+                "application_forms__role_groups",
+                "application_forms__event__league",
+            )
         )
 
         if user.is_authenticated:
@@ -793,6 +796,23 @@ class EventQuerySet(models.QuerySet["Event"]):
                 Prefetch("crews__assignments", queryset=crew_assignment_queryset)
             )
             .prefetch_related("crews__assignments__role")
+        )
+
+    def prefetch_for_management(self) -> models.QuerySet["Event"]:
+        return self.select_related("league").prefetch_related(
+            "application_forms",
+            "application_forms__role_groups",
+            "application_forms__event__league",
+            Prefetch(
+                "application_forms__applications",
+                queryset=Application.objects.filter(status__in=OPEN_STATUSES),
+                to_attr="open_applications",
+            ),
+            Prefetch(
+                "application_forms__applications",
+                queryset=Application.objects.filter(status__in=PENDING_STATUSES),
+                to_attr="pending_applications",
+            ),
         )
 
 

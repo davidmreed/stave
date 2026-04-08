@@ -155,7 +155,12 @@ def is_subscribed_to_league_group(
 def listed_application_forms(
     user: models.User, event: models.Event
 ) -> QuerySet[models.ApplicationForm]:
-    return models.ApplicationForm.objects.listed(user).filter(event=event)
+    return (
+        models.ApplicationForm.objects.listed(user)
+        .filter(event=event)
+        .select_related("event__league")
+        .prefetch_related("role_groups")
+    )
 
 
 @register.filter

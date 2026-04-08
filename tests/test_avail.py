@@ -1,3 +1,5 @@
+from zeal import zeal_ignore
+
 from tests.factories import ApplicationFactory
 
 from stave.avail import AvailabilityManager
@@ -5,14 +7,12 @@ from stave.avail import AvailabilityManager
 
 def test_availability_manager__applications(tournament):
     form = tournament.application_forms.get(slug="apply-nso-so")
-    for role_group in form.role_groups.all():
-        role, other_role = role_group.roles.all()[:2]
-        applications = [ApplicationFactory(form=form) for i in range(5)]
-        for application in applications:
-            application.roles.set([role])
-        applications = [ApplicationFactory(form=form) for i in range(5)]
-        for application in applications:
-            application.roles.set([other_role])
+    # False-positive N+1 from M2M .add() in test setup.
+    with zeal_ignore():
+        for role_group in form.role_groups.all():
+            role, other_role = role_group.roles.all()[:2]
+            ApplicationFactory.create_batch(5, form=form, roles=[role])
+            ApplicationFactory.create_batch(5, form=form, roles=[other_role])
 
     am = AvailabilityManager.with_application_form(form)
     assert set(am.applications_by_role_group.keys()) == {

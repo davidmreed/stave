@@ -50,7 +50,7 @@
     <div>
         <dt>Time</dt>
         <dd>
-            {{ item.games.first.start_time|time }}&ndash;{{ item.games.last.end_time|time }} {{ item.games.last.end_time|tzname }}
+            {% for game in item.games.all %}{% if forloop.first %}{{ game.start_time|time }}&ndash;{% endif %}{% if forloop.last %}{{ game.end_time|time }} {{ game.end_time|tzname }}{% endif %}{% endfor %}
         </dd>
     </div>
     {% endif %}
