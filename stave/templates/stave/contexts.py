@@ -179,6 +179,7 @@ class StaffingHeaderInputs:
 class HomeInputs:
     application_forms: Page
     applications: Page
+    staffed_applications: Page
     events: Page
     leagues: Page
     league_groups: Page
