@@ -59,14 +59,13 @@
         <h2>{% ftlmsg 'my-staffed-applications-title' %}</h2>
     </header>
 {% for event in staffed_applications %}
-{{ event }}
-{# {% include "stave/event_staffed_card.html" with item=event user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %} #}
+{% include "stave/event_applied_card.html" with item=event user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
 {% empty %}
 <p>
 {% ftlmsg 'my-applications-none-staffed' %}
 </p>
 {% endfor %}
-{% ftlmsg 'my-applications-x-of-y' x=staffed_applications|length y=applications.paginator.count %}
+{% ftlmsg 'my-applications-x-of-y' x=staffed_applications|length y=staffed_applications.paginator.count %}
 <a href="{% url 'my-applications' %}">{% ftlmsg 'my-staffed-applications-see-all' %}</a>
 {% url 'calendar-user' request.user.id as url %}
 {% include "stave/partials/calendar.html" with url=url only %}

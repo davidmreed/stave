@@ -12,7 +12,7 @@ from django.core.paginator import Paginator
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import Q, QuerySet, Value, Prefetch
+from django.db.models import Q, QuerySet, Value
 from django.http import (
     FileResponse,
     Http404,
@@ -153,15 +153,17 @@ class OpenApplicationsListView(generic.ListView):
 
 class MyApplicationsView(LoginRequiredMixin, generic.ListView):
     template_name = "stave/my_applications.html"
-    model = models.Application
+    model = models.Event
     paginate_by = 25
 
-    def get_queryset(self) -> QuerySet[models.Application]:
+    def get_queryset(self) -> QuerySet[models.Event]:
         return (
-            super()
-            .get_queryset()
-            .filter(user=self.request.user)
-            .order_by("-form__event__start_date")
+            (
+                models.Event.objects.open_for_user(self.request.user)
+                | models.Event.objects.staffed_for_user(self.request.user)
+            )
+            .distinct()
+            .prefetch_for_applied_card(self.request.user)
         )
 
 
@@ -259,95 +261,12 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
                 self.request.user
             )
         )
-        event_queryset = models.Event.objects.none()
-        application_queryset = models.Event.objects.none()
-        staffed_queryset = models.Event.objects.none()
         league_queryset = models.League.objects.none()
         league_group_queryset = models.LeagueGroup.objects.none()
         subscribed_leagues = 0
         subscribed_league_groups = 0
 
         if self.request.user.is_authenticated:
-            # Open, not-yet-assigned applications
-            application_queryset = models.Application.objects.filter(
-                user=self.request.user,
-            ).exclude(
-                status__in=[
-                    models.ApplicationStatus.WITHDRAWN,
-                    models.ApplicationStatus.ASSIGNED,
-                    models.ApplicationStatus.CONFIRMED,
-                ]
-            )
-
-            crew_assignment_queryset = models.CrewAssignment.objects.filter(
-                user=self.request.user
-            )
-
-            event_queryset = (
-                models.Event.objects.filter(
-                    application_forms__applications__in=(
-                        models.Application.objects.filter(
-                            user=self.request.user,
-                        ).exclude(
-                            status__in=[
-                                models.ApplicationStatus.WITHDRAWN,
-                                models.ApplicationStatus.ASSIGNED,
-                                models.ApplicationStatus.CONFIRMED,
-                            ]
-                        )
-                    ),
-                    start_date__gte=datetime.now(),
-                )
-                .order_by("start_date")
-                .select_related("league")
-                .prefetch_related(
-                    Prefetch(
-                        "application_forms__applications", queryset=application_queryset
-                    )
-                )
-                .prefetch_related("application_forms__role_groups")
-                .prefetch_related(
-                    Prefetch(
-                        "crews__crew_assignments", queryset=crew_assignment_queryset
-                    )
-                )
-                .select_related("crews__crew_assignments__role__role_group")
-            )
-
-            # Staffed applications
-            staffed_queryset = (
-                models.Event.objects.filter(
-                    application_forms__applications__in=(
-                        models.Application.objects.filter(
-                            user=self.request.user,
-                            form__event__start_date__gte=datetime.now(),
-                            status__in=[
-                                models.ApplicationStatus.ASSIGNED,
-                                models.ApplicationStatus.CONFIRMED,
-                            ],
-                        )
-                    )
-                )
-                .order_by("start_date")
-                .prefetch_related("application_forms")
-                .select_related("league")
-                .prefetch_related(
-                    Prefetch("crews__assignments", queryset=crew_assignment_queryset)
-                )
-                .prefetch_related("application_forms__role_groups")
-            )
-            event_queryset = (
-                models.Event.objects.manageable(self.request.user)
-                .exclude(
-                    status__in=[
-                        models.EventStatus.CANCELED,
-                        models.EventStatus.COMPLETE,
-                    ]
-                )
-                .select_related("league")
-                .prefetch_related("application_forms")
-                .prefetch_related("application_forms__role_groups")
-            )
             league_queryset = models.League.objects.manageable(self.request.user)
             league_group_queryset = models.LeagueGroup.objects.owned(self.request.user)
             subscribed_leagues = models.LeagueGroup.get_subscriptions_group_for_user(
@@ -361,9 +280,21 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
 
         return contexts.HomeInputs(
             application_forms=Paginator(application_form_queryset, 5).page(1),
-            applications=Paginator(application_queryset, 5).get_page(1),
-            staffed_applications=Paginator(staffed_queryset, 5).get_page(1),
-            events=Paginator(event_queryset, 5).get_page(1),
+            applications=Paginator(
+                models.Event.objects.open_for_user(
+                    self.request.user
+                ).prefetch_for_applied_card(self.request.user),
+                5,
+            ).get_page(1),
+            staffed_applications=Paginator(
+                models.Event.objects.staffed_for_user(
+                    self.request.user
+                ).prefetch_for_applied_card(self.request.user),
+                5,
+            ).get_page(1),
+            events=Paginator(
+                models.Event.objects.staffing_for_user(self.request.user), 5
+            ).get_page(1),
             leagues=Paginator(league_queryset, 5).get_page(1),
             league_groups=Paginator(league_group_queryset, 5).get_page(1),
             subscribed_leagues=subscribed_leagues,

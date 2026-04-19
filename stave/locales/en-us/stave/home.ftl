@@ -17,7 +17,7 @@ my-applications-x-of-y=Showing { $x } of { $y }.
 my-applications-see-all=See all my applications
 
 my-staffed-applications-title=Events Where I'm Staffed
-my-applications-none-staffed=You're not current staffed on any upcoming events.
+my-applications-none-staffed=You're not currently staffed on any upcoming events.
 my-staffed-applications-see-all=See all my applications
 
 my-events-title=Staffing

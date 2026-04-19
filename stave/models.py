@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
 from django.db import models, transaction
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.template.defaultfilters import slugify
 from django.urls import reverse
 from django.utils import formats
@@ -609,6 +609,13 @@ class Crew(models.Model):
         return self.name
 
 
+class CrewAssignmentQuerySet(models.QuerySet["CrewAssignment"]):
+    def concrete_for_user(self, user: User) -> models.QuerySet["CrewAssignment"]:
+        return self.filter(
+            user=user, crew__kind__in=[CrewKind.OVERRIDE_CREW, CrewKind.EVENT_CREW]
+        )
+
+
 class CrewAssignment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     crew = models.ForeignKey(Crew, related_name="assignments", on_delete=models.CASCADE)
@@ -617,6 +624,8 @@ class CrewAssignment(models.Model):
         Role, related_name="crew_assignments", on_delete=models.CASCADE
     )
     # TODO: validate that our Role is a member of the Role Group for our Crew
+
+    objects = CrewAssignmentQuerySet.as_manager()
 
     class Meta:
         constraints = [
@@ -716,6 +725,69 @@ class EventQuerySet(models.QuerySet["Event"]):
 
     def prefetch_for_display(self) -> models.QuerySet["Event"]:
         return self.select_related("league").prefetch_related("games")
+
+    def staffing_for_user(self, user: User) -> models.QuerySet["Event"]:
+        if not user.is_authenticated:
+            return self.none()
+        return (
+            self.manageable(user)
+            .exclude(
+                status__in=[
+                    EventStatus.CANCELED,
+                    EventStatus.COMPLETE,
+                ]
+            )
+            .select_related("league")
+            .prefetch_related("application_forms")
+            .prefetch_related("application_forms__applications")
+            .prefetch_related("application_forms__role_groups")
+        )
+
+    def open_for_user(self, user: User) -> models.QuerySet["Event"]:
+        if not user.is_authenticated:
+            return self.none()
+        application_queryset = Application.objects.open_for_user(user)
+        return self.exclude(
+            status__in=[
+                EventStatus.CANCELED,
+                EventStatus.COMPLETE,
+            ]
+        ).filter(
+            end_date__gte=datetime.now(),
+            application_forms__applications__in=application_queryset,
+        )
+
+    def staffed_for_user(self, user: User) -> models.QuerySet["Event"]:
+        if not user.is_authenticated:
+            return self.none()
+
+        application_queryset = Application.objects.staffed_for_user(user)
+        return self.filter(
+            end_date__gte=datetime.now(),
+            application_forms__applications__in=application_queryset,
+        )
+
+    def prefetch_for_applied_card(self, user: User) -> models.QuerySet["Event"]:
+        if not user.is_authenticated:
+            return self.none()
+        crew_assignment_queryset = CrewAssignment.objects.concrete_for_user(user)
+        application_queryset = Application.objects.open_for_user(
+            user
+        ) | Application.objects.staffed_for_user(user)
+        return (
+            self.order_by("start_date")
+            .select_related("league")
+            .prefetch_related(
+                Prefetch(
+                    "application_forms__applications", queryset=application_queryset
+                )
+            )
+            .prefetch_related("application_forms__role_groups")
+            .prefetch_related(
+                Prefetch("crews__assignments", queryset=crew_assignment_queryset)
+            )
+            .prefetch_related("crews__assignments__role__role_group")
+        )
 
 
 class Event(models.Model):
@@ -1612,6 +1684,31 @@ class ApplicationQuerySet(models.QuerySet["Application"]):
 
     def pending(self):
         return self.filter(status__in=PENDING_STATUSES)
+
+    def open_for_user(self, user: User):
+        return self.filter(
+            user=user,
+        ).exclude(
+            status__in=[
+                ApplicationStatus.WITHDRAWN,
+                ApplicationStatus.ASSIGNED,
+                ApplicationStatus.ASSIGNMENT_PENDING,
+                ApplicationStatus.CONFIRMED,
+            ]
+        )
+
+    def staffed_for_user(self, user: User):
+        return self.filter(
+            user=user,
+            status__in=[
+                ApplicationStatus.ASSIGNED,
+                ApplicationStatus.CONFIRMED,
+                ApplicationStatus.ASSIGNMENT_PENDING,
+            ],
+        )
+
+    def invited_for_user(self, user: User):
+        self.filter(user=user, status__in=[ApplicationStatus.INVITED])
 
 
 class Application(models.Model):
