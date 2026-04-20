@@ -16,6 +16,10 @@ my-applications-none-pending=You don't have any applications pending right now.
 my-applications-x-of-y=Showing { $x } of { $y }.
 my-applications-see-all=See all my applications
 
+my-staffed-applications-title=Events Where I'm Staffed
+my-applications-none-staffed=You're not currently staffed on any upcoming events.
+my-staffed-applications-see-all=See all my applications
+
 my-events-title=Staffing
 my-events-none=You aren't staffing any events.
 # Templated localization, do not translate the content within the curly braces ({})

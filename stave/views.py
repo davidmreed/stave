@@ -134,14 +134,17 @@ class OpenApplicationsListView(generic.ListView):
     def get_context_data(self, *args, **kwargs) -> dict:
         context = super().get_context_data(*args, **kwargs)
 
-        subscr_group = models.LeagueGroup.get_subscriptions_group_for_user(
-            self.request.user
-        )
-        context["has_subscriptions"] = (
-            subscr_group and subscr_group.group_memberships.exists()
-        ) or models.LeagueGroup.objects.subscribed(self.request.user).exclude(
-            is_subscriptions_group=True
-        ).exists()
+        if self.request.user.is_authenticated:
+            subscr_group = models.LeagueGroup.get_subscriptions_group_for_user(
+                self.request.user
+            )
+            context["has_subscriptions"] = (
+                subscr_group and subscr_group.group_memberships.exists()
+            ) or models.LeagueGroup.objects.subscribed(self.request.user).exclude(
+                is_subscriptions_group=True
+            ).exists()
+        else:
+            context["has_subscriptions"] = False
 
         return context
 
@@ -153,15 +156,17 @@ class OpenApplicationsListView(generic.ListView):
 
 class MyApplicationsView(LoginRequiredMixin, generic.ListView):
     template_name = "stave/my_applications.html"
-    model = models.Application
+    model = models.Event
     paginate_by = 25
 
-    def get_queryset(self) -> QuerySet[models.Application]:
+    def get_queryset(self) -> QuerySet[models.Event]:
         return (
-            super()
-            .get_queryset()
-            .filter(user=self.request.user)
-            .order_by("-form__event__start_date")
+            (
+                models.Event.objects.open_for_user(self.request.user)
+                | models.Event.objects.staffed_for_user(self.request.user)
+            )
+            .distinct()
+            .prefetch_for_applied_card(self.request.user)
         )
 
 
@@ -259,37 +264,12 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
                 self.request.user
             )
         )
-        event_queryset = models.Event.objects.none()
-        application_queryset = models.Application.objects.none()
         league_queryset = models.League.objects.none()
         league_group_queryset = models.LeagueGroup.objects.none()
         subscribed_leagues = 0
         subscribed_league_groups = 0
 
         if self.request.user.is_authenticated:
-            application_queryset = (
-                models.Application.objects.filter(
-                    user=self.request.user,
-                    form__event__start_date__gt=datetime.now(),
-                )
-                .exclude(status=models.ApplicationStatus.WITHDRAWN)
-                .order_by("form__event__start_date")
-                .select_related("form")
-                .select_related("form__event")
-                .select_related("form__event__league")
-            )
-            event_queryset = (
-                models.Event.objects.manageable(self.request.user)
-                .exclude(
-                    status__in=[
-                        models.EventStatus.CANCELED,
-                        models.EventStatus.COMPLETE,
-                    ]
-                )
-                .select_related("league")
-                .prefetch_related("application_forms")
-                .prefetch_related("application_forms__role_groups")
-            )
             league_queryset = models.League.objects.manageable(self.request.user)
             league_group_queryset = models.LeagueGroup.objects.owned(self.request.user)
             subscribed_leagues = models.LeagueGroup.get_subscriptions_group_for_user(
@@ -303,8 +283,21 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
 
         return contexts.HomeInputs(
             application_forms=Paginator(application_form_queryset, 5).page(1),
-            applications=Paginator(application_queryset, 5).get_page(1),
-            events=Paginator(event_queryset, 5).get_page(1),
+            pending_application_events=Paginator(
+                models.Event.objects.open_for_user(
+                    self.request.user
+                ).prefetch_for_applied_card(self.request.user),
+                5,
+            ).get_page(1),
+            staffed_application_events=Paginator(
+                models.Event.objects.staffed_for_user(
+                    self.request.user
+                ).prefetch_for_applied_card(self.request.user),
+                5,
+            ).get_page(1),
+            staffing_events=Paginator(
+                models.Event.objects.staffing_for_user(self.request.user), 5
+            ).get_page(1),
             leagues=Paginator(league_queryset, 5).get_page(1),
             league_groups=Paginator(league_group_queryset, 5).get_page(1),
             subscribed_leagues=subscribed_leagues,

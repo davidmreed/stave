@@ -1,5 +1,38 @@
 {% extends "stave/event.html" %}
 
 {% block navigation %}
-<a href="{{ application.get_absolute_url }}">{{ application.form.role_group_names }} ({{ application.user_visible_status.label }})</a>
+{# Iterate over all application forms on this event #}
+{% for app_form in item.application_forms.all %}
+{# Show the staffing schedule link and the user's roles #}
+{# Note that we filter to a subset of all data relevant for display here #}
+
+{% for app in app_form.applications.all %}
+{% if app.status == app.ApplicationStatus.ASSIGNED %}
+<span>
+<strong>{{ app_form.role_group_names }}</strong>: staffed as
+{% for crew in item.crews.all %}
+{% if crew.role_group in app_form.role_groups.all %}
+{% for assignment in crew.assignments.all %}
+{{ assignment.role }}{% if not forloop.last %}, {% else %}.{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+<a href="{{ app.get_absolute_url }}">Application</a>
+<a href="{% url 'event-user-role-group-schedule' item.league.slug item.slug app.user_id app_form.role_group_ids %}">Schedule</a>
+</span>
+{% elif app.status == app.ApplicationStatus.INVITED %}
+<span>
+<strong>
+{{ app_form.role_group_names }}</strong>:
+<span class="cta"><a href="{{ app.get_absolute_url }}">{{ app.user_visible_status.label }} - Response Required</a></span>
+</span>
+{% else %}
+<span>
+<strong>
+{{ app_form.role_group_names }}</strong>:
+<a href="{{ app.get_absolute_url }}">{{ app.user_visible_status.label }}</a>
+</span>
+{% endif %}
+{% endfor %}
+{% endfor %}
 {% endblock navigation %}

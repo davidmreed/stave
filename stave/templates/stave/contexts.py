@@ -177,11 +177,12 @@ class StaffingHeaderInputs:
 
 @dataclass
 class HomeInputs:
-    application_forms: Page
-    applications: Page
-    events: Page
-    leagues: Page
-    league_groups: Page
+    application_forms: Page[models.Event]
+    pending_application_events: Page[models.Event]
+    staffed_application_events: Page[models.Event]
+    staffing_events: Page[models.Event]
+    leagues: Page[models.League]
+    league_groups: Page[models.LeagueGroup]
     subscribed_leagues: int
     subscribed_league_groups: int
     has_subscriptions: bool
