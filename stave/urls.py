@@ -277,6 +277,11 @@ urlpatterns = [
         name="form-applications",
     ),
     path(
+        "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:application_form_slug>/applications/csv/",
+        views.FormApplicationsCSVView.as_view(),
+        name="form-applications-csv",
+    ),
+    path(
         "_/<slug:league_slug>/events/<slug:event_slug>/forms/<slug:application_form_slug>/comms/",
         views.CommCenterView.as_view(),
         name="form-comms",
