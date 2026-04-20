@@ -1,6 +1,7 @@
 import copy
 from collections.abc import Mapping, Sequence
 from datetime import datetime, date
+import itertools
 from typing import Any
 
 from django import forms, template
@@ -184,3 +185,22 @@ def commalist(d: Sequence[Any]) -> str:
 @register.filter
 def game_history(ca: models.CrewAssignment):
     return models.GameHistory(ca)
+
+
+@register.filter
+def unique_role_names(
+    crews: QuerySet[models.CrewAssignment], role_groups: QuerySet[models.RoleGroup]
+) -> str:
+    return commalist(
+        list(
+            set(
+                itertools.chain.from_iterable(
+                    [
+                        [assignment.role.name for assignment in crew.assignments.all()]
+                        for crew in crews
+                        if crew.role_group in role_groups
+                    ]
+                )
+            )
+        )
+    )

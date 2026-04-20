@@ -1,5 +1,7 @@
 {% extends "stave/event.html" %}
 
+{% load stave_tags %}
+
 {% block navigation %}
 {# Iterate over all application forms on this event #}
 {% for app_form in item.application_forms.all %}
@@ -10,13 +12,9 @@
 {% if app.status == app.ApplicationStatus.ASSIGNED %}
 <span>
 <strong>{{ app_form.role_group_names }}</strong>: staffed as
-{% for crew in item.crews.all %}
-{% if crew.role_group in app_form.role_groups.all %}
-{% for assignment in crew.assignments.all %}
-{{ assignment.role }}{% if not forloop.last %}, {% else %}.{% endif %}
-{% endfor %}
-{% endif %}
-{% endfor %}
+
+{{ item.crews.all|unique_role_names:app_form.role_groups.all }}.
+
 <a href="{{ app.get_absolute_url }}">Application</a>
 <a href="{% url 'event-user-role-group-schedule' item.league.slug item.slug app.user_id app_form.role_group_ids %}">Schedule</a>
 </span>
