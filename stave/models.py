@@ -704,8 +704,12 @@ class EventQuerySet(models.QuerySet["Event"]):
     def open_applications_grouped_by_subscription(
         self, user: User | AnonymousUser
     ) -> models.QuerySet["Event"]:
-        application_form_queryset = Event.objects.filter(
-            id__in=ApplicationForm.objects.listed(user).values("event")
+        application_form_queryset = (
+            Event.objects.filter(
+                id__in=ApplicationForm.objects.listed(user).values("event")
+            )
+            .select_related("league")
+            .prefetch_related("application_forms__role_groups")
         )
 
         if user.is_authenticated:
@@ -714,8 +718,6 @@ class EventQuerySet(models.QuerySet["Event"]):
                     application_form_queryset.exclude(
                         application_forms__applications__user=user
                     )
-                    .select_related("league")
-                    .prefetch_related("application_forms__role_groups")
                 )
                 .annotate(is_subscribed=Q(league__in=League.objects.subscribed(user)))
                 .order_by("-is_subscribed", "start_date", "end_date")
@@ -786,7 +788,7 @@ class EventQuerySet(models.QuerySet["Event"]):
             .prefetch_related(
                 Prefetch("crews__assignments", queryset=crew_assignment_queryset)
             )
-            .prefetch_related("crews__assignments__role__role_group")
+            .prefetch_related("crews__assignments__role")
         )
 
 
@@ -1481,6 +1483,10 @@ class ApplicationForm(models.Model):
     @property
     def role_group_names(self) -> str:
         return ", ".join([rg.name for rg in self.role_groups.all()])
+
+    @property
+    def role_group_ids(self) -> str:
+        return ",".join([str(rg.id) for rg in self.role_groups.all()])
 
     def __str__(self) -> str:
         return f"{self.event.name} ({self.role_group_names})"

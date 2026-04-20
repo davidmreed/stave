@@ -73,6 +73,13 @@ You chose to withdraw this application.
 
 Your application to this event was not accepted.
 
+{% elif application.user_visible_status == application.ApplicationStatus.ASSIGNED %}
+
+You're staffed for this event.
+<a href="{% url 'event-user-role-group-schedule' application.form.event.league.slug application.form.event.slug application.user_id application.form.role_group_ids %}">
+  View schedule
+</a>
+
 {% endif %}
 </p>
 {% else %}

@@ -134,14 +134,17 @@ class OpenApplicationsListView(generic.ListView):
     def get_context_data(self, *args, **kwargs) -> dict:
         context = super().get_context_data(*args, **kwargs)
 
-        subscr_group = models.LeagueGroup.get_subscriptions_group_for_user(
-            self.request.user
-        )
-        context["has_subscriptions"] = (
-            subscr_group and subscr_group.group_memberships.exists()
-        ) or models.LeagueGroup.objects.subscribed(self.request.user).exclude(
-            is_subscriptions_group=True
-        ).exists()
+        if self.request.user.is_authenticated:
+            subscr_group = models.LeagueGroup.get_subscriptions_group_for_user(
+                self.request.user
+            )
+            context["has_subscriptions"] = (
+                subscr_group and subscr_group.group_memberships.exists()
+            ) or models.LeagueGroup.objects.subscribed(self.request.user).exclude(
+                is_subscriptions_group=True
+            ).exists()
+        else:
+            context["has_subscriptions"] = False
 
         return context
 
@@ -280,19 +283,19 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
 
         return contexts.HomeInputs(
             application_forms=Paginator(application_form_queryset, 5).page(1),
-            applications=Paginator(
+            pending_application_events=Paginator(
                 models.Event.objects.open_for_user(
                     self.request.user
                 ).prefetch_for_applied_card(self.request.user),
                 5,
             ).get_page(1),
-            staffed_applications=Paginator(
+            staffed_application_events=Paginator(
                 models.Event.objects.staffed_for_user(
                     self.request.user
                 ).prefetch_for_applied_card(self.request.user),
                 5,
             ).get_page(1),
-            events=Paginator(
+            staffing_events=Paginator(
                 models.Event.objects.staffing_for_user(self.request.user), 5
             ).get_page(1),
             leagues=Paginator(league_queryset, 5).get_page(1),

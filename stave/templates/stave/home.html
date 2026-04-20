@@ -17,18 +17,18 @@
 <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
 
 {# Staffing pane #}
-{% if request.user.is_authenticated and events %}
+{% if request.user.is_authenticated and staffing_events %}
 
 <article style="flex: 1 0 45%;">
     <header>
         <h2>{% ftlmsg 'my-events-title' %}</h2>
     </header>
-{% for event in events %}
+{% for event in staffing_events %}
 {% include "stave/partials/event_action_card.html" with item=event user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
 {% empty %}
 {% ftlmsg 'my-events-none' %}
 {% endfor %}
-{% ftlmsg 'my-events-showing-x-of-y' x=events|length y=events.paginator.count %}
+{% ftlmsg 'my-events-showing-x-of-y' x=staffing_events|length y=staffing_events.paginator.count %}
 <a href="{% url 'my-events' %}">{% ftlmsg 'my-events-see-all' %}</a>
 {% url 'calendar-user' request.user.id as url %}
 {% include "stave/partials/calendar.html" with url=url only %}
@@ -37,6 +37,47 @@
 {% endif %}
 
 <div style="flex: 1 1 100%; display: flex; gap: 1rem; flex-wrap: wrap;">
+
+{% if request.user.is_authenticated %}
+
+{# My staffed applications pane #}
+
+<article style="flex: 1 1 auto;">
+    <header>
+        <h2>{% ftlmsg 'my-staffed-applications-title' %}</h2>
+    </header>
+{% for event in staffed_application_events %}
+{% include "stave/event_applied_card.html" with item=event user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
+{% empty %}
+<p>
+{% ftlmsg 'my-applications-none-staffed' %}
+</p>
+{% endfor %}
+{% ftlmsg 'my-applications-x-of-y' x=staffed_application_events|length y=staffed_application_events.paginator.count %}
+<a href="{% url 'my-applications' %}">{% ftlmsg 'my-staffed-applications-see-all' %}</a>
+{% url 'calendar-user' request.user.id as url %}
+{% include "stave/partials/calendar.html" with url=url only %}
+</article>
+
+{# My applications pane #}
+<article style="flex: 1 1 auto;">
+    <header>
+        <h2>{% ftlmsg 'my-applications-title' %}</h2>
+    </header>
+{% for event in pending_application_events %}
+{% include "stave/event_applied_card.html" with item=event user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
+{% empty %}
+<p>
+{% ftlmsg 'my-applications-none-pending' %}
+</p>
+{% endfor %}
+{% ftlmsg 'my-applications-x-of-y' x=pending_application_events|length y=pending_application_events.paginator.count %}
+<a href="{% url 'my-applications' %}">{% ftlmsg 'my-applications-see-all' %}</a>
+{% url 'calendar-user' request.user.id as url %}
+{% include "stave/partials/calendar.html" with url=url only %}
+</article>
+
+{% endif %}
 
 {# Open applications pane #}
 <article style="flex: 1 1 auto;">
@@ -49,47 +90,6 @@
 {% ftlmsg 'open-applications-showing-x-of-y' x=application_forms|length y=application_forms.paginator.count %}
 <a href="{% url 'open-applications' %}">{% ftlmsg 'open-applications-see-all' %}</a>
 </article>
-
-{% if request.user.is_authenticated %}
-
-{# My staffed applications pane #}
-
-<article style="flex: 1 1 auto;">
-    <header>
-        <h2>{% ftlmsg 'my-staffed-applications-title' %}</h2>
-    </header>
-{% for event in staffed_applications %}
-{% include "stave/event_applied_card.html" with item=event user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
-{% empty %}
-<p>
-{% ftlmsg 'my-applications-none-staffed' %}
-</p>
-{% endfor %}
-{% ftlmsg 'my-applications-x-of-y' x=staffed_applications|length y=staffed_applications.paginator.count %}
-<a href="{% url 'my-applications' %}">{% ftlmsg 'my-staffed-applications-see-all' %}</a>
-{% url 'calendar-user' request.user.id as url %}
-{% include "stave/partials/calendar.html" with url=url only %}
-</article>
-
-{# My applications pane #}
-<article style="flex: 1 1 auto;">
-    <header>
-        <h2>{% ftlmsg 'my-applications-title' %}</h2>
-    </header>
-{% for event in applications %}
-{% include "stave/event_applied_card.html" with item=event user=request.user card_kind="stave/mini_card.html" csrf_token=csrf_token only %}
-{% empty %}
-<p>
-{% ftlmsg 'my-applications-none-pending' %}
-</p>
-{% endfor %}
-{% ftlmsg 'my-applications-x-of-y' x=applications|length y=applications.paginator.count %}
-<a href="{% url 'my-applications' %}">{% ftlmsg 'my-applications-see-all' %}</a>
-{% url 'calendar-user' request.user.id as url %}
-{% include "stave/partials/calendar.html" with url=url only %}
-</article>
-
-{% endif %}
 
 </div>
 

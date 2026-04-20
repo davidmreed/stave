@@ -9,7 +9,7 @@
 {% for app in app_form.applications.all %}
 {% if app.status == app.ApplicationStatus.ASSIGNED %}
 <span>
-<strong><a href="{{ app.get_absolute_url }}">{{ app_form.role_group_names }}</a></strong>: staffed as
+<strong>{{ app_form.role_group_names }}</strong>: staffed as
 {% for crew in item.crews.all %}
 {% if crew.role_group in app_form.role_groups.all %}
 {% for assignment in crew.assignments.all %}
@@ -17,10 +17,15 @@
 {% endfor %}
 {% endif %}
 {% endfor %}
-<a href="{{ app_form.get_schedule_url }}">View schedule</a>
+<a href="{{ app.get_absolute_url }}">Application</a>
+<a href="{% url 'event-user-role-group-schedule' item.league.slug item.slug app.user_id app_form.role_group_ids %}">Schedule</a>
 </span>
 {% else %}
-<a href="{{ app.get_absolute_url }}">{{ app_form.role_group_names }} ({{ app.user_visible_status.label }})</a>
+<span>
+<strong>
+{{ app_form.role_group_names }}</strong>:
+<a href="{{ app.get_absolute_url }}">{{ app.user_visible_status.label }}</a>
+</span>
 {% endif %}
 {% endfor %}
 {% endfor %}
