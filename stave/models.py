@@ -749,14 +749,18 @@ class EventQuerySet(models.QuerySet["Event"]):
         if not user.is_authenticated:
             return self.none()
         application_queryset = Application.objects.open_for_user(user)
-        return self.exclude(
-            status__in=[
-                EventStatus.CANCELED,
-                EventStatus.COMPLETE,
-            ]
-        ).filter(
-            end_date__gte=datetime.now(),
-            application_forms__applications__in=application_queryset,
+        return (
+            self.exclude(
+                status__in=[
+                    EventStatus.CANCELED,
+                    EventStatus.COMPLETE,
+                ]
+            )
+            .filter(
+                end_date__gte=datetime.now(),
+                application_forms__applications__in=application_queryset,
+            )
+            .distinct()
         )
 
     def staffed_for_user(self, user: User) -> models.QuerySet["Event"]:
@@ -767,7 +771,7 @@ class EventQuerySet(models.QuerySet["Event"]):
         return self.filter(
             end_date__gte=datetime.now(),
             application_forms__applications__in=application_queryset,
-        )
+        ).distinct()
 
     def prefetch_for_applied_card(self, user: User) -> models.QuerySet["Event"]:
         if not user.is_authenticated:

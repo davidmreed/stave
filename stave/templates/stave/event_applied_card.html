@@ -20,6 +20,12 @@
 <a href="{{ app.get_absolute_url }}">Application</a>
 <a href="{% url 'event-user-role-group-schedule' item.league.slug item.slug app.user_id app_form.role_group_ids %}">Schedule</a>
 </span>
+{% elif app.status == app.ApplicationStatus.INVITED %}
+<span>
+<strong>
+{{ app_form.role_group_names }}</strong>:
+<span class="cta"><a href="{{ app.get_absolute_url }}">{{ app.user_visible_status.label }} - Response Required</a></span>
+</span>
 {% else %}
 <span>
 <strong>
