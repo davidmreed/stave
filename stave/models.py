@@ -1021,6 +1021,28 @@ PENDING_STATUSES = (
     ApplicationStatus.ASSIGNMENT_PENDING,
 )
 
+# Statuses where the user knows they have been staffed.
+USER_VISIBLE_STAFFED_STATUSES_CONFIRMTHENASSIGN = (
+    ApplicationStatus.INVITED,
+    ApplicationStatus.CONFIRMED,
+    ApplicationStatus.ASSIGNMENT_PENDING,
+    ApplicationStatus.ASSIGNED,
+)
+
+USER_VISIBLE_STAFFED_STATUSES_ASSIGNONLY = (ApplicationStatus.ASSIGNED,)
+
+# Statuses where the application is still pending in the user's view
+USER_VISIBLE_OPEN_STATUSES_CONFIRMTHENASSIGN = (
+    ApplicationStatus.APPLIED,
+    ApplicationStatus.INVITATION_PENDING,
+    ApplicationStatus.REJECTION_PENDING,
+)
+USER_VISIBLE_OPEN_STATUSES_ASSIGNONLY = (
+    ApplicationStatus.APPLIED,
+    ApplicationStatus.ASSIGNMENT_PENDING,
+    ApplicationStatus.REJECTION_PENDING,
+)
+
 
 class MessageTemplate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -1694,27 +1716,30 @@ class ApplicationQuerySet(models.QuerySet["Application"]):
     def open_for_user(self, user: User):
         return self.filter(
             user=user,
-        ).exclude(
-            status__in=[
-                ApplicationStatus.WITHDRAWN,
-                ApplicationStatus.ASSIGNED,
-                ApplicationStatus.ASSIGNMENT_PENDING,
-                ApplicationStatus.CONFIRMED,
-            ]
+        ).filter(
+            Q(
+                status__in=USER_VISIBLE_OPEN_STATUSES_ASSIGNONLY,
+                form__application_kind=ApplicationKind.ASSIGN_ONLY,
+            )
+            | Q(
+                status__in=USER_VISIBLE_OPEN_STATUSES_CONFIRMTHENASSIGN,
+                form__application_kind=ApplicationKind.CONFIRM_THEN_ASSIGN,
+            )
         )
 
     def staffed_for_user(self, user: User):
         return self.filter(
             user=user,
-            status__in=[
-                ApplicationStatus.ASSIGNED,
-                ApplicationStatus.CONFIRMED,
-                ApplicationStatus.ASSIGNMENT_PENDING,
-            ],
+        ).filter(
+            Q(
+                status__in=USER_VISIBLE_STAFFED_STATUSES_ASSIGNONLY,
+                form__application_kind=ApplicationKind.ASSIGN_ONLY,
+            )
+            | Q(
+                status__in=USER_VISIBLE_STAFFED_STATUSES_CONFIRMTHENASSIGN,
+                form__application_kind=ApplicationKind.CONFIRM_THEN_ASSIGN,
+            )
         )
-
-    def invited_for_user(self, user: User):
-        self.filter(user=user, status__in=[ApplicationStatus.INVITED])
 
 
 class Application(models.Model):
