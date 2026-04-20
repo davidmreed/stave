@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
+import csv
 from dataclasses import is_dataclass
 from datetime import datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, Any
@@ -1615,6 +1616,80 @@ class FormApplicationsView(
             game_counts=am.game_counts_by_user,
             ApplicationStatus=models.ApplicationStatus,
         )
+
+
+class FormApplicationsCSVView(LoginRequiredMixin, views.View):
+    def get(
+        self,
+        request: HttpRequest,
+        league_slug: str,
+        event_slug: str,
+        application_form_slug: str,
+    ) -> HttpResponse:
+        form: models.ApplicationForm = get_object_or_404(
+            models.ApplicationForm.objects.manageable(request.user)
+            .prefetch_applications()
+            .filter(
+                event__slug=event_slug,
+                event__league__slug=league_slug,
+            ),
+            slug=application_form_slug,
+        )
+
+        response = HttpResponse(
+            content_type="text/csv",
+            headers={"Content-Disposition": 'attachment; filename="applications.csv"'},
+        )
+
+        am = AvailabilityManager.with_application_form(form)
+
+        writer = csv.writer(response)
+        # Headers, mirroring application_table_row.html
+        requires_profile_fields = form.requires_profile_fields
+        if "email" not in requires_profile_fields:
+            requires_profile_fields.insert(0, "email")
+        headers = (
+            ["Status", "Games"]
+            + requires_profile_fields
+            + [rg.name for rg in form.role_groups.all()]
+            + ["Availability"]
+            + [q.content for q in form.form_questions.all()]
+        )
+        writer.writerow(headers)
+        for application in form.applications.all():
+            writer.writerow(
+                [
+                    application.get_status_display(),
+                    str(am.game_counts_by_user.get(application.user_id, 0)),
+                ]
+                + [
+                    application.get_user_data().get(field)
+                    for field in requires_profile_fields
+                ]
+                + [
+                    ", ".join(
+                        r.name for r in application.roles.all() if r.role_group == rg
+                    )
+                    for rg in application.form.role_groups.all()
+                ]
+                + [
+                    ", ".join(application.availability_by_day)
+                    if form.application_availability_kind
+                    == models.ApplicationAvailabilityKind.BY_DAY
+                    else ", ".join(
+                        [
+                            str(g.order_key)
+                            for g in application.availability_by_game.all()
+                        ]
+                    )
+                ]
+                + [
+                    application.responses_by_question().get(q.id)
+                    for q in form.form_questions.all()
+                ]
+            )
+
+        return response
 
 
 class ApplicationStatusView(LoginRequiredMixin, views.View):

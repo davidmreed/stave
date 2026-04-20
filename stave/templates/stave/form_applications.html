@@ -19,6 +19,21 @@
     {% endif %}
 </aside>
 
+<details>
+<summary>Download as CSV</summary>
+<p>
+    Stave takes user privacy <strong>very seriously</strong>. Applications may include sensitive data,
+like an applicant's pronouns, contact information, or medical needs. You agreed to follow Stave's <a href="{% url 'privacy-policy' %}">privacy policy</a>,
+which requires you to use this data only for purposes that are connected to event participation or volunteer service.
+</p>
+<p>
+    You should have a process in place for <strong>destroying exported data as soon as it is no longer in use</strong>.
+</p>
+<a role="button" href="{% url 'form-applications-csv' form.event.league.slug form.event.slug form.slug %}">
+    I'm sure; download CSV
+</a>
+</details>
+
 {% partialdef application-table %}
         {% for application in applications %}
         <tr>
