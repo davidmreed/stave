@@ -299,7 +299,10 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
                 5,
             ).get_page(1),
             staffing_events=Paginator(
-                models.Event.objects.staffing_for_user(self.request.user), 5
+                models.Event.objects.staffing_for_user(
+                    self.request.user
+                ).prefetch_for_management(),
+                5,
             ).get_page(1),
             leagues=Paginator(league_queryset, 5).get_page(1),
             league_groups=Paginator(league_group_queryset, 5).get_page(1),
