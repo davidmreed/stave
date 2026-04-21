@@ -5,6 +5,7 @@ from django.contrib.auth.models import AnonymousUser
 
 import zoneinfo
 import pytest
+from zeal import zeal_context
 
 from stave import models
 from tests import factories
@@ -22,6 +23,12 @@ register(factories.RoleFactory)
 register(factories.LeagueUserPermissionFactory)
 register(factories.GameFactory)
 register(factories.RoleGroupCrewAssignmentFactory)
+
+
+@pytest.fixture(autouse=True)
+def _zeal():
+    with zeal_context():
+        yield
 
 
 @pytest.fixture

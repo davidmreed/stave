@@ -177,7 +177,9 @@ class MyEventsView(LoginRequiredMixin, generic.ListView):
     paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.Event]:
-        return models.Event.objects.manageable(self.request.user)
+        return models.Event.objects.manageable(
+            self.request.user
+        ).prefetch_for_management()
 
 
 class MyLeaguesView(LoginRequiredMixin, generic.ListView):
@@ -297,7 +299,10 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
                 5,
             ).get_page(1),
             staffing_events=Paginator(
-                models.Event.objects.staffing_for_user(self.request.user), 5
+                models.Event.objects.staffing_for_user(
+                    self.request.user
+                ).prefetch_for_management(),
+                5,
             ).get_page(1),
             leagues=Paginator(league_queryset, 5).get_page(1),
             league_groups=Paginator(league_group_queryset, 5).get_page(1),
@@ -898,7 +903,7 @@ class RoleGroupListView(LoginRequiredMixin, TenantedObjectMixin, generic.ListVie
     paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.RoleGroup]:
-        return self.league.role_groups.all()
+        return self.league.role_groups.prefetch_related("roles").all()
 
 
 class RoleGroupCreateUpdateView(
@@ -1353,7 +1358,10 @@ class LeagueDetailView(
 
     def get_context(self) -> contexts.LeagueDetailViewInputs:
         return contexts.LeagueDetailViewInputs(
-            events=self.get_object().events.listed(self.request.user)
+            events=self.get_object()
+            .events.listed(self.request.user)
+            .select_related("league")
+            .prefetch_related("games", "application_forms__role_groups")
         )
 
 
@@ -2193,7 +2201,9 @@ class ApplicationFormView(views.View):
         league_slug: str,
     ) -> HttpResponse:
         app_form = get_object_or_404(
-            models.ApplicationForm.objects.accessible(request.user),
+            models.ApplicationForm.objects.accessible(request.user)
+            .select_related("event__league")
+            .prefetch_related("role_groups__roles", "form_questions"),
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league_slug,

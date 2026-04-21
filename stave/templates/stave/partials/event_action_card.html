@@ -6,17 +6,17 @@
     <strong>
         <a href="{{ application_form.get_absolute_url }}"">{{ application_form.role_group_names }}</a>
     </strong>
-    {% if application_form.applications.open|length %}
+    {% if application_form.open_applications|length %}
     <span class="cta">
         <a href="{% url 'form-applications' application_form.event.league.slug application_form.event.slug application_form.slug %}">
-            {{ application_form.applications.open|length }} open
+            {{ application_form.open_applications|length }} open
         </a>
         </span>
     {% endif %}
-    {% if application_form.applications.pending|length %}
+    {% if application_form.pending_applications|length %}
     <span class="cta">
         <a href="{% url 'form-comms' application_form.event.league.slug application_form.event.slug application_form.slug %}">
-            {{ application_form.applications.pending|length }} pending
+            {{ application_form.pending_applications|length }} pending
         </a>
     </span>
     {% endif %}

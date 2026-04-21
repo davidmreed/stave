@@ -16,10 +16,12 @@ INSTALLED_APPS += [
     "debug_toolbar",
     "django_extensions",  # Useful development tools like shell_plus
     "behave_django",  # BDD testing framework
+    "zeal",  # N+1 query detection
 ]
 
 # Add debug toolbar middleware at the beginning for development
 MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+MIDDLEWARE.append("zeal.middleware.zeal_middleware")
 
 # Debug toolbar configuration
 INTERNAL_IPS = [
@@ -64,3 +66,8 @@ STORAGES = {
 }
 
 SILENCED_SYSTEM_CHECKS = ["fields.E210"]
+
+# django-zeal N+1 detection settings
+ZEAL_ALLOWLIST = [
+    {"model": "sessions.Session", "field": "*"},  # Django internals, not our code
+]

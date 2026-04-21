@@ -238,13 +238,18 @@ class ApplicationResponseFactory(factory.django.DjangoModelFactory):
 class ApplicationFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "stave.Application"
+        skip_postgeneration_save = True
 
     user = factory.SubFactory(UserFactory)
     form = factory.SubFactory(ApplicationFormFactory)
 
     status = models.ApplicationStatus.APPLIED
 
-    # Roles
+    @factory.post_generation
+    def roles(self, create, extracted, **kwargs):
+        if not create or not extracted:
+            return
+        self.roles.add(*extracted)
 
     # Questions
 
