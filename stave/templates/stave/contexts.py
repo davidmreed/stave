@@ -6,7 +6,7 @@ from django.core.paginator import Page
 from django.db.models import QuerySet
 from django.http import HttpRequest
 
-from stave import forms, models
+from stave import forms, models, avail
 
 
 def to_dict(obj) -> dict:
@@ -31,8 +31,7 @@ class ApplicationTableInputs:
 @dataclass
 class ApplicationTableRowInputs:
     form: models.ApplicationForm
-    application: models.Application
-    game_count: int
+    entry: avail.ApplicationEntry
 
 
 @dataclass
@@ -52,8 +51,8 @@ class CrewBuilderDetailInputs:
     form: models.ApplicationForm
     role: models.Role
     game: models.Game | None
-    applications: list[models.Application]
-    game_counts: dict[UUID, int]
+    applications: list[avail.ApplicationEntry]
+    ConflictKind: type = avail.ConflictKind
 
 
 @dataclass
@@ -88,11 +87,10 @@ class ViewApplicationContext:
 @dataclass
 class FormApplicationsInputs:
     form: models.ApplicationForm
-    applications_action: QuerySet[models.Application]
-    applications_inprogress: QuerySet[models.Application]
-    applications_staffed: QuerySet[models.Application]
-    applications_closed: QuerySet[models.Application]
-    game_counts: dict[UUID, int]
+    applications_action: list[avail.ApplicationEntry]
+    applications_inprogress: list[avail.ApplicationEntry]
+    applications_staffed: list[avail.ApplicationEntry]
+    applications_closed: list[avail.ApplicationEntry]
     ApplicationStatus: type
 
 
