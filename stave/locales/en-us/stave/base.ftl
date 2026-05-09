@@ -3,7 +3,8 @@ application-name=Stave
 navbar-leagues=Leagues
 navbar-events=Events
 navbar-docs=Docs
-navbar-my-account=My Account
+# Templated localization, do not translate the content within the curly braces ({})
+navbar-my-account=My Account ({ $x })
 navbar-logout=Logout
 navbar-signup=Sign Up
 navbar-login=Login
