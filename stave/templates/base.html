@@ -32,7 +32,7 @@
             <div>
                 <ul>
                 {% if request.user.is_authenticated %}
-                <li><a href="{% url 'profile' %}">{% ftlmsg 'navbar-my-account' %}</a></li>
+                <li><a href="{% url 'profile' %}">{% ftlmsg 'navbar-my-account' x=request.user.preferred_name|default:request.user.email %}</a></li>
                 <li><a href="{% url 'account_logout' %}">{% ftlmsg 'navbar-logout' %}</a></li>
                 {% else %}
                 <li><a href="{% url 'account_signup' %}">{% ftlmsg 'navbar-signup' %}</a></li>
