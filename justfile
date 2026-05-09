@@ -19,6 +19,9 @@ makemigrations:
 migrate:
     uv run manage.py migrate
 
+run-postgres:
+    docker compose -f docker-compose.dev.yml up -d
+
 # Run server in development mode
 run:
     uv run manage.py runserver 0.0.0.0:8888
