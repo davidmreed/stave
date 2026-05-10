@@ -1348,7 +1348,6 @@ class EventCreateUpdateForm(ParentChildForm):
         self.parent_form.instance.league = self.league
 
         # Renumber games.
-        breakpoint()
         for index, game_form in enumerate(
             sorted(
                 [
