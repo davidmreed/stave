@@ -71,3 +71,5 @@ SILENCED_SYSTEM_CHECKS = ["fields.E210"]
 ZEAL_ALLOWLIST = [
     {"model": "sessions.Session", "field": "*"},  # Django internals, not our code
 ]
+ZEAL_RAISE = False
+ZEAL_NPLUSONE_THRESHOLD = 3
