@@ -1349,11 +1349,15 @@ class EventCreateUpdateForm(ParentChildForm):
 
         # Renumber games.
         for index, game_form in enumerate(
-            [
-                game_form
-                for game_form in self.child_formset.forms
-                if game_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
-            ]
+            sorted(
+                [
+                    game_form
+                    for game_form in self.child_formset.forms
+                    if game_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
+                    and game_form.cleaned_data.get(DELETION_FIELD_NAME) is not True
+                ],
+                key=lambda f: f.cleaned_data.get("start_time"),
+            )
         ):
             new_order_key = index + 1
             if game_form.instance.order_key != new_order_key:
