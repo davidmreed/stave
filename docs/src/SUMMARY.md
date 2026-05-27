@@ -18,6 +18,10 @@
 - [Messaging](./messaging.md)
 - [Templates & League Management](./league-management.md)
 
+# Developer Reference
+
+- [Application Lifecycle](./application-lifecycle.md)
+
 # Policies
 
 - [Privacy Policy](./privacy-policy.md)
