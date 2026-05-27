@@ -1,4 +1,3 @@
-from debug_toolbar.toolbar import debug_toolbar_urls
 from django.contrib import admin
 from django.urls import include, path
 from django.views.generic.base import RedirectView
@@ -396,4 +395,10 @@ urlpatterns = [
         calendars.MySubscriptionsEventFeed(),
         name="calendar-user-subscriptions",
     ),
-] + debug_toolbar_urls()
+]
+
+if "debug_toolbar" in settings.INSTALLED_APPS:
+    # Only enable the debug_toolbar endpoints if the app is installed.
+    from debug_toolbar.toolbar import debug_toolbar_urls
+
+    urlpatterns += debug_toolbar_urls()
