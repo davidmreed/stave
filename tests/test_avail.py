@@ -1,4 +1,10 @@
-from tests.factories import ApplicationFactory, ApplicationFormFactory, CrewFactory, RoleFactory, GameFactory
+from tests.factories import (
+    ApplicationFactory,
+    CrewFactory,
+    ApplicationFormFactory,
+    RoleFactory,
+    GameFactory,
+)
 from datetime import datetime, timedelta, timezone
 from stave.avail import AvailabilityManager, UserAvailabilityEntry, ConflictKind
 from pytest import fixture
@@ -335,8 +341,16 @@ def test_availability_manager__static_crews(db):
 
     # The AvailabilityManager requires crews to share one of
     # the AppForm's Role Groups.
-    crew = CrewFactory(event=application_form.event, role_group=application_form.role_groups.first(), kind=models.CrewKind.GAME_CREW)
-    CrewFactory(event=application_form.event, role_group=application_form.role_groups.first(), kind=models.CrewKind.EVENT_CREW)
+    crew = CrewFactory(
+        event=application_form.event,
+        role_group=application_form.role_groups.first(),
+        kind=models.CrewKind.GAME_CREW,
+    )
+    CrewFactory(
+        event=application_form.event,
+        role_group=application_form.role_groups.first(),
+        kind=models.CrewKind.EVENT_CREW,
+    )
     CrewFactory(kind=models.CrewKind.GAME_CREW)
     am = AvailabilityManager.with_application_form(application_form)
 
@@ -346,52 +360,67 @@ def test_availability_manager__static_crews(db):
 def test_availability_manager__event_crews(db):
     application_form = ApplicationFormFactory()
     application_form.role_groups.set(application_form.event.league.role_groups.all())
-    crew = CrewFactory(event=application_form.event, role_group=application_form.role_groups.first(), kind=models.CrewKind.EVENT_CREW)
-    CrewFactory(event=application_form.event, role_group=application_form.role_groups.first(), kind=models.CrewKind.GAME_CREW)
+    crew = CrewFactory(
+        event=application_form.event,
+        role_group=application_form.role_groups.first(),
+        kind=models.CrewKind.EVENT_CREW,
+    )
+    CrewFactory(
+        event=application_form.event,
+        role_group=application_form.role_groups.first(),
+        kind=models.CrewKind.GAME_CREW,
+    )
     CrewFactory(kind=models.CrewKind.EVENT_CREW)
     am = AvailabilityManager.with_application_form(application_form)
 
     assert am.event_crews == [crew]
 
-def test_applications_by_role_group():...
+def test_role_groups(): ...
 
-def test_role_groups():...
 
-def test_game_crew_assignments():...
+def test_game_crew_assignments(): ...
 
-def test_user_availability():...
 
-def test_user_event_availability():...
-def test_user_static_crew_availability():...
+def test_user_availability(): ...
+
+
+def test_user_event_availability(): ...
+def test_user_static_crew_availability(): ...
 def test_get_game_count_for_user(): ...
 
+
 def test_game_counts_by_user(): ...
+
 
 def test_get_application_counts(): ...
 def test_get_all_applications(): ...
 
+
 def test_get_application_entries(): ...
+
 
 def test_get_swappable_assignments(): ...
 
+
 def test_get_application_by_id(): ...
 
-def test_get_application_for_user():...
+
+def test_get_application_for_user(): ...
+
 
 def test_get_application_for_assignment(): ...
 
+
 def test_get_assignment(): ...
+
 
 def test_set_assignment__open_slot(db):
     application = ApplicationFactory(
         status=models.ApplicationStatus.APPLIED,
-        form__application_kind=models.ApplicationKind.ASSIGN_ONLY
+        form__application_kind=models.ApplicationKind.ASSIGN_ONLY,
     )
     role = application.roles.first()
-    crew = CrewFactory(
-        event=application.form.event,
-        role_group=role.role_group
-    )
+    crew = CrewFactory(event=application.form.event, role_group=role.role_group)
 
     am = AvailabilityManager.with_application_form(application.form)
     am.set_assignment(role, crew, application.user)
@@ -400,107 +429,80 @@ def test_set_assignment__open_slot(db):
     application.refresh_from_db()
     assert application.status == models.ApplicationStatus.ASSIGNMENT_PENDING
 
+
 def test_set_assignment__replace_existing(db):
     application = ApplicationFactory(
         status=models.ApplicationStatus.ASSIGNMENT_PENDING,
-        form__application_kind=models.ApplicationKind.ASSIGN_ONLY
+        form__application_kind=models.ApplicationKind.ASSIGN_ONLY,
     )
     role = application.roles.first()
     other_application = ApplicationFactory(
-        form=application.form,
-        status=models.ApplicationStatus.APPLIED
+        form=application.form, status=models.ApplicationStatus.APPLIED
     )
     other_application.roles.set([role])
-    crew = CrewFactory(
-        event=application.form.event,
-        role_group=role.role_group
-    )
-    models.CrewAssignment.objects.create(
-        user=application.user,
-        crew=crew,
-        role=role
-    )
+    crew = CrewFactory(event=application.form.event, role_group=role.role_group)
+    models.CrewAssignment.objects.create(user=application.user, crew=crew, role=role)
 
     am = AvailabilityManager.with_application_form(application.form)
     am.set_assignment(role, crew, other_application.user)
 
     assert crew.get_assignments_by_role_id()[role.id].user == other_application.user
-    assert not models.CrewAssignment.objects.filter(
-        user=application.user
-    ).exists()
+    assert not models.CrewAssignment.objects.filter(user=application.user).exists()
     application.refresh_from_db()
     assert application.status == models.ApplicationStatus.APPLIED
     other_application.refresh_from_db()
     assert other_application.status == models.ApplicationStatus.ASSIGNMENT_PENDING
 
+
 def test_set_assignment__remove_existing(db):
     application = ApplicationFactory(
         status=models.ApplicationStatus.ASSIGNMENT_PENDING,
-        form__application_kind=models.ApplicationKind.ASSIGN_ONLY
+        form__application_kind=models.ApplicationKind.ASSIGN_ONLY,
     )
     role = application.roles.first()
-    crew = CrewFactory(
-        event=application.form.event,
-        role_group=role.role_group
-    )
-    models.CrewAssignment.objects.create(
-        user=application.user,
-        crew=crew,
-        role=role
-    )
+    crew = CrewFactory(event=application.form.event, role_group=role.role_group)
+    models.CrewAssignment.objects.create(user=application.user, crew=crew, role=role)
 
     am = AvailabilityManager.with_application_form(application.form)
     am.set_assignment(role, crew, None)
 
-    assert not models.CrewAssignment.objects.filter(
-        user=application.user
-    ).exists()
+    assert not models.CrewAssignment.objects.filter(user=application.user).exists()
     application.refresh_from_db()
     assert application.status == models.ApplicationStatus.APPLIED
     assert crew.get_assignments_by_role_id()[role.id].user is None
 
+
 def test_set_assignment__swap_roles_override_crew(db):
     application = ApplicationFactory(
         status=models.ApplicationStatus.ASSIGNMENT_PENDING,
-        form__application_kind=models.ApplicationKind.ASSIGN_ONLY
+        form__application_kind=models.ApplicationKind.ASSIGN_ONLY,
     )
     role = application.roles.first()
     other_role = RoleFactory(role_group=role.role_group)
     other_application = ApplicationFactory(
-        form=application.form,
-        status=models.ApplicationStatus.ASSIGNMENT_PENDING
+        form=application.form, status=models.ApplicationStatus.ASSIGNMENT_PENDING
     )
     other_application.roles.set([role, other_role])
     crew = CrewFactory(
         kind=models.CrewKind.OVERRIDE_CREW,
         event=application.form.event,
-        role_group=role.role_group
+        role_group=role.role_group,
     )
     # Swapping roles requires the Crew have a non-None
     # get_context()
     game = GameFactory(event=application.form.event)
     models.RoleGroupCrewAssignment.objects.create(
-        crew_overrides=crew,
-        game=game,
-        role_group=role.role_group
+        crew_overrides=crew, game=game, role_group=role.role_group
     )
+    models.CrewAssignment.objects.create(user=application.user, crew=crew, role=role)
     models.CrewAssignment.objects.create(
-        user=application.user,
-        crew=crew,
-        role=role
-    )
-    models.CrewAssignment.objects.create(
-        user=other_application.user,
-        crew=crew,
-        role=other_role
+        user=other_application.user, crew=crew, role=other_role
     )
 
     am = AvailabilityManager.with_application_form(application.form)
     am.set_assignment(role, crew, other_application.user)
 
-    assert not models.CrewAssignment.objects.filter(
-        user=application.user
-    ).exists()
+    assert not models.CrewAssignment.objects.filter(user=application.user).exists()
     application.refresh_from_db()
     assert application.status == models.ApplicationStatus.APPLIED
     other_application.refresh_from_db()
@@ -513,8 +515,12 @@ def test_set_assignment__swap_roles_static_crew_to_override_crew(db): ...
 def test_set_assignment__swap_roles_static_crew_to_blank(db): ...
 def test_set_assignment__swap_roles_event_crew(db): ...
 
-def test_set_assignment__swap_roles_static_crew_to_override_crew_keep_nonexclusive(db): ...
+
+def test_set_assignment__swap_roles_static_crew_to_override_crew_keep_nonexclusive(
+    db,
+): ...
 def test_set_assignment__swap_roles_event_crew_keep_nonexclusive(db): ...
 def test_set_assignment__static_crew_override_replace_blank_with_original(db): ...
+
 
 def test_set_crew_assignment(): ...

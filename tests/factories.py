@@ -86,7 +86,9 @@ class EventFactory(factory.django.DjangoModelFactory):
         obj.role_groups.set(
             random.sample(
                 list(event_role_groups),
-                random.randrange(1, len(event_role_groups)) if len(event_role_groups) > 1 else 1
+                random.randrange(1, len(event_role_groups))
+                if len(event_role_groups) > 1
+                else 1,
             )
         )
 
@@ -209,7 +211,9 @@ class ApplicationFormFactory(factory.django.DjangoModelFactory):
         obj.role_groups.set(
             random.sample(
                 list(event_role_groups),
-                random.randrange(1, len(event_role_groups)) if len(event_role_groups) > 1 else 1
+                random.randrange(1, len(event_role_groups))
+                if len(event_role_groups) > 1
+                else 1,
             )
         )
 
@@ -269,13 +273,21 @@ class ApplicationFactory(factory.django.DjangoModelFactory):
     # Roles
     @factory.post_generation
     def roles(obj, create, extracted, **kwargs):
-        available_roles = models.Role.objects.filter(role_group__in=obj.form.event.role_groups.all())
-        obj.roles.set(
-            random.sample(
-                list(available_roles),
-                random.randrange(1, len(available_roles)) if len(available_roles) > 1 else 1
+        if extracted:
+            obj.roles.set(extracted)
+        else:
+            available_roles = models.Role.objects.filter(
+                role_group__in=obj.form.role_groups.all()
             )
-        )
+            obj.roles.set(
+                random.sample(
+                    list(available_roles),
+                    random.randrange(1, len(available_roles))
+                    if len(available_roles) > 1
+                    else 1,
+                )
+            )
+
     # Questions
 
 
