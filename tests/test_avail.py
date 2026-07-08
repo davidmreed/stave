@@ -15,8 +15,12 @@ from stave import models
 def existing_entry(db):
     start_time = datetime.now(tz=timezone.utc)
     end_time = start_time + timedelta(hours=2)
+    crew = CrewFactory(kind=models.CrewKind.OVERRIDE_CREW)
+    role = crew.role_group.roles.first()
+
     return UserAvailabilityEntry(
-        crew=CrewFactory(kind=models.CrewKind.OVERRIDE_CREW),
+        crew=crew,
+        role=role,
         start_time=start_time,
         end_time=end_time,
         exclusive=True,
@@ -25,8 +29,12 @@ def existing_entry(db):
 
 @fixture
 def existing_static_crew_entry(db):
+    crew = CrewFactory(kind=models.CrewKind.GAME_CREW)
+    role = crew.role_group.roles.first()
+
     return UserAvailabilityEntry(
-        crew=CrewFactory(kind=models.CrewKind.GAME_CREW),
+        crew=crew,
+        role=role,
         start_time=None,
         end_time=None,
         exclusive=True,
@@ -35,8 +43,12 @@ def existing_static_crew_entry(db):
 
 @fixture
 def existing_event_crew_entry(db):
+    crew = CrewFactory(kind=models.CrewKind.EVENT_CREW)
+    role = crew.role_group.roles.first()
+
     return UserAvailabilityEntry(
-        crew=CrewFactory(kind=models.CrewKind.EVENT_CREW),
+        crew=crew,
+        role=role,
         start_time=None,
         end_time=None,
         exclusive=True,
@@ -48,6 +60,7 @@ def test_user_availability_entry__full_overlap_same_crew_exclusive(existing_entr
         existing_entry.overlaps(
             UserAvailabilityEntry(
                 crew=existing_entry.crew,
+                role=models.Role(),
                 start_time=existing_entry.start_time,
                 end_time=existing_entry.end_time,
                 exclusive=True,
@@ -63,6 +76,7 @@ def test_user_availability_entry__abutting_left_same_crew_exclusive(existing_ent
         existing_entry.overlaps(
             UserAvailabilityEntry(
                 crew=existing_entry.crew,
+                role=models.Role(),
                 start_time=existing_entry.end_time,
                 end_time=existing_entry.end_time + timedelta(hours=2),
                 exclusive=True,
@@ -78,6 +92,7 @@ def test_user_availability_entry__abutting_right_same_crew_exclusive(existing_en
         existing_entry.overlaps(
             UserAvailabilityEntry(
                 crew=existing_entry.crew,
+                role=models.Role(),
                 start_time=existing_entry.start_time - timedelta(hours=2),
                 end_time=existing_entry.start_time,
                 exclusive=True,
@@ -93,6 +108,7 @@ def test_user_availability_entry__full_overlap_same_crew_nonexclusive(existing_e
         existing_entry.overlaps(
             UserAvailabilityEntry(
                 crew=existing_entry.crew,
+                role=models.Role(),
                 start_time=existing_entry.start_time,
                 end_time=existing_entry.end_time,
                 exclusive=False,
@@ -108,6 +124,7 @@ def test_user_availability_entry__full_overlap_other_crew_non_swappable(existing
         existing_entry.overlaps(
             UserAvailabilityEntry(
                 crew=CrewFactory(kind=models.CrewKind.OVERRIDE_CREW),
+                role=models.Role(),
                 start_time=existing_entry.start_time,
                 end_time=existing_entry.end_time,
                 exclusive=True,
@@ -124,6 +141,7 @@ def test_user_availability_entry__full_overlap_other_crew_swappable(existing_ent
         existing_entry.overlaps(
             UserAvailabilityEntry(
                 crew=other_crew,
+                role=models.Role(),
                 start_time=existing_entry.start_time,
                 end_time=existing_entry.end_time,
                 exclusive=False,
@@ -139,6 +157,7 @@ def test_user_availability_entry__partial_overlap(existing_entry):
         existing_entry.overlaps(
             UserAvailabilityEntry(
                 crew=existing_entry.crew,
+                role=models.Role(),
                 start_time=existing_entry.start_time + timedelta(hours=1),
                 end_time=existing_entry.end_time,
                 exclusive=True,
@@ -156,6 +175,7 @@ def test_user_availability_entry__overlap_same_static_crew_exclusive(
         existing_static_crew_entry.overlaps(
             UserAvailabilityEntry(
                 crew=existing_static_crew_entry.crew,
+                role=models.Role(),
                 start_time=None,
                 end_time=None,
                 exclusive=True,
@@ -173,6 +193,7 @@ def test_user_availability_entry__overlap_same_static_crew_nonexclusive(
         existing_static_crew_entry.overlaps(
             UserAvailabilityEntry(
                 crew=existing_static_crew_entry.crew,
+                role=models.Role(),
                 start_time=None,
                 end_time=None,
                 exclusive=False,
@@ -190,6 +211,7 @@ def test_user_availability_entry__overlap_other_static_crew_non_swappable(
         existing_static_crew_entry.overlaps(
             UserAvailabilityEntry(
                 crew=CrewFactory(kind=models.CrewKind.GAME_CREW),
+                role=models.Role(),
                 start_time=None,
                 end_time=None,
                 exclusive=True,
@@ -208,6 +230,7 @@ def test_user_availability_entry__overlap_other_static_crew_swappable(
         existing_static_crew_entry.overlaps(
             UserAvailabilityEntry(
                 crew=other_crew,
+                role=models.Role(),
                 start_time=None,
                 end_time=None,
                 exclusive=True,
@@ -228,6 +251,7 @@ def test_user_availability_entry__overlap_same_event_crew_exclusive(
         existing_event_crew_entry.overlaps(
             UserAvailabilityEntry(
                 crew=existing_event_crew_entry.crew,
+                role=models.Role(),
                 start_time=None,
                 end_time=None,
                 exclusive=True,
@@ -245,6 +269,7 @@ def test_user_availability_entry__overlap_same_event_crew_nonexclusive(
         existing_event_crew_entry.overlaps(
             UserAvailabilityEntry(
                 crew=existing_event_crew_entry.crew,
+                role=models.Role(),
                 start_time=None,
                 end_time=None,
                 exclusive=False,
@@ -262,6 +287,7 @@ def test_user_availability_entry__overlap_other_event_crew_non_swappable(
         existing_event_crew_entry.overlaps(
             UserAvailabilityEntry(
                 crew=CrewFactory(kind=models.CrewKind.EVENT_CREW),
+                role=models.Role(),
                 start_time=None,
                 end_time=None,
                 exclusive=True,
@@ -280,6 +306,7 @@ def test_user_availability_entry__overlap_other_event_crew_swappable(
         existing_event_crew_entry.overlaps(
             UserAvailabilityEntry(
                 crew=other_crew,
+                role=models.Role(),
                 start_time=None,
                 end_time=None,
                 exclusive=True,
@@ -296,6 +323,7 @@ def test_user_availability_entry__non_meaningful(existing_event_crew_entry):
         existing_event_crew_entry.overlaps(
             UserAvailabilityEntry(
                 crew=other_crew,
+                role=models.Role(),
                 start_time=None,
                 end_time=None,
                 exclusive=True,
