@@ -2,7 +2,7 @@ import functools
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterable, Generator, Tuple
+from typing import Iterable, Generator, Tuple, List
 from uuid import UUID
 import enum
 
@@ -30,11 +30,13 @@ class ApplicationEntry:
     application: models.Application
     user_game_count: int
     availability_status: ConflictKind
+    conflicting_roles: List[models.Role] | None = None
 
 
 @dataclass
 class UserAvailabilityEntry:
     crew: models.Crew
+    role: models.Role
     # Denormalize these off the crew's Game
     # to avoid excess queries.
     start_time: datetime | None
@@ -301,6 +303,7 @@ class AvailabilityManager:
                 user_assigned_times_map[assignment.user_id].append(
                     UserAvailabilityEntry(
                         crew=assignment.crew,
+                        role=assignment.role,
                         start_time=game.start_time,
                         end_time=game.end_time,
                         exclusive=not assignment.role.nonexclusive,
@@ -337,6 +340,7 @@ class AvailabilityManager:
                 user_event_map[assignment.user_id].append(
                     UserAvailabilityEntry(
                         crew,
+                        assignment.role,
                         None,
                         None,
                         not assignment.role.nonexclusive,
@@ -354,6 +358,7 @@ class AvailabilityManager:
                 user_static_map[assignment.user_id].append(
                     UserAvailabilityEntry(
                         crew,
+                        assignment.role,
                         None,
                         None,
                         not assignment.role.nonexclusive,
@@ -366,7 +371,7 @@ class AvailabilityManager:
     @functools.cache
     def user_game_counts(self) -> dict[UUID, int]:
         return {
-            a.user.id: self.get_game_count_for_user(a.user) for a in all_applications
+            a.user.id: self.get_game_count_for_user(a.user) for a in self.all_applications
         }
 
     def get_application_counts(
@@ -407,6 +412,7 @@ class AvailabilityManager:
 
         entry = UserAvailabilityEntry(
             crew,
+            role,
             game.start_time if game else None,
             game.end_time if game else None,
             not role.nonexclusive,
@@ -414,23 +420,27 @@ class AvailabilityManager:
 
         for app in apps:
             game_count = self.get_game_count_for_user(app.user)
-            overlaps = set(
-                t.overlaps(entry, self.role_groups) for t in avail[app.user_id]
-            )
-            if ConflictKind.NON_SWAPPABLE_CONFLICT in overlaps:
+            overlaps = defaultdict(list)
+            for t in avail[app.user_id]:
+                overlap_kind = t.overlaps(entry, self.role_groups)
+                overlaps[overlap_kind].append(t)
+
+            if specific_overlaps := overlaps[ConflictKind.NON_SWAPPABLE_CONFLICT]:
                 entries.append(
                     ApplicationEntry(
                         application=app,
                         user_game_count=game_count,
                         availability_status=ConflictKind.NON_SWAPPABLE_CONFLICT,
+                        conflicting_roles=[o.role for o in specific_overlaps]
                     )
                 )
-            elif ConflictKind.SWAPPABLE_CONFLICT in overlaps:
+            elif specific_overlaps := overlaps[ConflictKind.SWAPPABLE_CONFLICT]:
                 entries.append(
                     ApplicationEntry(
                         application=app,
                         user_game_count=game_count,
                         availability_status=ConflictKind.SWAPPABLE_CONFLICT,
+                        conflicting_roles=[o.role for o in specific_overlaps]
                     )
                 )
             else:
@@ -452,10 +462,9 @@ class AvailabilityManager:
         game: models.Game | None,
         role: models.Role,
     ) -> list[UserAvailabilityEntry]:
-        avail = self._get_avail_data_for_crew_kind(crew.kind)
-
         entry = UserAvailabilityEntry(
             crew,
+            role,
             game.start_time if game else None,
             game.end_time if game else None,
             not role.nonexclusive,

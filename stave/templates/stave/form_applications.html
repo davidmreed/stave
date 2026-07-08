@@ -55,7 +55,7 @@ which requires you to use this data only for purposes that are connected to even
         </tr>
     </thead>
     <tbody>
-        {% with applications=applications_action %}
+        {% with entries=applications_action %}
         {% partial application-table %}
         {% endwith %}
     </tbody>
@@ -67,7 +67,7 @@ which requires you to use this data only for purposes that are connected to even
         </tr>
     </thead>
     <tbody>
-        {% with applications=applications_inprogress %}
+        {% with entries=applications_inprogress %}
         {% partial application-table %}
         {% endwith %}
     </tbody>
@@ -79,7 +79,7 @@ which requires you to use this data only for purposes that are connected to even
         </tr>
     </thead>
     <tbody>
-        {% with applications=applications_staffed %}
+        {% with entries=applications_staffed %}
         {% partial application-table %}
         {% endwith %}
     </tbody>
@@ -91,7 +91,7 @@ which requires you to use this data only for purposes that are connected to even
         </tr>
     </thead>
     <tbody>
-        {% with applications=applications_closed %}
+        {% with entries=applications_closed %}
         {% partial application-table %}
         {% endwith %}
     </tbody>
