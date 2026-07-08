@@ -16,6 +16,13 @@
     <tbody>
         {% for entry in applications %}
         {% if entry.availability_status != ConflictKind.NON_SWAPPABLE_CONFLICT %}
+        {% if entry.availability_status == ConflictKind.SWAPPABLE_CONFLICT %}
+        <tr>
+            <td colspan="999" style="color: white; font-size: 80%; background: grey;">
+                Assigned as {{ entry.conflicting_roles|commalist }}.
+            </td>
+        </tr>
+        {% endif %}
         <tr>
             <td>
                 <form class="inline" method="POST" action="{{ request.path }}">
@@ -50,6 +57,11 @@
     <tbody>
         {% for entry in applications %}
         {% if entry.availability_status == ConflictStatus.NON_SWAPPABLE_CONFLICT %}
+        <tr>
+            <td colspan="999" style="color: white; font-size: 80%; background: grey;">
+                Assigned as {{ entry.conflicting_roles|commalist }}.
+            </td>
+        </tr>
         <tr>
             <td>
                 <a role="button" href="{% url 'view-application' entry.application.id %}">View</a>
