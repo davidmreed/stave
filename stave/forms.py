@@ -957,20 +957,6 @@ class EventTemplateCreateUpdateForm(ParentChildForm):
     def clean(self):
         self.parent_form.instance.league = self.league
 
-        for index, child_form in enumerate(
-            [
-                child_form
-                for child_form in self.child_formset.forms
-                if child_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
-            ]
-        ):
-            new_order_key = index + 1
-            if child_form.instance.order_key != new_order_key:
-                child_form.instance.order_key = new_order_key
-                # force super to save this form, even if the user did not
-                # edit it.
-                child_form.has_changed = lambda: True
-
         super().clean()
 
     def get_redirect_url(self) -> str:
