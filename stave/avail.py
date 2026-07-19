@@ -115,21 +115,12 @@ class AvailabilityManager:
     def with_application_form(
         klass, application_form: models.ApplicationForm
     ) -> "AvailabilityManager":
-        # Filter based on our application model.
-        application_qs = models.Application.objects.exclude(
-            status__in=[
-                models.ApplicationStatus.WITHDRAWN,
-                models.ApplicationStatus.DECLINED,
-                models.ApplicationStatus.REJECTED,
-                models.ApplicationStatus.REJECTION_PENDING,
-            ]
-        )
         application_form: models.ApplicationForm = (
             models.ApplicationForm.objects.filter(id=application_form.id)
             .prefetch_related(
                 "role_groups",
                 "role_groups__roles",
-                Prefetch("applications", queryset=application_qs),
+                Prefetch("applications"),
                 Prefetch(
                     "applications__roles",
                     queryset=models.Role.objects.select_related("role_group"),
@@ -209,18 +200,6 @@ class AvailabilityManager:
             apps.extend(self.applications_by_status.get(status, []))
 
         return sorted(apps, key=lambda a: a.user.preferred_name.lower())
-
-    @property
-    @functools.cache
-    def applications_by_role_group(
-        self,
-    ) -> dict[UUID, dict[str, list[models.Application]]]:
-        applications = defaultdict(lambda: defaultdict(list))
-        for application in self.application_form.applications.all():
-            for role in application.roles.all():
-                applications[role.role_group_id][role.name].append(application)
-
-        return applications
 
     @property
     @functools.cache
@@ -322,23 +301,29 @@ class AvailabilityManager:
     ) -> tuple[int, int]:
         return (
             len(self.get_available_applications(crew, game, role)),
-            len(self.get_all_applications(crew, game, role)),
+            len(self.get_potential_applications(crew, game, role)),
         )
 
     @functools.cache
-    def get_all_applications(
+    def get_potential_applications(
         self, crew: models.Crew, game: models.Game | None, role: models.Role
     ) -> list[models.Application]:
-        return self._filter_for_basic_availability(
-            self.applications_by_role_group[role.role_group_id][role.name], crew, game
-        )
+        potential_applications = [
+            app
+            for app in self.applications
+            if (
+                role.name in app.role_names_by_role_group_id()[role.role_group_id]
+                and app.status not in models.CLOSED_STATUSES
+            )
+        ]
+        return self._filter_for_basic_availability(potential_applications, crew, game)
 
     @functools.cache
     def get_available_applications(
         self, crew: models.Crew, game: models.Game | None, role: models.Role
     ) -> list[models.Application]:
         return self._filter_for_already_assigned_users(
-            self.get_all_applications(crew, game, role),
+            self.get_potential_applications(crew, game, role),
             crew,
             game,
             role,
