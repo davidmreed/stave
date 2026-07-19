@@ -334,7 +334,6 @@ def test_user_availability_entry__non_meaningful(existing_event_crew_entry):
     )
 
 
-
 def test_availability_manager__applications_by_status(db):
     application_form = ApplicationFormFactory()
     for status in models.ApplicationStatus:
@@ -346,6 +345,7 @@ def test_availability_manager__applications_by_status(db):
 
     assert by_status.keys() == list(models.ApplicationStatus)
     assert all(len(v) == 3 for v in by_status.values())
+
 
 def test_availability_manager__get_applications_in_statuses(db):
     application_form = ApplicationFormFactory()
@@ -362,6 +362,7 @@ def test_availability_manager__get_applications_in_statuses(db):
 
     assert len(in_statuses) == 6
     assert in_statuses == sorted(in_statuses, key=lambda a: a.user.preferred_name)
+
 
 def test_availability_manager__static_crews(db):
     application_form = ApplicationFormFactory()
@@ -402,6 +403,7 @@ def test_availability_manager__event_crews(db):
     am = AvailabilityManager.with_application_form(application_form)
 
     assert am.event_crews == [crew]
+
 
 def test_role_groups(): ...
 

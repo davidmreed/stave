@@ -371,7 +371,8 @@ class AvailabilityManager:
     @functools.cache
     def user_game_counts(self) -> dict[UUID, int]:
         return {
-            a.user.id: self.get_game_count_for_user(a.user) for a in self.all_applications
+            a.user.id: self.get_game_count_for_user(a.user)
+            for a in self.all_applications
         }
 
     def get_application_counts(
@@ -431,7 +432,7 @@ class AvailabilityManager:
                         application=app,
                         user_game_count=game_count,
                         availability_status=ConflictKind.NON_SWAPPABLE_CONFLICT,
-                        conflicting_roles=[o.role for o in specific_overlaps]
+                        conflicting_roles=[o.role for o in specific_overlaps],
                     )
                 )
             elif specific_overlaps := overlaps[ConflictKind.SWAPPABLE_CONFLICT]:
@@ -440,7 +441,7 @@ class AvailabilityManager:
                         application=app,
                         user_game_count=game_count,
                         availability_status=ConflictKind.SWAPPABLE_CONFLICT,
-                        conflicting_roles=[o.role for o in specific_overlaps]
+                        conflicting_roles=[o.role for o in specific_overlaps],
                     )
                 )
             else:
@@ -495,7 +496,8 @@ class AvailabilityManager:
         return [
             t
             for t in self._get_avail_data_for_crew_kind(crew.kind)[user.id]
-            if t.overlaps(entry, self.role_groups) is ConflictKind.NON_SWAPPABLE_CONFLICT
+            if t.overlaps(entry, self.role_groups)
+            is ConflictKind.NON_SWAPPABLE_CONFLICT
         ]
 
     def _get_avail_data_for_crew_kind(
@@ -573,7 +575,9 @@ class AvailabilityManager:
             if ca.role == role:
                 return ca
 
-    def _swap_out_of_assignments(self, user: models.User, crew: models.Crew, role: models.Role) -> None:
+    def _swap_out_of_assignments(
+        self, user: models.User, crew: models.Crew, role: models.Role
+    ) -> None:
         application = self.get_application_for_user(user)
         if application:
             application.move_status_forwards_for_assignment()
@@ -624,10 +628,7 @@ class AvailabilityManager:
             for ca in cas:
                 if avail_entry.crew.kind == models.CrewKind.OVERRIDE_CREW:
                     ca.delete()
-                models.CrewAssignment.objects.create(
-                    role=ca.role, crew=crew, user=None
-                        )
-
+                models.CrewAssignment.objects.create(role=ca.role, crew=crew, user=None)
 
     def set_assignment(
         self,
@@ -652,9 +653,7 @@ class AvailabilityManager:
         # Finally, add the new entry.
         # Note that this might be a null override on top of a static crew,
         # including the case where we're blanking a static crew assignment.
-        _ = models.CrewAssignment.objects.create(
-            role=role, crew=crew, user=user
-        )
+        _ = models.CrewAssignment.objects.create(role=role, crew=crew, user=user)
 
     def set_crew_assignment(
         self,
@@ -667,14 +666,12 @@ class AvailabilityManager:
             models.RoleGroupCrewAssignment.objects.filter(
                 game=game,
                 role_group=role_group,
-            ).exclude(
-                crew__kind=models.CrewKind.OVERRIDE_CREW
-            ).delete()
+            ).exclude(crew__kind=models.CrewKind.OVERRIDE_CREW).delete()
             # 2. Remove any existing override-crew CrewAssignments
             override_crew = models.RoleGroupCrewAssignment.objects.filter(
                 game=game,
                 role_group=role_group,
-                crew__kind=models.CrewKind.OVERRIDE_CREW
+                crew__kind=models.CrewKind.OVERRIDE_CREW,
             ).first()
             assert override_crew
             override_crew.crew_assignments.all().delete()
@@ -695,14 +692,10 @@ class AvailabilityManager:
 
             # 4. Add a new RoleGroupCrewAssignment.
             models.RoleGroupCrewAssignment.objects.create(
-                game=game,
-                role_group=role_group,
-                crew=crew
+                game=game, role_group=role_group, crew=crew
             )
 
             for non_swappable_role in non_swappable:
                 models.CrewAssignment.objects.create(
-                    crew=override_crew,
-                    role=non_swappable_role,
-                    user=None
+                    crew=override_crew, role=non_swappable_role, user=None
                 )
