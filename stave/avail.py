@@ -311,7 +311,10 @@ class AvailabilityManager:
         potential_applications = [
             app
             for app in self.applications
-            if role.name in app.role_names and app.status not in models.CLOSED_STATUSES
+            if (
+                role.name in app.role_names_by_role_group_id()[role.role_group_id]
+                and app.status not in models.CLOSED_STATUSES
+            )
         ]
         return self._filter_for_basic_availability(potential_applications, crew, game)
 
