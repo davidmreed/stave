@@ -1784,6 +1784,8 @@ class Application(models.Model):
     roles: models.ManyToManyField["Application", Role] = models.ManyToManyField(Role)
     status = models.IntegerField(choices=ApplicationStatus.choices)
 
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+
     @property
     def user_visible_status(self) -> ApplicationStatus:
         match self.status:
