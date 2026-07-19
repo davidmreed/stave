@@ -4,11 +4,9 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stave', '0064_alter_league_time_zone'),
-        ('stave', '0064_merge_20260510_1649'),
+        ("stave", "0064_alter_league_time_zone"),
+        ("stave", "0064_merge_20260510_1649"),
     ]
 
-    operations = [
-    ]
+    operations = []
