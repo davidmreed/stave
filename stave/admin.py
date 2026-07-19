@@ -63,7 +63,7 @@ class ApplicationResponseInline(admin.TabularInline):
 
 @admin.register(models.Application)
 class ApplicationAdmin(admin.ModelAdmin):
-    list_display = ("user", "form", "form__event", "status")
+    list_display = ("user", "form", "form__event", "status", "created_at")
     inlines = [ApplicationResponseInline]
 
 
