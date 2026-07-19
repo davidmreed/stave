@@ -2152,7 +2152,9 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
             except UserNotAvailableException:
                 messages.info(
                     request,
-                    _("The selected user is not available for the chosen slot."),
+                    gettext_lazy(
+                        "The selected user is not available for the chosen slot."
+                    ),
                 )
 
             # Redirect the user to the Crew Builder for this crew
