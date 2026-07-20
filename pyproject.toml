@@ -69,6 +69,10 @@ exclude_also = [
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "stave.settings"
+# fluent-compiler emits a lot of Python 3.15 warnings
+filterwarnings = [
+    "ignore::DeprecationWarning:fluent*"
+]
 
 [tool.uv]
 # behave-django 1.7.0 relies on a prerelease version of behave
