@@ -502,6 +502,38 @@ def test_set_assignment__remove_existing(db):
     assert crew.get_assignments_by_role_id()[role.id].user is None
 
 
+def test_set_crew_assignment__assign_crew_over_individual_assignments(db):
+    application = ApplicationFactory(
+        status=models.ApplicationStatus.ASSIGNMENT_PENDING,
+        form__application_kind=models.ApplicationKind.ASSIGN_ONLY,
+    )
+    role = application.roles.first()
+    crew = CrewFactory(
+        kind=models.CrewKind.OVERRIDE_CREW,
+        event=application.form.event,
+        role_group=role.role_group,
+    )
+    static_crew = CrewFactory(
+        kind=models.CrewKind.GAME_CREW,
+        event=application.form.event,
+        role_group=role.role_group,
+    )
+    # Swapping roles requires the Crew have a non-None
+    # get_context()
+    game = GameFactory(event=application.form.event)
+    models.RoleGroupCrewAssignment.objects.create(
+        crew_overrides=crew, game=game, role_group=role.role_group
+    )
+    models.CrewAssignment.objects.create(user=application.user, crew=crew, role=role)
+
+    am = AvailabilityManager.with_application_form(application.form)
+    am.set_crew_assignment(role.role_group, static_crew, game=game)
+
+    # All CrewAssignments from the override crew should be removed
+    # There should be no blanking overrides
+    assert not models.CrewAssignment.objects.filter(crew=crew).exists()
+
+
 def test_set_assignment__swap_roles_override_crew(db):
     application = ApplicationFactory(
         status=models.ApplicationStatus.ASSIGNMENT_PENDING,
