@@ -2,38 +2,98 @@ import functools
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterable
+from typing import Iterable, Generator, Tuple, List
 from uuid import UUID
+import enum
 
+from django.db import transaction
 from django.db.models import Prefetch, QuerySet
 
 from . import models
 
 
+class ConflictKind(enum.Enum):
+    NONE = 1
+    NON_SWAPPABLE_CONFLICT = 2
+    SWAPPABLE_CONFLICT = 3
+
+
+ConflictKind.do_not_call_in_templates = True
+
+
+class UserNotAvailableException(Exception):
+    pass
+
+
+@dataclass
+class ApplicationEntry:
+    application: models.Application
+    user_game_count: int
+    availability_status: ConflictKind
+    conflicting_roles: List[models.Role] | None = None
+
+
 @dataclass
 class UserAvailabilityEntry:
     crew: models.Crew
+    role: models.Role
     # Denormalize these off the crew's Game
     # to avoid excess queries.
     start_time: datetime | None
     end_time: datetime | None
     exclusive: bool
 
-    def overlaps(self, other: "UserAvailabilityEntry") -> bool:
-        if self.crew.kind != other.crew.kind:
-            return False
+    def overlaps(
+        self,
+        other: "UserAvailabilityEntry",
+        swappable_role_groups: set[models.RoleGroup],
+    ) -> ConflictKind:
+        has_times = None not in (
+            self.start_time,
+            self.end_time,
+            other.start_time,
+            other.end_time,
+        )
+        if (
+            self.start_time == other.start_time
+            and self.end_time == other.end_time
+            and self.crew.role_group == other.crew.role_group
+        ):
+            # This is a self-swap: either the same crew entirely,
+            # or an override crew and a static crew assigned to the
+            # same game. That means we need to account for role
+            # exclusiveness: the two roles could be complementary.
+            if self.exclusive and other.exclusive:
+                return ConflictKind.SWAPPABLE_CONFLICT
+            else:
+                return ConflictKind.NONE
+        elif has_times:
+            # This is a comparison between two override crews, which always
+            # have defined start and end times, or between two assigned static crews
+            # or an assigned static crew and an override crew, which will
+            # also have times.
+            time_overlap = (
+                self.start_time < other.end_time and self.end_time > other.start_time
+            )
 
-        if self.crew.id == other.crew.id:
-            return self.exclusive and other.exclusive
+            if time_overlap:
+                if (
+                    other.crew.role_group in swappable_role_groups
+                    or other.crew.role_group == self.crew.role_group
+                ):
+                    return ConflictKind.SWAPPABLE_CONFLICT
+                else:
+                    return ConflictKind.NON_SWAPPABLE_CONFLICT
 
-        match self.crew.kind:
-            case models.CrewKind.OVERRIDE_CREW:
-                time_overlap = (self.start_time < other.end_time) and (
-                    self.end_time > other.start_time
-                )
-                return time_overlap
-            case models.CrewKind.GAME_CREW | models.CrewKind.EVENT_CREW:
-                return True
+        elif self.crew.kind == other.crew.kind:
+            # This comparison is between static crews _without_ assignments
+            # or between event crews. No times involved.
+            if other.crew.role_group in swappable_role_groups:
+                return ConflictKind.SWAPPABLE_CONFLICT
+            else:
+                return ConflictKind.NON_SWAPPABLE_CONFLICT
+
+        return ConflictKind.NONE
 
 
 class ScheduleManager:
@@ -120,7 +180,10 @@ class AvailabilityManager:
             .prefetch_related(
                 "role_groups",
                 "role_groups__roles",
-                Prefetch("applications"),
+                Prefetch(
+                    "applications",
+                    queryset=models.Application.objects.select_related("user"),
+                ),
                 Prefetch(
                     "applications__roles",
                     queryset=models.Role.objects.select_related("role_group"),
@@ -203,6 +266,11 @@ class AvailabilityManager:
 
     @property
     @functools.cache
+    def role_groups(self) -> set[models.RoleGroup]:
+        return set(self.application_form.role_groups.all())
+
+    @property
+    @functools.cache
     def static_crews(self) -> list[models.Crew]:
         return [
             crew
@@ -220,26 +288,30 @@ class AvailabilityManager:
         ]
 
     @property
+    def game_crew_assignments(
+        self,
+    ) -> Generator[Tuple[models.Game, models.CrewAssignment]]:
+        for game in self.application_form.event.games.all():
+            for rgca in game.role_group_crew_assignments.all():
+                for ca in rgca.effective_crew_by_role_id().values():
+                    yield (game, ca)
+
+    @property
     @functools.cache
     def user_availability(self) -> dict[UUID, list[UserAvailabilityEntry]]:
         user_assigned_times_map = defaultdict(list)
 
-        for game in self.application_form.event.games.all():
-            for rgca in game.role_group_crew_assignments.all():
-                effective_crew = rgca.effective_crew_by_role_id().values()
-                for assignment in effective_crew:
-                    # We squash all effective game assignments to appear
-                    # as part of the override crew. This ensures we
-                    # catch conflicts between the assigned static crew
-                    # and the overrides.
-                    user_assigned_times_map[assignment.user_id].append(
-                        UserAvailabilityEntry(
-                            crew=rgca.crew_overrides,
-                            start_time=game.start_time,
-                            end_time=game.end_time,
-                            exclusive=not assignment.role.nonexclusive,
-                        )
+        for game, assignment in self.game_crew_assignments:
+            if assignment.user_id:
+                user_assigned_times_map[assignment.user_id].append(
+                    UserAvailabilityEntry(
+                        crew=assignment.crew,
+                        role=assignment.role,
+                        start_time=game.start_time,
+                        end_time=game.end_time,
+                        exclusive=not assignment.role.nonexclusive,
                     )
+                )
 
         return user_assigned_times_map
 
@@ -271,6 +343,7 @@ class AvailabilityManager:
                 user_event_map[assignment.user_id].append(
                     UserAvailabilityEntry(
                         crew,
+                        assignment.role,
                         None,
                         None,
                         not assignment.role.nonexclusive,
@@ -288,6 +361,7 @@ class AvailabilityManager:
                 user_static_map[assignment.user_id].append(
                     UserAvailabilityEntry(
                         crew,
+                        assignment.role,
                         None,
                         None,
                         not assignment.role.nonexclusive,
@@ -296,11 +370,25 @@ class AvailabilityManager:
 
         return user_static_map
 
+    @property
+    @functools.cache
+    def user_game_counts(self) -> dict[UUID, int]:
+        return {
+            a.user.id: self.get_game_count_for_user(a.user)
+            for a in self.all_applications
+        }
+
     def get_application_counts(
         self, crew: models.Crew, game: models.Game | None, role: models.Role
     ) -> tuple[int, int]:
         return (
-            len(self.get_available_applications(crew, game, role)),
+            len(
+                [
+                    a
+                    for a in self.get_application_entries(crew, game, role)
+                    if a.availability_status is ConflictKind.NONE
+                ]
+            ),
             len(self.get_potential_applications(crew, game, role)),
         )
 
@@ -319,17 +407,113 @@ class AvailabilityManager:
         return self._filter_for_basic_availability(potential_applications, crew, game)
 
     @functools.cache
-    def get_available_applications(
+    def get_application_entries(
         self, crew: models.Crew, game: models.Game | None, role: models.Role
-    ) -> list[models.Application]:
-        return self._filter_for_already_assigned_users(
-            self.get_potential_applications(crew, game, role),
+    ) -> list[ApplicationEntry]:
+        apps = self.get_potential_applications(crew, game, role)
+        avail = self._get_avail_data_for_crew_kind(crew.kind)
+        entries = []
+
+        entry = UserAvailabilityEntry(
             crew,
-            game,
             role,
+            game.start_time if game else None,
+            game.end_time if game else None,
+            not role.nonexclusive,
         )
 
-    # Filter methods MUST NOT hit the database - use only cached data
+        for app in apps:
+            game_count = self.get_game_count_for_user(app.user)
+            overlaps = defaultdict(list)
+            for t in avail[app.user_id]:
+                overlap_kind = t.overlaps(entry, self.role_groups)
+                overlaps[overlap_kind].append(t)
+
+            if specific_overlaps := overlaps[ConflictKind.NON_SWAPPABLE_CONFLICT]:
+                entries.append(
+                    ApplicationEntry(
+                        application=app,
+                        user_game_count=game_count,
+                        availability_status=ConflictKind.NON_SWAPPABLE_CONFLICT,
+                        conflicting_roles=[o.role for o in specific_overlaps],
+                    )
+                )
+            elif specific_overlaps := overlaps[ConflictKind.SWAPPABLE_CONFLICT]:
+                entries.append(
+                    ApplicationEntry(
+                        application=app,
+                        user_game_count=game_count,
+                        availability_status=ConflictKind.SWAPPABLE_CONFLICT,
+                        conflicting_roles=[o.role for o in specific_overlaps],
+                    )
+                )
+            else:
+                entries.append(
+                    ApplicationEntry(
+                        application=app,
+                        user_game_count=game_count,
+                        availability_status=ConflictKind.NONE,
+                    )
+                )
+
+        return entries
+
+    @functools.cache
+    def get_swappable_assignments(
+        self,
+        user: models.User,
+        crew: models.Crew,
+        game: models.Game | None,
+        role: models.Role,
+    ) -> list[UserAvailabilityEntry]:
+        entry = UserAvailabilityEntry(
+            crew,
+            role,
+            game.start_time if game else None,
+            game.end_time if game else None,
+            not role.nonexclusive,
+        )
+
+        return [
+            t
+            for t in self._get_avail_data_for_crew_kind(crew.kind)[user.id]
+            if t.overlaps(entry, self.role_groups) is ConflictKind.SWAPPABLE_CONFLICT
+        ]
+
+    @functools.cache
+    def get_non_swappable_assignments(
+        self,
+        user: models.User,
+        crew: models.Crew,
+        game: models.Game | None,
+        role: models.Role,
+    ) -> list[UserAvailabilityEntry]:
+        entry = UserAvailabilityEntry(
+            crew,
+            role,
+            game.start_time if game else None,
+            game.end_time if game else None,
+            not role.nonexclusive,
+        )
+
+        return [
+            t
+            for t in self._get_avail_data_for_crew_kind(crew.kind)[user.id]
+            if t.overlaps(entry, self.role_groups)
+            is ConflictKind.NON_SWAPPABLE_CONFLICT
+        ]
+
+    def _get_avail_data_for_crew_kind(
+        self, kind: models.CrewKind
+    ) -> dict[UUID, list[UserAvailabilityEntry]]:
+        match kind:
+            case models.CrewKind.OVERRIDE_CREW:
+                return self.user_availability
+            case models.CrewKind.EVENT_CREW:
+                return self.user_event_availability
+            case models.CrewKind.GAME_CREW:
+                return self.user_static_crew_availability
+
     def _filter_for_basic_availability(
         self,
         applications: Iterable[models.Application],
@@ -362,31 +546,154 @@ class AvailabilityManager:
 
         return applications
 
-    def _filter_for_already_assigned_users(
+    def get_application_by_id(self, id: UUID) -> models.Application | None:
+        for application in self.applications:
+            if (
+                application.id == id
+                and application.status != models.ApplicationStatus.WITHDRAWN
+            ):
+                return application
+
+    def get_application_for_user(self, user: models.User) -> models.Application | None:
+        for application in self.applications:
+            if (
+                application.user == user
+                and application.status != models.ApplicationStatus.WITHDRAWN
+            ):
+                return application
+
+    def get_application_for_assignment(
+        self, assignment: models.CrewAssignment
+    ) -> models.Application | None:
+        # There should be exactly one or zero non-withdrawn applications for this user.
+        if assignment.user:
+            return self.get_application_for_user(assignment.user)
+
+    def get_assignment(
         self,
-        applications: Iterable[models.Application],
-        crew: models.Crew,
-        game: models.Game | None,
         role: models.Role,
-    ) -> Iterable[models.Application]:
-        entry = UserAvailabilityEntry(
-            crew,
-            game.start_time if game else None,
-            game.end_time if game else None,
-            not role.nonexclusive,
-        )
+        crew: models.Crew,
+    ) -> models.CrewAssignment | None:
+        for ca in crew.assignments.all():
+            if ca.role == role:
+                return ca
 
-        match crew.kind:
-            case models.CrewKind.OVERRIDE_CREW:
-                avail = self.user_availability
-            case models.CrewKind.EVENT_CREW:
-                avail = self.user_event_availability
-            case models.CrewKind.GAME_CREW:
-                avail = self.user_static_crew_availability
+    def _swap_out_of_assignments(
+        self, user: models.User, crew: models.Crew, role: models.Role
+    ) -> None:
+        application = self.get_application_for_user(user)
+        if application:
+            application.move_status_forwards_for_assignment()
+        else:
+            raise UserNotAvailableException("There is no application for user")
 
-        return list(
-            filter(
-                lambda app: not any(t.overlaps(entry) for t in avail[app.user_id]),
-                applications,
-            )
+        old_availability_entries = self.get_swappable_assignments(
+            user, crew, crew.get_context(), role
         )
+        for avail_entry in old_availability_entries:
+            # This UserAvailabilityEntry might come from a direct assignment
+            # or from a static crew assignment; there are different ways
+            # to replace those.
+            # FIXME: could we get back a static crew entry when we are blanking
+            # an override?
+            match avail_entry.crew.kind:
+                case models.CrewKind.GAME_CREW | models.CrewKind.EVENT_CREW:
+                    keep_nonexclusive = (
+                        # Swap within a crew
+                        avail_entry.crew == crew
+                        # Swap from a static crew to an override crew in the same context
+                        or avail_entry.crew.get_context() == crew.get_context()
+                    )
+                case models.CrewKind.OVERRIDE_CREW:
+                    # If we're reassigning within the same crew,
+                    # just remove exclusive roles; otherwise, all roles.
+                    keep_nonexclusive = avail_entry.crew == crew
+
+            # This is a set, not a list, because when we're overriding a static crew
+            # assignment, we'll get back a CrewAssignment for every game that the
+            # static crew is assigned to from game_crew_assignments
+            cas = {
+                ca
+                for (_, ca) in self.game_crew_assignments
+                if (ca.crew == avail_entry.crew and ca.user == user)
+            }
+            if keep_nonexclusive:
+                cas = {ca for ca in cas if not ca.role.nonexclusive}
+
+            # Add an overriding CrewAssignment to blank for each relevant
+            # assignment. This ensures that, if we are removing an override
+            # crew assignment, any underlying static crew member is not
+            # silently re-staffed into this role.
+            # If this is an override crew, also delete the original CrewAssignment.
+            #
+            # Note that `crew` is not necessarily `avail_entry.crew`.
+            # If the latter is a static crew, the former is an override crew.
+            for ca in cas:
+                if avail_entry.crew.kind == models.CrewKind.OVERRIDE_CREW:
+                    ca.delete()
+                models.CrewAssignment.objects.create(role=ca.role, crew=crew, user=None)
+
+    def set_assignment(
+        self,
+        role: models.Role,
+        crew: models.Crew,
+        user: models.User | None,
+    ) -> None:
+        with transaction.atomic():
+            # Regardless of the "to" side of this assignment,
+            # we need to remove any existing assignment.
+            existing_assignment = self.get_assignment(role, crew)
+            if existing_assignment:
+                application = self.get_application_for_assignment(existing_assignment)
+                existing_assignment.delete()
+                if application:
+                    application.move_status_backwards_for_unassignment()
+
+            # If necessary, swap the new user out of their existing assignments.
+            if user:
+                self._swap_out_of_assignments(user, crew, role)
+
+        # Finally, add the new entry.
+        # Note that this might be a null override on top of a static crew,
+        # including the case where we're blanking a static crew assignment.
+        _ = models.CrewAssignment.objects.create(role=role, crew=crew, user=user)
+
+    def set_crew_assignment(
+        self,
+        role_group: models.RoleGroup,
+        crew: models.Crew,
+        game: models.Game,
+    ) -> None:
+        with transaction.atomic():
+            # 1. Locate the existing RoleGroupCrewAssignment and remove any static crew.
+            existing_crew_assignment = models.RoleGroupCrewAssignment.objects.filter(
+                game=game,
+                role_group=role_group,
+            ).first()
+            existing_crew_assignment.crew = None
+            # 2. Remove any existing override-crew CrewAssignments
+            existing_crew_assignment.crew_overrides.assignments.all().delete()
+
+            # 3. Check whether any members of the crew are unavailable.
+            #   a. if swappable, swap them out of their existing assignments.
+            #   b. if not swappable, override them to a blank.
+            non_swappable = []
+
+            for ca in crew.assignments.all():
+                user = ca.user
+                role = ca.role
+                self._swap_out_of_assignments(user, crew, role)
+                if self.get_non_swappable_assignments(
+                    user, crew, crew.get_context(), role
+                ):
+                    non_swappable.append(role)
+
+            for non_swappable_role in non_swappable:
+                models.CrewAssignment.objects.create(
+                    crew=existing_crew_assignment.override_crew,
+                    role=non_swappable_role,
+                    user=None,
+                )
+
+            # 4. Save the RoleGroupCrewAssignment.
+            existing_crew_assignment.save()
