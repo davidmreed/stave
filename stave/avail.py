@@ -662,26 +662,21 @@ class AvailabilityManager:
         game: models.Game,
     ) -> None:
         with transaction.atomic():
-            # 1. Remove any existing RoleGroupCrewAssignments other than the override crew.
-            models.RoleGroupCrewAssignment.objects.filter(
+            # 1. Locate the existing RoleGroupCrewAssignment and remove any static crew.
+            existing_crew_assignment = models.RoleGroupCrewAssignment.objects.filter(
                 game=game,
                 role_group=role_group,
-            ).exclude(crew__kind=models.CrewKind.OVERRIDE_CREW).delete()
-            # 2. Remove any existing override-crew CrewAssignments
-            override_crew = models.RoleGroupCrewAssignment.objects.filter(
-                game=game,
-                role_group=role_group,
-                crew__kind=models.CrewKind.OVERRIDE_CREW,
             ).first()
-            assert override_crew
-            override_crew.crew_assignments.all().delete()
+            existing_crew_assignment.crew = None
+            # 2. Remove any existing override-crew CrewAssignments
+            existing_crew_assignment.crew_overrides.assignments.all().delete()
 
             # 3. Check whether any members of the crew are unavailable.
             #   a. if swappable, swap them out of their existing assignments.
             #   b. if not swappable, override them to a blank.
             non_swappable = []
 
-            for ca in crew.crew_assignments.all():
+            for ca in crew.assignments.all():
                 user = ca.user
                 role = ca.role
                 self._swap_out_of_assignments(user, crew, role)
@@ -690,12 +685,12 @@ class AvailabilityManager:
                 ):
                     non_swappable.append(role)
 
-            # 4. Add a new RoleGroupCrewAssignment.
-            models.RoleGroupCrewAssignment.objects.create(
-                game=game, role_group=role_group, crew=crew
-            )
-
             for non_swappable_role in non_swappable:
                 models.CrewAssignment.objects.create(
-                    crew=override_crew, role=non_swappable_role, user=None
+                    crew=existing_crew_assignment.override_crew,
+                    role=non_swappable_role,
+                    user=None,
                 )
+
+            # 4. Save the RoleGroupCrewAssignment.
+            existing_crew_assignment.save()
