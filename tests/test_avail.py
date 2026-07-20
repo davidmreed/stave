@@ -338,12 +338,12 @@ def test_availability_manager__applications_by_status(db):
     application_form = ApplicationFormFactory()
     for status in models.ApplicationStatus:
         for _ in range(3):
-            ApplicationFactory(application_form=application_form, status=status)
+            ApplicationFactory(form=application_form, status=status)
 
     am = AvailabilityManager.with_application_form(application_form)
     by_status = am.applications_by_status
 
-    assert by_status.keys() == list(models.ApplicationStatus)
+    assert list(by_status.keys()) == list(models.ApplicationStatus)
     assert all(len(v) == 3 for v in by_status.values())
 
 
@@ -423,7 +423,7 @@ def test_game_counts_by_user(): ...
 
 
 def test_get_application_counts(): ...
-def test_get_all_applications(): ...
+def test_get_potential_applications(): ...
 
 
 def test_get_application_entries(): ...
