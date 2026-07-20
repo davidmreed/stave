@@ -180,7 +180,10 @@ class AvailabilityManager:
             .prefetch_related(
                 "role_groups",
                 "role_groups__roles",
-                Prefetch("applications"),
+                Prefetch(
+                    "applications",
+                    queryset=models.Application.objects.select_related("user"),
+                ),
                 Prefetch(
                     "applications__roles",
                     queryset=models.Role.objects.select_related("role_group"),

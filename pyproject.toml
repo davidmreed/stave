@@ -74,9 +74,9 @@ filterwarnings = [
     # fluent-compiler emits a lot of Python 3.15 warnings
     "ignore::DeprecationWarning:fluent*",
     # N+1s are fine _if_ they take place inside a factory
-    "ignore:N+1::tests.factories",
-    # ... but otherwise are errors.
-    "error:N+1",
+    "ignore:.*N\\+1.*tests/factories:UserWarning",
+    # ... but _not_ in application code.
+    "error:.*N\\+1.*stave/stave:UserWarning",
 ]
 
 [tool.uv]
