@@ -562,7 +562,7 @@ def test_set_assignment__replace_existing(db):
     assert other_application.status == models.ApplicationStatus.ASSIGNMENT_PENDING
 
 
-def test_set_assignment__remove_existing(db):
+def test_set_assignment__removes_existing_assignment(db):
     application = ApplicationFactory(
         status=models.ApplicationStatus.ASSIGNMENT_PENDING,
         form__application_kind=models.ApplicationKind.ASSIGN_ONLY,
@@ -612,7 +612,8 @@ def test_set_crew_assignment__assign_crew_over_individual_assignments(db):
     assert not models.CrewAssignment.objects.filter(crew=crew).exists()
 
 
-def test_set_assignment__swap_roles_override_crew(db):
+def test_set_assignment__swap_roles_one_to_one_on_override_crew(db):
+    # Arrange
     application = ApplicationFactory(
         status=models.ApplicationStatus.ASSIGNMENT_PENDING,
         form__application_kind=models.ApplicationKind.ASSIGN_ONLY,
@@ -640,9 +641,11 @@ def test_set_assignment__swap_roles_override_crew(db):
         user=other_application.user, crew=crew, role=other_role
     )
 
+    # Act
     am = AvailabilityManager.with_application_form(application.form)
     am.set_assignment(role, crew, other_application.user)
 
+    # Assert
     assert not models.CrewAssignment.objects.filter(user=application.user).exists()
     application.refresh_from_db()
     assert application.status == models.ApplicationStatus.APPLIED
@@ -652,7 +655,115 @@ def test_set_assignment__swap_roles_override_crew(db):
     assert crew.get_assignments_by_role_id()[other_role.id].user is None
 
 
-def test_set_assignment__swap_roles_static_crew_to_override_crew(db): ...
+def test_set_assignment__swap_roles_one_to_one_on_override_crew_with_nonexclusive(db):
+    # Arrange
+    application = ApplicationFactory(
+        status=models.ApplicationStatus.ASSIGNMENT_PENDING,
+        form__application_kind=models.ApplicationKind.ASSIGN_ONLY,
+    )
+    role = application.roles.first()
+    other_role = RoleFactory(role_group=role.role_group)
+    nonexclusive_role = RoleFactory(role_group=role.role_group)
+    other_application = ApplicationFactory(
+        form=application.form,
+        status=models.ApplicationStatus.ASSIGNMENT_PENDING,
+        roles=[role, other_role],
+    )
+    crew = CrewFactory(
+        kind=models.CrewKind.OVERRIDE_CREW,
+        event=application.form.event,
+        role_group=role.role_group,
+    )
+    # Swapping roles requires the Crew have a non-None
+    # get_context()
+    game = GameFactory(event=application.form.event)
+    models.RoleGroupCrewAssignment.objects.create(
+        crew_overrides=crew, game=game, role_group=role.role_group
+    )
+    models.CrewAssignment.objects.create(user=application.user, crew=crew, role=role)
+    models.CrewAssignment.objects.create(
+        user=other_application.user, crew=crew, role=other_role
+    )
+    models.CrewAssignment.objects.create(
+        user=other_application.user, crew=crew, role=nonexclusive_role
+    )
+
+    # Act
+    am = AvailabilityManager.with_application_form(application.form)
+    breakpoint()
+    am.set_assignment(role, crew, other_application.user)
+
+    # Assert
+    assert not models.CrewAssignment.objects.filter(user=application.user).exists()
+    application.refresh_from_db()
+    assert application.status == models.ApplicationStatus.APPLIED
+    other_application.refresh_from_db()
+    assert other_application.status == models.ApplicationStatus.ASSIGNMENT_PENDING
+    assert crew.get_assignments_by_role_id()[role.id].user == other_application.user
+    assert (
+        crew.get_assignments_by_role_id()[nonexclusive_role.id].user
+        == other_application.user
+    )
+    assert crew.get_assignments_by_role_id()[other_role.id].user is None
+
+
+def test_set_assignment__swap_roles_static_crew_to_override_crew(db):
+    # Arrange
+    application = ApplicationFactory(
+        status=models.ApplicationStatus.ASSIGNMENT_PENDING,
+        form__application_kind=models.ApplicationKind.ASSIGN_ONLY,
+    )
+    role = application.roles.first()
+    other_role = RoleFactory(role_group=role.role_group)
+    other_application = ApplicationFactory(
+        form=application.form,
+        status=models.ApplicationStatus.ASSIGNMENT_PENDING,
+        roles=[role, other_role],
+    )
+    crew = CrewFactory(
+        kind=models.CrewKind.OVERRIDE_CREW,
+        event=application.form.event,
+        role_group=role.role_group,
+    )
+    static_crew = CrewFactory(
+        kind=models.CrewKind.GAME_CREW,
+        event=application.form.event,
+        role_group=role.role_group,
+    )
+    # Swapping roles requires the Crew have a non-None
+    # get_context()
+    game = GameFactory(event=application.form.event)
+    models.RoleGroupCrewAssignment.objects.create(
+        crew_overrides=crew, crew=static_crew, game=game, role_group=role.role_group
+    )
+    models.CrewAssignment.objects.create(user=application.user, crew=crew, role=role)
+    models.CrewAssignment.objects.create(
+        user=other_application.user, crew=static_crew, role=other_role
+    )
+
+    # Act
+    am = AvailabilityManager.with_application_form(application.form)
+    am.set_assignment(role, crew, other_application.user)
+
+    # Assert
+    # Original assignee is unassigned
+    assert not models.CrewAssignment.objects.filter(user=application.user).exists()
+    application.refresh_from_db()
+    assert application.status == models.ApplicationStatus.APPLIED
+    # New assignee is in the correct status
+    other_application.refresh_from_db()
+    assert other_application.status == models.ApplicationStatus.ASSIGNMENT_PENDING
+    # New assignee is assigned on the override crew
+    assert crew.get_assignments_by_role_id()[role.id].user == other_application.user
+    # A blank CrewAssignment covers their role on the static crew.
+    assert crew.get_assignments_by_role_id()[other_role.id].user is None
+    # Their assignment on the static crew is unchanged.
+    assert (
+        static_crew.get_assignments_by_role_id()[other_role.id].user
+        == other_application.user
+    )
+
+
 def test_set_assignment__swap_roles_static_crew_to_blank(db): ...
 def test_set_assignment__swap_roles_event_crew(db): ...
 
