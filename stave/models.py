@@ -593,17 +593,23 @@ class Crew(models.Model):
     role_group_override_assignments: models.Manager["RoleGroupCrewAssignment"]
 
     def get_assignments_by_role_id(self) -> dict[uuid.UUID, "CrewAssignment"]:
-        return {assignment.role_id: assignment for assignment in self.assignments.all()}
+        if not hasattr(self, "_assignments_by_role_id_cache"):
+            self._assignments_by_role_id_cache = {
+                assignment.role_id: assignment for assignment in self.assignments.all()
+            }
+        return self._assignments_by_role_id_cache
 
     def get_context(self) -> "None | Game | Event":
-        if erga := self.event_role_group_assignments.first():
-            return erga.event
-        elif rga := self.role_group_assignments.first():
-            return rga.game
-        elif rgoa := self.role_group_override_assignments.first():
-            return rgoa.game
-
-        return None
+        if not hasattr(self, "_get_context_cache"):
+            if erga := self.event_role_group_assignments.first():
+                self._get_context_cache = erga.event
+            elif rga := self.role_group_assignments.first():
+                self._get_context_cache = rga.game
+            elif rgoa := self.role_group_override_assignments.first():
+                self._get_context_cache = rgoa.game
+            else:
+                self._get_context_cache = None
+        return self._get_context_cache
 
     def __str__(self) -> str:
         return self.name

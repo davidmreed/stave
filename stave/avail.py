@@ -503,6 +503,30 @@ class AvailabilityManager:
             is ConflictKind.NON_SWAPPABLE_CONFLICT
         ]
 
+    def get_any_conflict_assignments(
+        self,
+        user: models.User,
+        crew: models.Crew,
+        game: models.Game | None,
+        role: models.Role,
+    ) -> list[UserAvailabilityEntry]:
+        """Get all assignments that conflict with the given role/crew/game,
+        including both swappable and non-swappable conflicts.
+        """
+        entry = UserAvailabilityEntry(
+            crew,
+            role,
+            game.start_time if game else None,
+            game.end_time if game else None,
+            not role.nonexclusive,
+        )
+
+        return [
+            t
+            for t in self._get_avail_data_for_crew_kind(crew.kind)[user.id]
+            if t.overlaps(entry, self.role_groups) is not ConflictKind.NONE
+        ]
+
     def _get_avail_data_for_crew_kind(
         self, kind: models.CrewKind
     ) -> dict[UUID, list[UserAvailabilityEntry]]:
@@ -615,8 +639,17 @@ class AvailabilityManager:
             cas = {
                 ca
                 for (_, ca) in self.game_crew_assignments
-                if (ca.crew == avail_entry.crew and ca.user == user)
+                if (
+                    ca.crew == avail_entry.crew
+                    and ca.user == user
+                    and ca.pk is not None
+                )
             }
+            # Also include direct crew assignments for event crews (which aren't in game_crew_assignments)
+            if avail_entry.crew.kind == models.CrewKind.EVENT_CREW:
+                for ca in avail_entry.crew.assignments.all():
+                    if ca.user == user and ca.pk is not None:
+                        cas.add(ca)
             if keep_nonexclusive:
                 cas = {ca for ca in cas if not ca.role.nonexclusive}
 
@@ -624,14 +657,28 @@ class AvailabilityManager:
             # assignment. This ensures that, if we are removing an override
             # crew assignment, any underlying static crew member is not
             # silently re-staffed into this role.
-            # If this is an override crew, also delete the original CrewAssignment.
+            # If this is an override crew being overridden by a different crew,
+            # also delete the original CrewAssignment.
             #
             # Note that `crew` is not necessarily `avail_entry.crew`.
             # If the latter is a static crew, the former is an override crew.
             for ca in cas:
-                if avail_entry.crew.kind == models.CrewKind.OVERRIDE_CREW:
+                if (
+                    avail_entry.crew.kind == models.CrewKind.OVERRIDE_CREW
+                    and avail_entry.crew != crew
+                ):
+                    # Override crew being replaced by a different crew - delete original
                     ca.delete()
-                models.CrewAssignment.objects.create(role=ca.role, crew=crew, user=None)
+                elif avail_entry.crew == crew:
+                    # Swapping within the same crew (event crew, static crew, or override crew):
+                    # update the existing assignment to blank instead of creating
+                    # a new one (which would violate unique constraint).
+                    ca.user = None
+                    ca.save()
+                else:
+                    models.CrewAssignment.objects.create(
+                        role=ca.role, crew=crew, user=None
+                    )
 
     def set_assignment(
         self,
@@ -658,6 +705,42 @@ class AvailabilityManager:
         # including the case where we're blanking a static crew assignment.
         _ = models.CrewAssignment.objects.create(role=role, crew=crew, user=user)
 
+        # If this is a static crew (GAME_CREW) and we're assigning a user (not blanking),
+        # check override crews that use this static crew. If the user is not available
+        # for a specific game context, create a blank override to prevent them from
+        # being silently re-staffed.
+        if crew.kind == models.CrewKind.GAME_CREW and user:
+            self._ensure_blank_overrides_for_static_crew_assignment(crew, role, user)
+
+    def _ensure_blank_overrides_for_static_crew_assignment(
+        self, static_crew: models.Crew, role: models.Role, user: models.User
+    ) -> None:
+        """For each override crew that uses this static crew, check if the assigned
+        user is available for that game context. If not available (any conflict),
+        create a blank assignment on the override crew to prevent the user from being silently
+        re-staffed from the static crew.
+        """
+        # Find all RoleGroupCrewAssignments that reference this static crew
+        for rgca in static_crew.role_group_assignments.all():
+            if rgca.crew_overrides:
+                override_crew = rgca.crew_overrides
+                game = rgca.game
+                # Check if user has any conflicts for this game/role
+                conflicts = self.get_any_conflict_assignments(
+                    user, override_crew, game, role
+                )
+                if conflicts:
+                    # User has a conflict for this game - create blank override
+                    existing_blank = override_crew.assignments.filter(
+                        role=role, user=None
+                    ).first()
+                    if not existing_blank:
+                        models.CrewAssignment.objects.create(
+                            crew=override_crew,
+                            role=role,
+                            user=None,
+                        )
+
     def set_crew_assignment(
         self,
         role_group: models.RoleGroup,
@@ -670,27 +753,49 @@ class AvailabilityManager:
                 game=game,
                 role_group=role_group,
             ).first()
+            static_crew = existing_crew_assignment.crew
             existing_crew_assignment.crew = None
             # 2. Remove any existing override-crew CrewAssignments
-            existing_crew_assignment.crew_overrides.assignments.all().delete()
+            if existing_crew_assignment.crew_overrides:
+                existing_crew_assignment.crew_overrides.assignments.all().delete()
 
-            # 3. Check whether any members of the crew are unavailable.
+            # 3. Check whether any members of the static crew are unavailable.
             #   a. if swappable, swap them out of their existing assignments.
-            #   b. if not swappable, override them to a blank.
+            #   b. if not swappable, override them to a blank on the new override crew.
             non_swappable = []
 
-            for ca in crew.assignments.all():
-                user = ca.user
-                role = ca.role
-                self._swap_out_of_assignments(user, crew, role)
-                if self.get_non_swappable_assignments(
-                    user, crew, crew.get_context(), role
-                ):
-                    non_swappable.append(role)
+            if static_crew:
+                for ca in static_crew.assignments.all():
+                    user = ca.user
+                    role = ca.role
+                    self._swap_out_of_assignments(user, crew, role)
+                    if self.get_non_swappable_assignments(
+                        user, crew, crew.get_context(), role
+                    ):
+                        non_swappable.append(role)
+
+            # Set the override crew on the RoleGroupCrewAssignment
+            existing_crew_assignment.crew_overrides = crew
+
+            # Create blank assignments on the new override crew for all roles
+            # that have assignments on the static crew. This prevents the
+            # static crew members from being silently re-staffed.
+            if static_crew:
+                for ca in static_crew.assignments.all():
+                    # Only create blank if there isn't already one (from non-swappable handling)
+                    existing_blank = crew.assignments.filter(
+                        role=ca.role, user=None
+                    ).first()
+                    if not existing_blank:
+                        models.CrewAssignment.objects.create(
+                            crew=crew,
+                            role=ca.role,
+                            user=None,
+                        )
 
             for non_swappable_role in non_swappable:
                 models.CrewAssignment.objects.create(
-                    crew=existing_crew_assignment.override_crew,
+                    crew=crew,
                     role=non_swappable_role,
                     user=None,
                 )
