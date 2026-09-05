@@ -630,10 +630,8 @@ def test_get_game_count_for_user(db):
     assert am.get_game_count_for_user(user) == 2
     assert am.get_game_count_for_user(user2) == 0
 
-    assert am.game_counts_by_user == {
-        user.id: 2,
-        user2.id: 0
-    }
+    assert am.game_counts_by_user == {user.id: 2, user2.id: 0}
+
 
 def test_get_application_counts_and_get_potential_applications(db):
     application_form = ApplicationFormFactory(
@@ -671,6 +669,7 @@ def test_get_application_counts_and_get_potential_applications(db):
     assert len(
         am.get_potential_applications(crew, game, role_group.roles.first())
     ) == len(models.IN_PROGRESS_STATUSES)
+
 
 def test_get_application_entries(db):
     application_form = ApplicationFormFactory(
@@ -739,6 +738,7 @@ def test_get_swappable_assignments(db):
     assert swappable_same[0].role == role1
 
     # TODO: expand this test.
+
 
 def test_get_application_for_user(db):
     application = ApplicationFactory(
@@ -919,6 +919,7 @@ def test_set_crew_assignment__assign_crew_over_individual_assignments(db):
     # All CrewAssignments from the override crew should be removed
     # There should be no blanking overrides
     assert not models.CrewAssignment.objects.filter(crew=crew).exists()
+
 
 def test_set_crew_assignment__assign_crew_with_unavailable_member_blanks(db):
     application = ApplicationFactory(
