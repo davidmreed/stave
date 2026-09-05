@@ -593,17 +593,23 @@ class Crew(models.Model):
     role_group_override_assignments: models.Manager["RoleGroupCrewAssignment"]
 
     def get_assignments_by_role_id(self) -> dict[uuid.UUID, "CrewAssignment"]:
-        return {assignment.role_id: assignment for assignment in self.assignments.all()}
+        if not hasattr(self, "_assignments_by_role_id_cache"):
+            self._assignments_by_role_id_cache = {
+                assignment.role_id: assignment for assignment in self.assignments.all()
+            }
+        return self._assignments_by_role_id_cache
 
     def get_context(self) -> "None | Game | Event":
-        if erga := self.event_role_group_assignments.first():
-            return erga.event
-        elif rga := self.role_group_assignments.first():
-            return rga.game
-        elif rgoa := self.role_group_override_assignments.first():
-            return rgoa.game
-
-        return None
+        if not hasattr(self, "_get_context_cache"):
+            if erga := self.event_role_group_assignments.first():
+                self._get_context_cache = erga.event
+            elif rga := self.role_group_assignments.first():
+                self._get_context_cache = rga.game
+            elif rgoa := self.role_group_override_assignments.first():
+                self._get_context_cache = rgoa.game
+            else:
+                self._get_context_cache = None
+        return self._get_context_cache
 
     def __str__(self) -> str:
         return self.name
@@ -619,7 +625,9 @@ class CrewAssignmentQuerySet(models.QuerySet["CrewAssignment"]):
 class CrewAssignment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     crew = models.ForeignKey(Crew, related_name="assignments", on_delete=models.CASCADE)
-    user = models.ForeignKey(User, related_name="crews", on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        User, related_name="crews", on_delete=models.CASCADE, null=True, blank=True
+    )
     role = models.ForeignKey(
         Role, related_name="crew_assignments", on_delete=models.CASCADE
     )
@@ -1973,6 +1981,37 @@ class Application(models.Model):
                     pass
 
         return states
+
+    def move_status_backwards_for_unassignment(self):
+        if not self.has_assignments():
+            # Reset its status appropriately.
+            if self.status == ApplicationStatus.ASSIGNMENT_PENDING:
+                if self.form.application_kind == ApplicationKind.CONFIRM_THEN_ASSIGN:
+                    self.status = ApplicationStatus.CONFIRMED
+                else:
+                    self.status = ApplicationStatus.APPLIED
+            elif self.status == ApplicationStatus.INVITATION_PENDING:
+                self.status = ApplicationStatus.APPLIED
+            self.save()
+
+    def move_status_forwards_for_assignment(self):
+        # Update the status of the application
+        if self.form.application_kind == ApplicationKind.ASSIGN_ONLY:
+            # Note that this sends apps in ASSIGNED status backwards,
+            # so they'll get an update email.
+            self.status = ApplicationStatus.ASSIGNMENT_PENDING
+        else:
+            # for CONFIRM_THEN_ASSIGN events, our status update depends on the current status as well.
+            match self.status:
+                case ApplicationStatus.APPLIED:
+                    self.status = ApplicationStatus.INVITATION_PENDING
+                case ApplicationStatus.CONFIRMED:
+                    self.status = ApplicationStatus.ASSIGNMENT_PENDING
+                case _:
+                    # All other cases do not update.
+                    pass
+
+        self.save()
 
 
 class ApplicationResponse(models.Model):

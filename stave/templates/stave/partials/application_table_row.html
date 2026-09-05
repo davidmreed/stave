@@ -1,20 +1,20 @@
 {% load stave_tags %}
 {% inputs 'ApplicationTableRowInputs' %}
-<td><small>{{ application.get_status_display }}</small></td>
+<td><small>{{ entry.application.get_status_display }}</small></td>
 <td>{% if application.created_at %}<small>{{ application.created_at|date:"Y-m-d" }}</small>{% endif %}</td>
-<td><small>{{ game_count }}</small></td>
+<td><small>{{ entry.user_game_count }}</small></td>
 {# Profile fields #}
-{% for field in application.form.requires_profile_fields %}
+{% for field in form.requires_profile_fields %}
 <td>
     <small>
     {% if field == "game_history_url" %}
-    {% with url=application.get_user_data|get:field|valid_url %}
+    {% with url=entry.application.get_user_data|get:field|valid_url %}
     {% if url %}
     <a href="{{ url }}" target="_blank">
         Open
     </a>
     {% else %}
-    {{ url }}
+    <code>{{ url }}</code>
     {% endif %}
     {% endwith %}
     {% elif field == "email" %}
@@ -22,7 +22,7 @@
         <abbr title="Send Email">✉️</abbr>
     </a>
     {% else %}
-    {% with text=application.get_user_data|get:field %}
+    {% with text=entry.application.get_user_data|get:field %}
     {% include "stave/partials/abbrev.html" with text=text only %}
     {% endwith %}
     {% endif %}
@@ -30,10 +30,10 @@
 </td>
 {% endfor %}
 {# Roles #}
-{% for role_group in application.form.role_groups.all %}
+{% for role_group in form.role_groups.all %}
     <td>
         <small>
-        {% for role in application.roles.all %}
+        {% for role in entry.application.roles.all %}
             {% if role.role_group_id == role_group.id %}
                 {{ role }}
             {% endif %}
@@ -45,10 +45,10 @@
 {% if form.application_availability_kind == form.ApplicationAvailabilityKind.BY_DAY %}
 <td>
     <small>
-    {% if form.event.days|length == application.availability_by_day|length %}
+    {% if form.event.days|length == entry.application.availability_by_day|length %}
     All days
     {% elif form.event.days|length <= 3 %}
-    {% for day in application.availability_by_day %}
+    {% for day in entry.application.availability_by_day %}
     {{ day|as_date|date:"D" }}.{% if not forloop.last %},{% endif %}
     {% endfor %}
     only
@@ -59,7 +59,7 @@
                 {{ application.availability_by_day|length }}/{{ form.event.days|length }}
             </span>
         </summary>
-        {% for day in application.availability_by_day %}
+        {% for day in entry.application.availability_by_day %}
         {{ day }}{% if not forloop.last %},{% endif %}
         {% endfor %}
     </details>
@@ -69,11 +69,11 @@
 {% elif form.application_availability_kind == form.ApplicationAvailabilityKind.BY_GAME %}
 <td>
     <small>
-    {% if form.games|length == application.availability_by_game.all|length %}
+    {% if form.games|length == entry.application.availability_by_game.all|length %}
     All games
     {% elif form.games|length <= 3 %}
-        Game{% if application.availability_by_game.all|length > 1 %}s{% endif %}
-        {% for game in application.availability_by_game.all %}
+        Game{% if entry.application.availability_by_game.all|length > 1 %}s{% endif %}
+        {% for game in entry.application.availability_by_game.all %}
          {{ game.order_key }}{% if not forloop.last %},{% endif %}
         {% endfor %}
         only
@@ -81,10 +81,10 @@
     <details>
         <summary>
             <span>
-                {{ application.availability_by_game.all|length }}/{{ form.games|length }}
+                {{ entry.application.availability_by_game.all|length }}/{{ form.games|length }}
             </span>
         </summary>
-        {% for game in application.availability_by_game.all %}
+        {% for game in entry.application.availability_by_game.all %}
         Game {{ game.order_key }}{% if not forloop.last %},<br>{% endif %}
         {% endfor %}
     </details>
@@ -94,7 +94,7 @@
 {% endif %}
 {# Application questions #}
 {% for question in form.form_questions.all %}
-    {% with response=application.responses_by_question|get:question.id %}
+    {% with response=entry.application.responses_by_question|get:question.id %}
         <td>
             <small>
             {% include "stave/partials/abbrev.html" with text=response only %}
