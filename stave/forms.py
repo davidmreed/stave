@@ -1348,7 +1348,7 @@ class EventCreateUpdateForm(ParentChildForm):
             new_order_key = index + 1
             if game_form.instance.order_key != new_order_key:
                 game_form.cleaned_data["order_key"] = game_form.instance.order_key = (
-                    index + 1
+                    new_order_key
                 )
                 # force super to save this form, even if the user did not
                 # edit it.
