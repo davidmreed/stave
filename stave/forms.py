@@ -1,4 +1,5 @@
 import copy
+import datetime
 from typing import Tuple
 import zoneinfo
 
@@ -1334,6 +1335,7 @@ class EventCreateUpdateForm(ParentChildForm):
         self.parent_form.instance.league = self.league
 
         # Renumber games.
+        missing_start_time = datetime.datetime(3000, 1, 1, tzinfo=datetime.timezone.utc)
         for index, game_form in enumerate(
             sorted(
                 [
@@ -1342,7 +1344,7 @@ class EventCreateUpdateForm(ParentChildForm):
                     if game_form.cleaned_data.get(DELETION_FIELD_NAME) != "on"
                     and game_form.cleaned_data.get(DELETION_FIELD_NAME) is not True
                 ],
-                key=lambda f: f.cleaned_data.get("start_time"),
+                key=lambda f: f.cleaned_data.get("start_time", missing_start_time),
             )
         ):
             new_order_key = index + 1
