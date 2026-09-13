@@ -3,6 +3,9 @@
 {% load markdownify stave_tags %}
 
 {% block actions %}
+{% if user|can_manage_league_events:item %}
+<a role="button" href="{% url 'event-create' item.slug %}">Create Event</a>
+{% endif %}
 {% if user|can_manage_league:item %}
 <a role="button" href="{% url 'league-edit' item.slug %}">Edit</a>
 {% endif %}
