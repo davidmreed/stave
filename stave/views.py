@@ -379,13 +379,11 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         object_ = self.get_object(request, **kwargs)
-        form = self.get_form(instance=object_)
+        self.form = self.get_form(instance=object_)
 
         # On a GET, we can process adds but not deletes.
         if request.GET.get("action") == "add":
-            form.add_child_form()
-
-        self.form = form
+            self.form.add_child_form()
 
         return render(
             request,
@@ -1085,6 +1083,9 @@ class EventCreateUpdateView(
             models.League.objects.event_manageable(self.request.user),
             slug=self.kwargs.get("league_slug"),
         )
+        template = None
+        initial = None
+        game_template_initial = None
 
         if template_id := self.kwargs.get("template_id"):
             template = get_object_or_404(league.event_templates.all(), id=template_id)
@@ -1135,11 +1136,6 @@ class EventCreateUpdateView(
                         "kind": game_template.kind,
                     }
                 )
-
-        else:
-            template = None
-            initial = None
-            game_template_initial = None
 
         return forms.EventCreateUpdateForm(
             league=league,
