@@ -795,6 +795,7 @@ class EventQuerySet(models.QuerySet["Event"]):
             .prefetch_related(
                 Prefetch("crews__assignments", queryset=crew_assignment_queryset)
             )
+            .prefetch_related("crews__role_group")
             .prefetch_related("crews__assignments__role")
         )
 
