@@ -1109,7 +1109,7 @@ class EventCreateUpdateView(
             }
 
             timezone = ZoneInfo(league.time_zone)
-            if not self.kwargs.get("data"):
+            if not kwargs.get("data"):
                 game_template_initial = []
                 for game_template in template.game_templates.all():
                     game_template_initial.append(
