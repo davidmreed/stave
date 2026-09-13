@@ -2,7 +2,8 @@
 
 <form action="{{ request.path }}" enctype="multipart/form-data" method="POST">
     {% csrf_token %}
-
+    <# Prevent a default submission going to a Delete button #>
+    <button type="submit" disabled hidden aria-hidden="true"></button>
     {{ form.parent_form }}
 
     <h2>{{ child_name_plural|title }} </h2>

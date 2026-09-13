@@ -179,7 +179,7 @@ class ParentChildForm(forms.Form):
             self.child_form_class.Meta.model,
             form=self.child_form_class,
             can_delete=True,
-            extra=len(initial) if initial else 0,
+            extra=0,
         )
 
         formset_factory.deletion_widget = forms.HiddenInput
@@ -242,8 +242,8 @@ class ParentChildForm(forms.Form):
             self.child_formset.extra += 1
 
     def delete_child_form(self, index: int):
-        new_data = self.child_formset.data.copy()
-        if 0 <= index < len(new_data):
+        if 0 <= index < self.child_formset.total_form_count:
+            new_data = self.child_formset.data.copy()
             new_data[f"form-{index}-DELETE"] = "on"
             self.child_formset = self.get_child_formset(initial=None, data=new_data)
 

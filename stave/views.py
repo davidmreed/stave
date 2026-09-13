@@ -1109,34 +1109,33 @@ class EventCreateUpdateView(
             }
 
             timezone = ZoneInfo(league.time_zone)
-            if not kwargs.get("data"):
-                game_template_initial = []
-                for game_template in template.game_templates.all():
-                    game_template_initial.append(
-                        {
-                            "start_time": datetime.combine(
-                                start_date + timedelta(days=game_template.day - 1),
-                                game_template.start_time or time(12, 00),
-                                tzinfo=timezone,
-                            )
-                            if start_date
-                            else None,
-                            "end_time": datetime.combine(
-                                start_date + timedelta(days=game_template.day - 1),
-                                game_template.end_time or time(14, 00),
-                                tzinfo=timezone,
-                            )
-                            if start_date
-                            else None,
-                            "role_groups": game_template.role_groups.all(),
-                            "home_league": game_template.home_league,
-                            "visiting_league": game_template.visiting_league,
-                            "home_team": game_template.home_team,
-                            "visiting_team": game_template.visiting_team,
-                            "association": game_template.association,
-                            "kind": game_template.kind,
-                        }
-                    )
+            game_template_initial = []
+            for game_template in template.game_templates.all():
+                game_template_initial.append(
+                    {
+                        "start_time": datetime.combine(
+                            start_date + timedelta(days=game_template.day - 1),
+                            game_template.start_time or time(12, 00),
+                            tzinfo=timezone,
+                        )
+                        if start_date
+                        else None,
+                        "end_time": datetime.combine(
+                            start_date + timedelta(days=game_template.day - 1),
+                            game_template.end_time or time(14, 00),
+                            tzinfo=timezone,
+                        )
+                        if start_date
+                        else None,
+                        "role_groups": game_template.role_groups.all(),
+                        "home_league": game_template.home_league,
+                        "visiting_league": game_template.visiting_league,
+                        "home_team": game_template.home_team,
+                        "visiting_team": game_template.visiting_team,
+                        "association": game_template.association,
+                        "kind": game_template.kind,
+                    }
+                )
 
         return forms.EventCreateUpdateForm(
             league=league,
