@@ -171,3 +171,16 @@ table details[open] summary span {
 .icon-button abbr {
     border-bottom: none;
 }
+
+div.form-group {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--pico-form-element-spacing-vertical);
+    width: 100%;
+}
+
+div.form-group div {
+    flex: 1 1 auto;
+}

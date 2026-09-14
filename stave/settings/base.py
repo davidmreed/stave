@@ -70,6 +70,7 @@ CSRF_TRUSTED_ORIGINS = [
 
 # Application definition - Base apps used in all environments
 INSTALLED_APPS = [
+    "django.forms",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -119,6 +120,7 @@ AUTHENTICATION_BACKENDS = [
 ROOT_URLCONF = "stave.urls"
 
 # Templates
+FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
