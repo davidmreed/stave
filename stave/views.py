@@ -389,9 +389,9 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
         assert self.form
         return contexts.ParentChildCreateUpdateInputs(
             form=self.form,
-            parent_name=self.form_class.parent_form_class._meta.model._meta.verbose_name,
-            child_name=self.form_class.child_form_class._meta.model._meta.verbose_name,
-            child_name_plural=self.form_class.child_form_class._meta.model._meta.verbose_name_plural,
+            parent_name=self.form_class.parent_form_class._meta.model._meta.verbose_name,  # type: ignore
+            child_name=self.form_class.child_form_class._meta.model._meta.verbose_name,  # type: ignore
+            child_name_plural=self.form_class.child_form_class._meta.model._meta.verbose_name_plural,  # type: ignore
             child_variants=self.form.get_child_variants(),
             allow_child_adds=self.allow_child_adds(),
             allow_child_deletes=self.allow_child_deletes(),

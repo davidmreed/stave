@@ -3,7 +3,7 @@ from django.contrib import admin
 
 from . import models
 
-admin.site.login = secure_admin_login(admin.site.login)
+admin.site.login = secure_admin_login(admin.site.login)  # type: ignore
 
 
 class CrewAssignmentInline(admin.TabularInline):

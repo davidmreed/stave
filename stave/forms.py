@@ -1,6 +1,6 @@
 import copy
 import datetime
-from typing import Tuple
+from typing import Tuple, Any
 import zoneinfo
 
 from django import forms
@@ -289,6 +289,7 @@ class ApplicationForm(forms.Form):
         self.instance = instance
 
         # If we have an instance, build a dict of initial values.
+        initial: dict[str, Any] | None = None
         if instance:
             initial = {}
             initial["days"] = instance.availability_by_day
@@ -308,8 +309,6 @@ class ApplicationForm(forms.Form):
                         content = content[0]
 
                     initial[f"{question.id}"] = content
-        else:
-            initial = None
 
         if "prefix" in kwargs:
             kwargs.pop("prefix")

@@ -84,3 +84,4 @@ project-includes = [
 ]
 [tool.pyrefly.errors]
 bad-override = "ignore"
+unused-parameter = "ignore"

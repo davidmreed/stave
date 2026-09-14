@@ -14,10 +14,12 @@ def send_emails():
         sent=False, tries__lt=settings.STAVE_EMAIL_MAX_TRIES
     ):
         try:
+            address = message.user.email if message.user else message.email
+            assert address
             email = EmailMultiAlternatives(
                 subject=message.subject,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[message.user.email if message.user else message.email],
+                to=[address],
                 body=message.content_plain_text,
             )
             if message.reply_to:

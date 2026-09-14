@@ -95,7 +95,9 @@ class LeagueEventsFeed(StaveEventFeed):
         return _("Events for {league} from Stave.app").format(league=obj)
 
     def items(self, obj: models.League) -> QuerySet[models.Event]:
-        return obj.events.listed(None).prefetch_for_display()
+        return (
+            models.Event.objects.filter(league=obj).listed(None).prefetch_for_display()
+        )
 
 
 class LeagueGroupEventsFeed(StaveEventFeed):

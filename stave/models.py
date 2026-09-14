@@ -745,12 +745,12 @@ class EventFilters:
 
     def subscribed(
         self: "EventQuerySet | EventManager", user: User
-    ) -> models.QuerySet["Event"]:
+    ) -> "EventQuerySet | EventManager":
         return self.listed(user).filter(league__in=League.objects.subscribed(user))
 
     def in_league_group(
         self: "EventQuerySet | EventManager", league_group: "LeagueGroup"
-    ) -> models.QuerySet["Event"]:
+    ) -> "EventQuerySet | EventManager":
         return self.filter(
             league__in=League.objects.filter(league_groups__group=league_group)
         )
