@@ -3,12 +3,12 @@ from collections import defaultdict
 import csv
 from dataclasses import is_dataclass
 from datetime import datetime, time, timedelta, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast, TypeVar
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from django import views
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, BadRequest
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -19,6 +19,7 @@ from django.http import (
     Http404,
     HttpRequest,
     HttpResponse,
+    StreamingHttpResponse,
     HttpResponseBadRequest,
     HttpResponseForbidden,
     HttpResponseNotFound,
@@ -33,7 +34,7 @@ from django.utils.translation import gettext, gettext_lazy
 from django.views import generic
 from meta.views import Meta
 
-import allauth
+import allauth.account.models
 
 from stave.templates.stave import contexts
 
@@ -42,6 +43,7 @@ from .avail import AvailabilityManager, ScheduleManager
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
+    from django.contrib.auth.models import AnonymousUser
 
 
 class TypedContextMixin[T: dict[str, Any] | DataclassInstance]:
@@ -62,7 +64,7 @@ class TypedContextMixin[T: dict[str, Any] | DataclassInstance]:
 class TenantedObjectMixin:
     league: models.League
 
-    def setup(self, request: HttpRequest, *args, **kwargs):
+    def setup(self: "views.View", request: HttpRequest, *args, **kwargs):
         super().setup(request, *args, **kwargs)
 
         if isinstance(self.request.user, models.User):
@@ -79,8 +81,21 @@ class TenantedObjectMixin:
         return base
 
 
+class UserMixin:
+    def get_user(self) -> AnonymousUser | models.User:
+        return cast(AnonymousUser | models.User, self.request.user)  # type: ignore
+
+
+class AuthenticatedUserMixin(LoginRequiredMixin):
+    def get_user(self) -> models.User:
+        return cast(models.User, self.request.user)  # type: ignore
+
+
+T = TypeVar("T")
+
+
 class TenantedGenericDeleteView[T](
-    LoginRequiredMixin, TenantedObjectMixin, generic.edit.DeleteView
+    AuthenticatedUserMixin, TenantedObjectMixin, generic.edit.DeleteView
 ):
     template_name = "stave/confirm_delete.html"
     list_view_name: str
@@ -95,12 +110,14 @@ class TenantedGenericDeleteView[T](
         return reverse(self.list_view_name, args=[self.league.slug])
 
 
-class LeagueLogoView(views.View):
-    def get(self, request: HttpRequest, path: str) -> HttpResponse:
+class LeagueLogoView(UserMixin, views.View):
+    def get(
+        self, request: HttpRequest, path: str
+    ) -> HttpResponse | StreamingHttpResponse:
         league_id = path.split("/")[0]
         try:
             league = get_object_or_404(
-                models.League.objects.visible(request.user), pk=league_id
+                models.League.objects.visible(self.get_user()), pk=league_id
             )
         except ValidationError:
             return HttpResponseNotFound()
@@ -111,12 +128,14 @@ class LeagueLogoView(views.View):
         return FileResponse(file_value.open("rb"))
 
 
-class EventBannerView(views.View):
-    def get(self, request: HttpRequest, path: str) -> HttpResponse:
+class EventBannerView(UserMixin, views.View):
+    def get(
+        self, request: HttpRequest, path: str
+    ) -> HttpResponse | StreamingHttpResponse:
         event_id = path.split("/")[0]
         try:
             event = get_object_or_404(
-                models.Event.objects.visible(request.user), pk=event_id
+                models.Event.objects.visible(self.get_user()), pk=event_id
             )
         except ValidationError:
             return HttpResponseNotFound()
@@ -127,7 +146,7 @@ class EventBannerView(views.View):
         return FileResponse(file_value.open("rb"))
 
 
-class OpenApplicationsListView(generic.ListView):
+class OpenApplicationsListView(UserMixin, generic.ListView):
     template_name = "stave/open_applications_list.html"
     model = models.Event
     paginate_by = 25
@@ -135,13 +154,13 @@ class OpenApplicationsListView(generic.ListView):
     def get_context_data(self, *args, **kwargs) -> dict:
         context = super().get_context_data(*args, **kwargs)
 
-        if self.request.user.is_authenticated:
-            subscr_group = models.LeagueGroup.get_subscriptions_group_for_user(
-                self.request.user
-            )
+        user = self.get_user()
+        if user.is_authenticated:
+            assert isinstance(user, models.User)
+            subscr_group = models.LeagueGroup.get_subscriptions_group_for_user(user)
             context["has_subscriptions"] = (
                 subscr_group and subscr_group.group_memberships.exists()
-            ) or models.LeagueGroup.objects.subscribed(self.request.user).exclude(
+            ) or models.LeagueGroup.objects.subscribed(user).exclude(
                 is_subscriptions_group=True
             ).exists()
         else:
@@ -151,11 +170,11 @@ class OpenApplicationsListView(generic.ListView):
 
     def get_queryset(self) -> QuerySet[models.Event]:
         return models.Event.objects.open_applications_grouped_by_subscription(
-            self.request.user
+            self.get_user()
         )
 
 
-class MyApplicationsView(LoginRequiredMixin, generic.ListView):
+class MyApplicationsView(AuthenticatedUserMixin, generic.ListView):
     template_name = "stave/my_applications.html"
     model = models.Event
     paginate_by = 25
@@ -163,44 +182,44 @@ class MyApplicationsView(LoginRequiredMixin, generic.ListView):
     def get_queryset(self) -> QuerySet[models.Event]:
         return (
             (
-                models.Event.objects.open_for_user(self.request.user)
-                | models.Event.objects.staffed_for_user(self.request.user)
+                models.Event.objects.open_for_user(self.get_user())
+                | models.Event.objects.staffed_for_user(self.get_user())
             )
             .distinct()
-            .prefetch_for_applied_card(self.request.user)
+            .prefetch_for_applied_card(self.get_user())
         )
 
 
-class MyEventsView(LoginRequiredMixin, generic.ListView):
+class MyEventsView(AuthenticatedUserMixin, generic.ListView):
     template_name = "stave/my_events_list.html"
     model = models.Event
     paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.Event]:
         return models.Event.objects.manageable(
-            self.request.user
+            self.get_user()
         ).prefetch_for_management()
 
 
-class MyLeaguesView(LoginRequiredMixin, generic.ListView):
+class MyLeaguesView(AuthenticatedUserMixin, generic.ListView):
     template_name = "stave/my_leagues_list.html"
     model = models.League
     paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.League]:
-        return models.League.objects.manageable(self.request.user)
+        return models.League.objects.manageable(self.get_user())
 
 
-class MyLeagueGroupsView(LoginRequiredMixin, generic.ListView):
+class MyLeagueGroupsView(AuthenticatedUserMixin, generic.ListView):
     template_name = "stave/my_league_groups_list.html"
     model = models.LeagueGroup
     paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.LeagueGroup]:
-        return models.LeagueGroup.objects.owned(self.request.user)
+        return models.LeagueGroup.objects.owned(self.get_user())
 
 
-class OfficiatingHistoryView(LoginRequiredMixin, generic.ListView):
+class OfficiatingHistoryView(AuthenticatedUserMixin, generic.ListView):
     """
     A view that displays a user's officiating history.
 
@@ -218,7 +237,7 @@ class OfficiatingHistoryView(LoginRequiredMixin, generic.ListView):
     model = models.RoleGroupCrewAssignment
 
     def get_queryset(self):
-        cas = models.CrewAssignment.objects.filter(user=self.request.user)
+        cas = models.CrewAssignment.objects.filter(user=self.get_user())
         crews = models.Crew.objects.filter(
             assignments__in=cas, event__status=models.EventStatus.COMPLETE
         )
@@ -232,7 +251,7 @@ class OfficiatingHistoryView(LoginRequiredMixin, generic.ListView):
 
         histories = []
         for rgca in context["object_list"]:
-            cas = [ca for ca in rgca.effective_crew() if ca.user == self.request.user]
+            cas = [ca for ca in rgca.effective_crew() if ca.user == self.get_user()]
             # A user can have up to two roles in a game. Primary role is the one with
             # `nonexclusive=True`.
             if len(cas) == 0:
@@ -248,7 +267,7 @@ class OfficiatingHistoryView(LoginRequiredMixin, generic.ListView):
                 )
             history = models.GameHistory(
                 game=rgca.game,
-                user=self.request.user,
+                user=self.get_user(),
                 role=role,
                 secondary_role=secondary_role,
             )
@@ -258,13 +277,13 @@ class OfficiatingHistoryView(LoginRequiredMixin, generic.ListView):
         return context
 
 
-class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
+class HomeView(UserMixin, TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
     template_name = "stave/home.html"
 
     def get_context(self) -> contexts.HomeInputs:
         application_form_queryset = (
             models.Event.objects.open_applications_grouped_by_subscription(
-                self.request.user
+                self.get_user()
             )
         )
         league_queryset = models.League.objects.none()
@@ -272,14 +291,16 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
         subscribed_leagues = 0
         subscribed_league_groups = 0
 
+        user = self.get_user()
         if self.request.user.is_authenticated:
-            league_queryset = models.League.objects.manageable(self.request.user)
-            league_group_queryset = models.LeagueGroup.objects.owned(self.request.user)
+            assert isinstance(user, models.User)
+            league_queryset = models.League.objects.manageable(user)
+            league_group_queryset = models.LeagueGroup.objects.owned(user)
             subscribed_leagues = models.LeagueGroup.get_subscriptions_group_for_user(
-                self.request.user
+                user
             ).group_memberships.count()
             subscribed_league_groups = (
-                models.LeagueGroup.objects.subscribed(self.request.user)
+                models.LeagueGroup.objects.subscribed(user)
                 .exclude(is_subscriptions_group=True)
                 .count()
             )
@@ -287,21 +308,19 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
         return contexts.HomeInputs(
             application_forms=Paginator(application_form_queryset, 5).page(1),
             pending_application_events=Paginator(
-                models.Event.objects.open_for_user(
-                    self.request.user
-                ).prefetch_for_applied_card(self.request.user),
+                models.Event.objects.open_for_user(user).prefetch_for_applied_card(
+                    user
+                ),
                 5,
             ).get_page(1),
             staffed_application_events=Paginator(
-                models.Event.objects.staffed_for_user(
-                    self.request.user
-                ).prefetch_for_applied_card(self.request.user),
+                models.Event.objects.staffed_for_user(user).prefetch_for_applied_card(
+                    user
+                ),
                 5,
             ).get_page(1),
             staffing_events=Paginator(
-                models.Event.objects.staffing_for_user(
-                    self.request.user
-                ).prefetch_for_management(),
+                models.Event.objects.staffing_for_user(user).prefetch_for_management(),
                 5,
             ).get_page(1),
             leagues=Paginator(league_queryset, 5).get_page(1),
@@ -327,7 +346,7 @@ class HomeView(TypedContextMixin[contexts.HomeInputs], generic.TemplateView):
 
 
 class EventDetailView(
-    TypedContextMixin[contexts.EventDetailInputs], generic.DetailView
+    UserMixin, TypedContextMixin[contexts.EventDetailInputs], generic.DetailView
 ):
     template_name = "stave/event_detail.html"
     model = models.Event
@@ -337,15 +356,15 @@ class EventDetailView(
         return contexts.EventDetailInputs(
             event=self.get_object(),
             application_forms=models.ApplicationForm.objects.listed(
-                self.request.user
+                self.get_user()
             ).filter(event=self.get_object()),
         )
 
     def get_queryset(self) -> QuerySet[models.Event]:
         return (
-            models.Event.objects.filter(league__slug=self.kwargs["league"])
-            .visible(user=self.request.user)
-            .prefetch_for_display()
+            models.Event.objects.prefetch_for_display()
+            .filter(league__slug=self.kwargs["league"])
+            .visible(user=self.get_user())
         )
 
 
@@ -367,6 +386,7 @@ class ParentChildCreateUpdateFormView(views.View, ABC):
         return self.form_class(**kwargs)
 
     def get_context(self) -> contexts.ParentChildCreateUpdateInputs:
+        assert self.form
         return contexts.ParentChildCreateUpdateInputs(
             form=self.form,
             parent_name=self.form_class.parent_form_class._meta.model._meta.verbose_name,
@@ -474,17 +494,17 @@ class LeagueGroupCreateUpdateView(ParentChildCreateUpdateFormView):
             )
 
 
-class LeagueGroupListView(generic.ListView):
+class LeagueGroupListView(UserMixin, generic.ListView):
     template_name = "stave/league_group_list.html"
     model = models.LeagueGroup
     paginate_by = 25
 
-    def get_queryset(self) -> QuerySet[models.MessageTemplate]:
-        return models.LeagueGroup.objects.visible(self.request.user)
+    def get_queryset(self) -> QuerySet[models.LeagueGroup]:
+        return models.LeagueGroup.objects.visible(self.get_user())
 
 
 class LeagueGroupDetailView(
-    TypedContextMixin[contexts.LeagueGroupInputs], generic.DetailView
+    UserMixin, TypedContextMixin[contexts.LeagueGroupInputs], generic.DetailView
 ):
     template_name = "stave/league_group_detail.html"
     model = models.LeagueGroup
@@ -492,7 +512,7 @@ class LeagueGroupDetailView(
     def get_context(self) -> contexts.LeagueGroupInputs:
         return contexts.LeagueGroupInputs(
             events=Paginator(
-                models.Event.objects.listed(self.request.user).in_league_group(
+                models.Event.objects.listed(self.get_user()).in_league_group(
                     self.object
                 ),
                 10,
@@ -500,10 +520,10 @@ class LeagueGroupDetailView(
         )
 
     def get_queryset(self) -> QuerySet[models.LeagueGroup]:
-        return models.LeagueGroup.objects.visible(self.request.user)
+        return models.LeagueGroup.objects.visible(self.get_user())
 
 
-class LeagueGroupDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
+class LeagueGroupDeleteView(AuthenticatedUserMixin, generic.edit.DeleteView):
     template_name = "stave/confirm_delete.html"
     model = models.LeagueGroup
 
@@ -511,14 +531,14 @@ class LeagueGroupDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
         return reverse("home")
 
 
-class LeagueGroupSubscribeView(LoginRequiredMixin, views.View):
+class LeagueGroupSubscribeView(AuthenticatedUserMixin, views.View):
     def post(
         self,
         request: HttpRequest,
         id: UUID,
     ) -> HttpResponse:
         league_group = get_object_or_404(
-            models.LeagueGroup.objects.visible(request.user),
+            models.LeagueGroup.objects.visible(self.get_user()),
             id=id,
         )
         models.LeagueGroupSubscription.objects.get_or_create(
@@ -534,14 +554,14 @@ class LeagueGroupSubscribeView(LoginRequiredMixin, views.View):
         return HttpResponseRedirect(league_group.get_absolute_url())
 
 
-class LeagueGroupUnsubscribeView(LoginRequiredMixin, views.View):
+class LeagueGroupUnsubscribeView(AuthenticatedUserMixin, views.View):
     def post(
         self,
         request: HttpRequest,
         id: UUID,
     ) -> HttpResponse:
         league_group = get_object_or_404(
-            models.LeagueGroup.objects.visible(request.user),
+            models.LeagueGroup.objects.visible(self.get_user()),
             id=id,
         )
         models.LeagueGroupSubscription.objects.filter(
@@ -557,17 +577,17 @@ class LeagueGroupUnsubscribeView(LoginRequiredMixin, views.View):
         return HttpResponseRedirect(league_group.get_absolute_url())
 
 
-class LeagueSubscribeView(LoginRequiredMixin, views.View):
+class LeagueSubscribeView(AuthenticatedUserMixin, views.View):
     def post(
         self,
         request: HttpRequest,
         league_slug: str,
     ) -> HttpResponse:
         league = get_object_or_404(
-            models.League.objects.visible(request.user), slug=league_slug
+            models.League.objects.visible(self.get_user()), slug=league_slug
         )
         models.LeagueGroupMember.objects.get_or_create(
-            group=models.LeagueGroup.get_subscriptions_group_for_user(request.user),
+            group=models.LeagueGroup.get_subscriptions_group_for_user(self.get_user()),
             league=league,
         )
 
@@ -580,17 +600,17 @@ class LeagueSubscribeView(LoginRequiredMixin, views.View):
         return HttpResponseRedirect(league.get_absolute_url())
 
 
-class LeagueUnsubscribeView(LoginRequiredMixin, views.View):
+class LeagueUnsubscribeView(AuthenticatedUserMixin, views.View):
     def post(
         self,
         request: HttpRequest,
         league_slug: str,
     ) -> HttpResponse:
         league = get_object_or_404(
-            models.League.objects.visible(request.user), slug=league_slug
+            models.League.objects.visible(self.get_user()), slug=league_slug
         )
         models.LeagueGroupMember.objects.filter(
-            group=models.LeagueGroup.get_subscriptions_group_for_user(request.user),
+            group=models.LeagueGroup.get_subscriptions_group_for_user(self.get_user()),
             league=league,
         ).delete()
 
@@ -609,7 +629,7 @@ class LeagueUnsubscribeView(LoginRequiredMixin, views.View):
 
 
 class LeaguePermissionListView(
-    LoginRequiredMixin, TenantedObjectMixin, generic.ListView
+    AuthenticatedUserMixin, TenantedObjectMixin, generic.ListView
 ):
     template_name = "stave/league_permissions.html"
     model = models.LeagueUserPermission
@@ -634,7 +654,7 @@ class LeaguePermissionListView(
 
 
 class LeaguePermissionEditView(
-    LoginRequiredMixin,
+    AuthenticatedUserMixin,
     TenantedObjectMixin,
     TypedContextMixin[contexts.LeaguePermissionEditViewInputs],
     generic.edit.FormView,
@@ -657,7 +677,7 @@ class LeaguePermissionEditView(
     def get_queryset(self) -> QuerySet[models.User]:
         return models.User.objects.filter(
             league_permissions__league__in=models.League.objects.manageable(
-                self.request.user
+                self.get_user()
             )
         ).distinct()
 
@@ -696,7 +716,7 @@ class LeaguePermissionEditView(
 
 
 class LeaguePermissionInviteView(
-    LoginRequiredMixin,
+    AuthenticatedUserMixin,
     TenantedObjectMixin,
     TypedContextMixin[contexts.LeaguePermissionEditViewInputs],
     generic.edit.FormView,
@@ -725,14 +745,14 @@ class LeaguePermissionInviteView(
         return contexts.LeaguePermissionInviteViewInputs(league=self.league)
 
 
-class LeaguePermissionUpdateInviteView(LoginRequiredMixin, views.View):
+class LeaguePermissionUpdateInviteView(AuthenticatedUserMixin, views.View):
     def post(self, request: HttpRequest, league_slug: str, invitation_id: UUID):
         # Revocation or deletion requires that the invitation be owned by
         # a league for which the logged-in user has manager permission.
 
         invitation = get_object_or_404(
             models.LeagueUserInvitation.objects.filter(
-                league__in=models.League.objects.manageable(request.user),
+                league__in=models.League.objects.manageable(self.get_user()),
             ),
             pk=invitation_id,
         )
@@ -790,7 +810,7 @@ class LeaguePermissionRespondInviteView(
         action = request.POST.get("action")
 
         with transaction.atomic():
-            object = self.get_object()
+            object: models.LeagueUserInvitation = self.get_object()
             if action == "accept" and self.email_match:
                 object.status = models.LeagueUserInvitationStatus.ACCEPTED
                 object.save()
@@ -815,7 +835,7 @@ class LeaguePermissionRespondInviteView(
 
 
 class MessageTemplateListView(
-    LoginRequiredMixin, TenantedObjectMixin, generic.ListView
+    AuthenticatedUserMixin, TenantedObjectMixin, generic.ListView
 ):
     template_name = "stave/message_template_list.html"
     model = models.MessageTemplate
@@ -826,7 +846,9 @@ class MessageTemplateListView(
 
 
 class MessageTemplateCreateView(
-    LoginRequiredMixin, TenantedObjectMixin, generic.edit.CreateView
+    AuthenticatedUserMixin,
+    TenantedObjectMixin,
+    generic.edit.CreateView,
 ):
     template_name = "stave/message_template_edit.html"
     form_class = forms.MessageTemplateForm
@@ -845,6 +867,8 @@ class MessageTemplateCreateView(
 
         return context
 
+    from typing import reveal_type
+
     def form_valid(self, form: forms.MessageTemplateForm) -> HttpResponse:
         form.instance.league = self.league
         self.object = form.save()
@@ -856,7 +880,7 @@ class MessageTemplateCreateView(
 
 
 class MessageTemplateUpdateView(
-    LoginRequiredMixin, TenantedObjectMixin, generic.edit.UpdateView
+    AuthenticatedUserMixin, TenantedObjectMixin, generic.edit.UpdateView
 ):
     template_name = "stave/message_template_edit.html"
     form_class = forms.MessageTemplateForm
@@ -895,7 +919,7 @@ class MessageTemplateDeleteView(TenantedGenericDeleteView[models.MessageTemplate
 ## Role Groups
 
 
-class RoleGroupListView(LoginRequiredMixin, TenantedObjectMixin, generic.ListView):
+class RoleGroupListView(AuthenticatedUserMixin, TenantedObjectMixin, generic.ListView):
     template_name = "stave/role_group_list.html"
     model = models.RoleGroup
     paginate_by = 25
@@ -905,7 +929,7 @@ class RoleGroupListView(LoginRequiredMixin, TenantedObjectMixin, generic.ListVie
 
 
 class RoleGroupCreateUpdateView(
-    LoginRequiredMixin, TenantedObjectMixin, ParentChildCreateUpdateFormView
+    AuthenticatedUserMixin, TenantedObjectMixin, ParentChildCreateUpdateFormView
 ):
     form_class = forms.RoleGroupCreateUpdateForm
     role_group: models.RoleGroup | None = None
@@ -958,7 +982,9 @@ class RoleGroupDeleteView(TenantedGenericDeleteView[models.RoleGroup]):
 ## Event Templates
 
 
-class EventTemplateListView(LoginRequiredMixin, TenantedObjectMixin, generic.ListView):
+class EventTemplateListView(
+    AuthenticatedUserMixin, TenantedObjectMixin, generic.ListView
+):
     template_name = "stave/event_template_list.html"
     model = models.EventTemplate
     paginate_by = 25
@@ -968,7 +994,7 @@ class EventTemplateListView(LoginRequiredMixin, TenantedObjectMixin, generic.Lis
 
 
 class EventTemplateCreateUpdateView(
-    LoginRequiredMixin, TenantedObjectMixin, ParentChildCreateUpdateFormTimezoneView
+    AuthenticatedUserMixin, TenantedObjectMixin, ParentChildCreateUpdateFormTimezoneView
 ):
     form_class = forms.EventTemplateCreateUpdateForm
     event_template: models.EventTemplate | None
@@ -1015,7 +1041,7 @@ class EventTemplateDeleteView(TenantedGenericDeleteView[models.EventTemplate]):
 
 
 class ApplicationFormTemplateListView(
-    LoginRequiredMixin, TenantedObjectMixin, generic.ListView
+    AuthenticatedUserMixin, TenantedObjectMixin, generic.ListView
 ):
     template_name = "stave/application_form_template_list.html"
     model = models.ApplicationFormTemplate
@@ -1026,7 +1052,7 @@ class ApplicationFormTemplateListView(
 
 
 class ApplicationFormTemplateCreateUpdateView(
-    LoginRequiredMixin, TenantedObjectMixin, ParentChildCreateUpdateFormView
+    AuthenticatedUserMixin, TenantedObjectMixin, ParentChildCreateUpdateFormView
 ):
     form_class = forms.ApplicationFormTemplateCreateUpdateForm
     application_form_template: models.ApplicationFormTemplate | None
@@ -1074,13 +1100,13 @@ class ApplicationFormTemplateDeleteView(
 
 
 class EventCreateUpdateView(
-    LoginRequiredMixin, ParentChildCreateUpdateFormTimezoneView
+    AuthenticatedUserMixin, ParentChildCreateUpdateFormTimezoneView
 ):
     form_class = forms.EventCreateUpdateForm
 
     def get_form(self, **kwargs) -> forms.EventCreateUpdateForm:
         league = get_object_or_404(
-            models.League.objects.event_manageable(self.request.user),
+            models.League.objects.event_manageable(self.get_user()),
             slug=self.kwargs.get("league_slug"),
         )
         template = None
@@ -1094,7 +1120,7 @@ class EventCreateUpdateView(
                 if start_date:
                     start_date = parse_date(start_date)
             except ValueError:
-                return HttpResponseBadRequest(f"invalid date {start_date}")
+                raise BadRequest(f"invalid date {start_date}")
 
             name = self.request.GET.get("name") or template.name
             initial = {
@@ -1154,7 +1180,7 @@ class EventCreateUpdateView(
     ) -> models.Event | None:
         if league_slug and event_slug:
             return get_object_or_404(
-                models.Event.objects.manageable(request.user)
+                models.Event.objects.manageable(self.get_user())
                 .prefetch_for_display()
                 .filter(
                     league__slug=league_slug,
@@ -1164,14 +1190,14 @@ class EventCreateUpdateView(
 
     def get_time_zone(self) -> str:
         league = get_object_or_404(
-            models.League.objects.event_manageable(self.request.user),
+            models.League.objects.event_manageable(self.get_user()),
             slug=self.kwargs.get("league_slug"),
         )
         return league.time_zone
 
 
 class EventCreateView(
-    LoginRequiredMixin,
+    AuthenticatedUserMixin,
     TypedContextMixin[contexts.TemplateSelectorInputs],
     generic.edit.CreateView,
 ):
@@ -1225,12 +1251,12 @@ class EventCreateView(
         return HttpResponseRedirect(url)
 
 
-class EventPublishView(LoginRequiredMixin, views.View):
+class EventPublishView(AuthenticatedUserMixin, views.View):
     def post(
         self, request: HttpRequest, league_slug: str, event_slug: str
     ) -> HttpResponse:
         event = get_object_or_404(
-            models.Event.objects.manageable(request.user).filter(
+            models.Event.objects.manageable(self.get_user()).filter(
                 league__slug=league_slug,
             ),
             slug=event_slug,
@@ -1248,12 +1274,12 @@ class EventPublishView(LoginRequiredMixin, views.View):
         return HttpResponseRedirect(event.get_absolute_url())
 
 
-class CrewCreateView(LoginRequiredMixin, views.View):
+class CrewCreateView(AuthenticatedUserMixin, views.View):
     def post(
         self, request: HttpRequest, league_slug: str, event_slug: str, form_slug: str
     ) -> HttpResponse:
         form = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user),
+            models.ApplicationForm.objects.manageable(self.get_user()),
             event__league__slug=league_slug,
             event__slug=event_slug,
             slug=form_slug,
@@ -1285,16 +1311,16 @@ class CrewCreateView(LoginRequiredMixin, views.View):
         return HttpResponseRedirect(form.get_absolute_url())
 
 
-class LeagueUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
+class LeagueUpdateView(AuthenticatedUserMixin, generic.edit.UpdateView):
     template_name = "stave/league_edit.html"
     form_class = forms.LeagueForm
 
     def get_queryset(self) -> QuerySet[models.League]:
-        return models.League.objects.manageable(self.request.user)
+        return models.League.objects.manageable(self.get_user())
 
 
 class LeagueCreateView(
-    LoginRequiredMixin,
+    AuthenticatedUserMixin,
     TypedContextMixin[contexts.TemplateSelectorInputs],
     generic.edit.CreateView,
 ):
@@ -1344,33 +1370,33 @@ class LeagueCreateView(
 
 
 class LeagueDetailView(
-    TypedContextMixin[contexts.LeagueDetailViewInputs], generic.DetailView
+    UserMixin, TypedContextMixin[contexts.LeagueDetailViewInputs], generic.DetailView
 ):
     template_name = "stave/league_detail.html"
     model = models.League
 
     def get_queryset(self) -> QuerySet[models.League]:
-        return models.League.objects.visible(self.request.user)
+        return models.League.objects.visible(self.get_user())
 
     def get_context(self) -> contexts.LeagueDetailViewInputs:
         return contexts.LeagueDetailViewInputs(
             events=self.get_object()
-            .events.listed(self.request.user)
+            .events.listed(self.get_user())
             .select_related("league")
             .prefetch_related("games", "application_forms__role_groups")
         )
 
 
-class LeagueListView(generic.ListView):
+class LeagueListView(UserMixin, generic.ListView):
     template_name = "stave/league_list.html"
     model = models.League
     paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.League]:
-        return models.League.objects.visible(self.request.user)
+        return models.League.objects.visible(self.get_user())
 
 
-class MySubscriptionsView(LoginRequiredMixin, generic.ListView):
+class MySubscriptionsView(AuthenticatedUserMixin, generic.ListView):
     template_name = "stave/my_subscriptions_list.html"
     paginate_by = 25
     model = models.League  # or LeagueGroup, below
@@ -1379,7 +1405,7 @@ class MySubscriptionsView(LoginRequiredMixin, generic.ListView):
         return (
             models.League.objects.filter(
                 id__in=models.LeagueGroup.get_subscriptions_group_for_user(
-                    self.request.user
+                    self.get_user()
                 )
                 .group_memberships.all()
                 .values("league_id")
@@ -1388,7 +1414,7 @@ class MySubscriptionsView(LoginRequiredMixin, generic.ListView):
             .order_by()
             .annotate(kind=Value("league"))
             .union(
-                models.LeagueGroup.objects.subscribed(self.request.user)
+                models.LeagueGroup.objects.subscribed(self.get_user())
                 .filter(is_subscriptions_group=False)
                 .values("id", "name")
                 .annotate(kind=Value("league_group"), slug=Value(""))
@@ -1397,14 +1423,14 @@ class MySubscriptionsView(LoginRequiredMixin, generic.ListView):
         ).order_by("name")
 
 
-class EventListView(generic.ListView):
+class EventListView(UserMixin, generic.ListView):
     template_name = "stave/event_list.html"
     model = models.Event
     paginate_by = 25
 
     def get_queryset(self) -> QuerySet[models.Event]:
         return (
-            models.Event.objects.listed(self.request.user)
+            models.Event.objects.listed(self.get_user())
             .prefetch_related("games")
             .prefetch_related("application_forms")
             .select_related("league")
@@ -1412,7 +1438,7 @@ class EventListView(generic.ListView):
 
 
 class ApplicationFormCreateUpdateView(
-    LoginRequiredMixin,
+    AuthenticatedUserMixin,
     ParentChildCreateUpdateFormTimezoneView,
 ):
     form_class = forms.ApplicationFormCreateUpdateForm
@@ -1424,7 +1450,7 @@ class ApplicationFormCreateUpdateView(
         super().setup(request, *args, **kwargs)
 
         self.event = get_object_or_404(
-            models.Event.objects.manageable(request.user),
+            models.Event.objects.manageable(self.get_user()),
             league__slug=kwargs.get("league_slug"),
             slug=kwargs.get("event_slug"),
         )
@@ -1471,13 +1497,13 @@ class ApplicationFormCreateUpdateView(
         return self.form.parent_form.instance.editable
 
 
-class FormDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
+class FormDeleteView(AuthenticatedUserMixin, generic.edit.DeleteView):
     template_name = "stave/confirm_delete.html"
     model = models.ApplicationForm
 
     def get_object(self) -> models.ApplicationForm:
         return get_object_or_404(
-            models.ApplicationForm.objects.manageable(self.request.user).filter(
+            models.ApplicationForm.objects.manageable(self.get_user()).filter(
                 event__league__slug=self.kwargs.get("league_slug"),
                 event__slug=self.kwargs.get("event_slug"),
             ),
@@ -1486,22 +1512,21 @@ class FormDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
 
     def get_success_url(self) -> str:
         return (
-            models.Event.objects.visible(self.request.user)
-            .filter(
+            models.Event.objects.visible(self.get_user())
+            .get(
                 league__slug=self.kwargs.get("league_slug"),
                 slug=self.kwargs.get("event_slug"),
             )
-            .first()
             .get_absolute_url()
         )
 
 
-class FormOpenCloseView(LoginRequiredMixin, views.View):
+class FormOpenCloseView(AuthenticatedUserMixin, views.View):
     def post(
         self, request: HttpRequest, league_slug: str, event_slug: str, form_slug: str
     ) -> HttpResponse:
         form = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user).filter(
+            models.ApplicationForm.objects.manageable(self.get_user()).filter(
                 event__league__slug=league_slug,
                 event__slug=event_slug,
             ),
@@ -1521,7 +1546,7 @@ class FormOpenCloseView(LoginRequiredMixin, views.View):
 
 
 class ProfileView(
-    LoginRequiredMixin,
+    AuthenticatedUserMixin,
     generic.edit.UpdateView,
 ):
     template_name = "stave/profile.html"
@@ -1530,11 +1555,11 @@ class ProfileView(
     success_url = reverse_lazy("profile")
 
     def get_object(self) -> models.User:
-        return self.request.user
+        return self.get_user()
 
 
 class SingleApplicationView(
-    LoginRequiredMixin,
+    AuthenticatedUserMixin,
     TypedContextMixin[contexts.ViewApplicationContext],
     generic.edit.UpdateView,
 ):
@@ -1545,7 +1570,7 @@ class SingleApplicationView(
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
 
-        application = self.get_object()
+        application: models.Application = self.get_object()
         kwargs.update(
             {
                 "instance": application,
@@ -1560,12 +1585,12 @@ class SingleApplicationView(
 
     def get_queryset(self) -> QuerySet[models.Application]:
         return models.Application.objects.visible(
-            self.request.user
+            self.get_user()
         ).prefetch_for_display()
 
     def get_context(self) -> contexts.ViewApplicationContext:
         application: models.Application = self.get_object()
-        application_form = self.get_form()
+        application_form: forms.ApplicationForm = self.get_form()
         # Force a clean since we're going to override
         # the `form` kwarg from our mixin
         application_form.is_valid()
@@ -1584,7 +1609,7 @@ class SingleApplicationView(
 
 
 class FormApplicationsView(
-    LoginRequiredMixin,
+    AuthenticatedUserMixin,
     TypedContextMixin[contexts.FormApplicationsInputs],
     generic.TemplateView,
 ):
@@ -1593,7 +1618,7 @@ class FormApplicationsView(
 
     def get_context(self) -> contexts.FormApplicationsInputs:
         form: models.ApplicationForm | None = (
-            models.ApplicationForm.objects.manageable(self.request.user)
+            models.ApplicationForm.objects.manageable(self.get_user())
             .prefetch_applications()
             .filter(
                 slug=self.kwargs["application_form_slug"],
@@ -1622,7 +1647,7 @@ class FormApplicationsView(
         )
 
 
-class FormApplicationsCSVView(LoginRequiredMixin, views.View):
+class FormApplicationsCSVView(AuthenticatedUserMixin, views.View):
     def get(
         self,
         request: HttpRequest,
@@ -1631,7 +1656,7 @@ class FormApplicationsCSVView(LoginRequiredMixin, views.View):
         application_form_slug: str,
     ) -> HttpResponse:
         form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user)
+            models.ApplicationForm.objects.manageable(self.get_user())
             .prefetch_applications()
             .filter(
                 event__slug=event_slug,
@@ -1696,18 +1721,18 @@ class FormApplicationsCSVView(LoginRequiredMixin, views.View):
         return response
 
 
-class ApplicationStatusView(LoginRequiredMixin, views.View):
+class ApplicationStatusView(AuthenticatedUserMixin, views.View):
     def post(
         self, request: HttpRequest, pk: UUID, status: models.ApplicationStatus
     ) -> HttpResponse:
         application: models.Application = get_object_or_404(
-            models.Application.objects.visible(request.user),
+            models.Application.objects.visible(self.get_user()),
             pk=pk,
         )
 
         # There are different legal state transformations based on whether the actor
         # is the applicant or the event manager.
-        legal_changes = application.get_legal_state_changes(request.user)
+        legal_changes = application.get_legal_state_changes(self.get_user())
 
         if status in legal_changes:
             application.status = status
@@ -1744,7 +1769,7 @@ class ApplicationStatusView(LoginRequiredMixin, views.View):
         return HttpResponseRedirect("/")
 
 
-class SetGameCrewView(LoginRequiredMixin, views.View):
+class SetGameCrewView(AuthenticatedUserMixin, views.View):
     def post(
         self,
         request: HttpRequest,
@@ -1756,7 +1781,7 @@ class SetGameCrewView(LoginRequiredMixin, views.View):
         crew_id: UUID | None = None,
     ) -> HttpResponse:
         game: models.Game = get_object_or_404(
-            models.Game.objects.manageable(request.user),
+            models.Game.objects.manageable(self.get_user()),
             pk=game_id,
         )
         rgca: models.RoleGroupCrewAssignment = get_object_or_404(
@@ -1784,7 +1809,7 @@ class SetGameCrewView(LoginRequiredMixin, views.View):
             return HttpResponseRedirect(game.event.get_absolute_url())
 
 
-class CrewDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
+class CrewDeleteView(AuthenticatedUserMixin, generic.edit.DeleteView):
     template_name = "stave/confirm_delete.html"
     model = models.Crew
 
@@ -1793,7 +1818,7 @@ class CrewDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
             models.Crew.objects.filter(
                 id=self.kwargs.get("crew_id"),
                 kind=models.CrewKind.GAME_CREW,
-                event__in=models.Event.objects.manageable(self.request.user),
+                event__in=models.Event.objects.manageable(self.get_user()),
             ),
         )
 
@@ -1807,7 +1832,7 @@ class CrewDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
         return self.get_object().event.get_absolute_url()
 
 
-class StaffedUserView(LoginRequiredMixin, views.View):
+class StaffedUserView(AuthenticatedUserMixin, views.View):
     def get(
         self,
         request: HttpRequest,
@@ -1815,7 +1840,7 @@ class StaffedUserView(LoginRequiredMixin, views.View):
         event_slug: str,
     ) -> HttpResponse:
         event: models.Event = get_object_or_404(
-            models.Event.objects.manageable(request.user),
+            models.Event.objects.manageable(self.get_user()),
             slug=event_slug,
             league__slug=league_slug,
         )  # TODO: prefetch
@@ -1831,7 +1856,7 @@ class StaffedUserView(LoginRequiredMixin, views.View):
         )
 
 
-class ScheduleView(LoginRequiredMixin, views.View):
+class ScheduleView(AuthenticatedUserMixin, views.View):
     def get(
         self,
         request: HttpRequest,
@@ -1851,9 +1876,13 @@ class ScheduleView(LoginRequiredMixin, views.View):
         )
 
         manageable = (
-            models.Event.objects.filter(id=event.id).manageable(request.user).exists()
+            models.Event.objects.filter(id=event.id)
+            .manageable(self.get_user())
+            .exists()
         )
-        staffed = models.User.objects.staffed(event).filter(id=request.user.id).exists()
+        staffed = (
+            models.User.objects.staffed(event).filter(id=self.get_user().id).exists()
+        )
         if not manageable and not staffed:
             return HttpResponseForbidden()
 
@@ -1913,7 +1942,7 @@ class ScheduleView(LoginRequiredMixin, views.View):
         )
 
 
-class CrewBuilderView(LoginRequiredMixin, views.View):
+class CrewBuilderView(AuthenticatedUserMixin, views.View):
     def get(
         self,
         request: HttpRequest,
@@ -1922,7 +1951,7 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         application_form_slug: str,
     ) -> HttpResponse:
         application_form_check: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user),
+            models.ApplicationForm.objects.manageable(self.get_user()),
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league,
@@ -1960,7 +1989,7 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         for crew in am.event_crews:
             event_crews_by_role_group_id[crew.role_group_id].append(crew)
 
-        override_crews_to_games = {}
+        override_crews_to_games: dict[models.Crew, models.Game] = {}
         for game in am.application_form.event.games.all():
             for rgca in game.role_group_crew_assignments.all():
                 if rgca.role_group in am.application_form.role_groups.all():
@@ -2009,7 +2038,7 @@ class CrewBuilderView(LoginRequiredMixin, views.View):
         )
 
 
-class CrewBuilderDetailView(LoginRequiredMixin, views.View):
+class CrewBuilderDetailView(AuthenticatedUserMixin, views.View):
     """A view rendering the Crew Builder with a list of applications for a given position.
     On GET, renders the view.
     On POST, assigns a role and returns to CrewBuilderView."""
@@ -2024,7 +2053,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         role_id: UUID,
     ) -> HttpResponse:
         application_form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user),
+            models.ApplicationForm.objects.manageable(self.get_user()),
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league,
@@ -2082,7 +2111,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         application_id = request.POST.get("application_id")
 
         application_form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user),
+            models.ApplicationForm.objects.manageable(self.get_user()),
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league,
@@ -2188,7 +2217,7 @@ class CrewBuilderDetailView(LoginRequiredMixin, views.View):
         )
 
 
-class ApplicationFormView(views.View):
+class ApplicationFormView(UserMixin, views.View):
     def get(
         self,
         request: HttpRequest,
@@ -2196,19 +2225,20 @@ class ApplicationFormView(views.View):
         event_slug: str,
         league_slug: str,
     ) -> HttpResponse:
+        user = self.get_user()
         app_form = get_object_or_404(
-            models.ApplicationForm.objects.accessible(request.user)
+            models.ApplicationForm.objects.accessible(user)
             .select_related("event__league")
             .prefetch_related("role_groups__roles", "form_questions"),
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league_slug,
         )
-        if request.user.is_authenticated:
+        if user.is_authenticated:
             # If the user has an existing non-withdrawn application, redirect them to it.
             existing_application = (
                 app_form.applications.filter(
-                    user=request.user,
+                    user=user,
                 )
                 .exclude(status=models.ApplicationStatus.WITHDRAWN)
                 .first()
@@ -2217,14 +2247,14 @@ class ApplicationFormView(views.View):
                 return HttpResponseRedirect(existing_application.get_absolute_url())
 
         editable = (
-            request.user.is_authenticated
-            and models.ApplicationForm.objects.submittable(request.user)
+            user.is_authenticated
+            and models.ApplicationForm.objects.submittable(user)
             .filter(id=app_form.id)
             .exists()
         )
         form = forms.ApplicationForm(
             app_form,
-            request.user if request.user.is_authenticated else None,
+            user if user.is_authenticated else None,  # type: ignore
             instance=None,
             editable=editable,
             label_suffix="",
@@ -2268,19 +2298,21 @@ class ApplicationFormView(views.View):
         league_slug: str,
     ) -> HttpResponse:
         app = None
-
-        if not request.user.is_authenticated:
+        user = self.get_user()
+        if not user.is_authenticated:
             return HttpResponseBadRequest("login first")  # TODO
 
+        assert isinstance(user, models.User)
+
         app_form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.submittable(request.user),
+            models.ApplicationForm.objects.submittable(user),
             slug=application_form_slug,
             event__slug=event_slug,
             event__league__slug=league_slug,
         )
         existing_application = (
             app_form.applications.filter(
-                user=request.user,
+                user=user,
             )
             .exclude(status=models.ApplicationStatus.WITHDRAWN)
             .first()
@@ -2298,7 +2330,7 @@ class ApplicationFormView(views.View):
 
         form = forms.ApplicationForm(
             app_form,
-            request.user,
+            user,
             data=request.POST,
             instance=None,
             editable=True,
@@ -2311,7 +2343,7 @@ class ApplicationFormView(views.View):
             app = form.save()
             # Send the user an acknowledgement email.
             context = models.MergeContext(
-                app, app_form, app_form.event, app_form.event.league, request.user, None
+                app, app_form, app_form.event, app_form.event.league, user, None
             )
             emails.send_message(
                 app,
@@ -2335,8 +2367,8 @@ class ApplicationFormView(views.View):
             application=None,
             app_form=app_form,
             form=form,
-            editable=request.user.is_authenticated
-            and models.ApplicationForm.objects.submittable(request.user)
+            editable=user.is_authenticated
+            and models.ApplicationForm.objects.submittable(user)
             .filter(id=app_form.id)
             .exists(),
         )
@@ -2344,7 +2376,7 @@ class ApplicationFormView(views.View):
         return render(request, "stave/view_application.html", contexts.to_dict(context))
 
 
-class CommCenterView(LoginRequiredMixin, views.View):
+class CommCenterView(AuthenticatedUserMixin, views.View):
     def get(
         self,
         request: HttpRequest,
@@ -2353,7 +2385,7 @@ class CommCenterView(LoginRequiredMixin, views.View):
         application_form_slug: str,
     ) -> HttpResponse:
         application_form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user),
+            models.ApplicationForm.objects.manageable(self.get_user()),
             event__league__slug=league_slug,
             event__slug=event_slug,
             slug=application_form_slug,
@@ -2378,7 +2410,7 @@ class CommCenterView(LoginRequiredMixin, views.View):
                     pending_rejection=pending_rejection,
                     pending_assignment=pending_assignment,
                     application_form=application_form,
-                    redirect_url=request.GET.get("redirect_url"),
+                    redirect_url=request.GET.get("redirect_url", ""),
                 )
             ),
         )
@@ -2393,19 +2425,20 @@ class CommCenterView(LoginRequiredMixin, views.View):
         """Send templated emails to the whole relevant population,
         using the configured template."""
         application_form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user),
+            models.ApplicationForm.objects.manageable(self.get_user()),
             event__league__slug=league_slug,
             event__slug=event_slug,
             slug=application_form_slug,
         )
 
+        email_type = request.POST.get("type", "")
         try:
-            email_type = models.SendEmailContextType(request.POST.get("type"))
+            email_type_enum = models.SendEmailContextType(email_type)
         except ValueError:
-            return HttpResponseBadRequest(f"invalid email_type {email_type}")
+            return HttpResponseBadRequest(f'invalid email_type "{email_type}"')
 
         member_queryset = application_form.get_user_queryset_for_context_type(
-            email_type
+            email_type_enum
         )
 
         # A specific user was intended as the target
@@ -2426,7 +2459,7 @@ class CommCenterView(LoginRequiredMixin, views.View):
                 .first()
             )
             emails.send_message_from_messagetemplate(
-                application, request.user, email_type, request.user.email
+                application, self.get_user(), email_type_enum, self.get_user().email
             )
 
         messages.info(request, gettext_lazy("Your emails are being sent"))
@@ -2439,7 +2472,7 @@ class CommCenterView(LoginRequiredMixin, views.View):
         return HttpResponseRedirect(application_form.event.get_absolute_url())
 
 
-class SendEmailView(LoginRequiredMixin, views.View):
+class SendEmailView(AuthenticatedUserMixin, views.View):
     def get(
         self,
         request: HttpRequest,
@@ -2448,20 +2481,21 @@ class SendEmailView(LoginRequiredMixin, views.View):
         application_form_slug: str,
         email_type: str,
     ) -> HttpResponse:
+        user = self.get_user()
         application_form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user),
+            models.ApplicationForm.objects.manageable(user),
             event__league__slug=league_slug,
             event__slug=event_slug,
             slug=application_form_slug,
         )
 
         try:
-            email_type = models.SendEmailContextType(email_type)
+            email_type_enum = models.SendEmailContextType(email_type)
         except ValueError:
             return HttpResponseBadRequest(f"invalid email_type {email_type}")
 
         member_queryset = application_form.get_user_queryset_for_context_type(
-            email_type
+            email_type_enum
         )
 
         empty_merge_context = models.MergeContext(
@@ -2473,7 +2507,7 @@ class SendEmailView(LoginRequiredMixin, views.View):
             sender=models.User(),
         )
 
-        initial = {"reply_to": request.user.email}
+        initial = {"reply_to": user.email}
 
         # If we have a GET param with a user id in it, filter down to that.
         # (Supplying the applicant query if we do not have a member_queryset or email_type)
@@ -2488,22 +2522,23 @@ class SendEmailView(LoginRequiredMixin, views.View):
             member_queryset = member_queryset.filter(id=target_member)
 
         if message_template := application_form.get_template_for_context_type(
-            email_type
+            email_type_enum
         ):
             from . import emails
 
             if member_queryset.count() == 1:
+                target_user = member_queryset.first()
+                assert target_user
+
                 merge_context = models.MergeContext(
                     league=application_form.event.league,
                     event=application_form.event,
                     app_form=application_form,
-                    application=application_form.applications.filter(
-                        user=member_queryset.first()
-                    )
+                    application=application_form.applications.filter(user=target_user)
                     .exclude(status=models.ApplicationStatus.WITHDRAWN)
                     .first(),
-                    user=member_queryset.first(),
-                    sender=request.user,
+                    user=target_user,
+                    sender=user,
                 )
                 initial["subject"] = emails.substitute(
                     merge_context, message_template.subject
@@ -2545,21 +2580,22 @@ class SendEmailView(LoginRequiredMixin, views.View):
         application_form_slug: str,
         email_type: str,
     ) -> HttpResponse:
+        user = self.get_user()
         application_form: models.ApplicationForm = get_object_or_404(
-            models.ApplicationForm.objects.manageable(request.user),
+            models.ApplicationForm.objects.manageable(user),
             event__league__slug=league_slug,
             event__slug=event_slug,
             slug=application_form_slug,
         )
 
         try:
-            email_type = models.SendEmailContextType(email_type)
+            email_type_enum = models.SendEmailContextType(email_type)
         except ValueError:
             return HttpResponseBadRequest(f"invalid email_type {email_type}")
 
         email_form = forms.SendEmailForm(data=request.POST)
         email_recipients_form = forms.SendEmailRecipientsForm(
-            application_form.get_user_queryset_for_context_type(email_type),
+            application_form.get_user_queryset_for_context_type(email_type_enum),
             data=request.POST,
         )
 
@@ -2580,14 +2616,15 @@ class SendEmailView(LoginRequiredMixin, views.View):
                         .exclude(status=models.ApplicationStatus.WITHDRAWN)
                         .first()
                     )
-                    emails.send_message(
-                        application,
-                        request.user,
-                        email_type,
-                        subject,
-                        content,
-                        reply_to,
-                    )
+                    if application:
+                        emails.send_message(
+                            application,
+                            user,
+                            email_type_enum,
+                            subject,
+                            content,
+                            reply_to,
+                        )
 
                 if recipients:
                     messages.info(request, gettext_lazy("Your emails are being sent"))

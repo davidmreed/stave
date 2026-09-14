@@ -1,0 +1,27 @@
+[[language]]
+name = "python"
+language-servers = ["pylsp", "ruff", "pyrefly"]
+auto-format = true
+
+[language-server.ruff]
+command = "uv"
+args = ["run", "ruff", "server"]
+
+[language-server.pylsp]
+command = "uv"
+args = ["run", "pylsp"]
+
+[language-server.pyrefly]
+command = "uv"
+args = ["run", "pyrefly", "lsp"]
+
+[language-server.djlsp]
+command = "uv"
+args = ["run", "djlsp"]
+
+[[language]]
+name = "htmldjango"
+file-types = ["html"]
+
+[language-server.djlsp.config]
+django_settings_module = "stave.settings.development"

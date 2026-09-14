@@ -46,6 +46,7 @@ dev = [
     "django-coverage-plugin>=3.2.0",
     "djade>=1.7.0",
     "django-zeal>=2.1.0",
+    "pyrefly>=1.3.0",
 ]
 
 [tool.coverage.run]
@@ -75,3 +76,11 @@ DJANGO_SETTINGS_MODULE = "stave.settings"
 # Remove this once behave-django updates to a stable release with behave 1.3.x
 # See https://github.com/behave/behave-django/pull/172
 prerelease = "if-necessary"
+
+[tool.pyrefly]
+project-includes = [
+    "**/*.py*",
+    "**/*.ipynb",
+]
+[tool.pyrefly.errors]
+bad-override = "ignore"

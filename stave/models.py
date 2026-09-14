@@ -5,6 +5,7 @@ import uuid
 import zoneinfo
 from collections import defaultdict
 from datetime import datetime, timedelta
+from typing import ClassVar, Any
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
@@ -29,13 +30,23 @@ class MRDACertificationLevel(models.TextChoices):
     RECOGNIZED = "Recognized", _("Recognized")
 
 
-class UserQuerySet(models.QuerySet["User"]):
-    def staffed(self, event: "Event") -> "UserQuerySet":
+class UserFilters:
+    def staffed(
+        self: "UserQuerySet | UserManager", event: "Event"
+    ) -> "UserQuerySet | UserManager":
         return self.filter(
             id__in=Application.objects.filter(
                 form__event=event, status=ApplicationStatus.ASSIGNED
             ).values("user_id")
         ).distinct()
+
+
+class UserQuerySet(UserFilters, models.QuerySet["User"]):
+    pass
+
+
+class UserManager(UserFilters, models.Manager["User"]):
+    pass
 
 
 class User(AbstractBaseUser):
@@ -92,13 +103,13 @@ class User(AbstractBaseUser):
 
     league_permissions: models.Manager["LeagueUserPermission"]
 
-    objects = UserQuerySet.as_manager()
+    objects: ClassVar[UserManager] = UserManager()
 
     # Required to use the Django Admin
-    def has_perm(self, perm, obj=None):
+    def has_perm(self, _perm, _obj=None):
         return True
 
-    def has_module_perms(self, app_label):
+    def has_module_perms(self, _app_label):
         return True
 
     def __str__(self) -> str:
@@ -142,7 +153,7 @@ class RoleGroup(models.Model):
 
     def clone(self, league: "League") -> "RoleGroup":
         new_object = copy.copy(self)
-        new_object.id = new_object.pk = None
+        new_object.id = new_object.pk = uuid.uuid4()
         new_object._state.adding = True
         new_object.league = league
         new_object.league_template = None
@@ -182,7 +193,7 @@ class Role(models.Model):
 
     def clone(self, role_group: RoleGroup) -> "Role":
         new_object = copy.copy(self)
-        new_object.id = new_object.pk = None
+        new_object.id = new_object.pk = uuid.uuid4()
         new_object._state.adding = True
         new_object.role_group = role_group
         new_object.save()
@@ -198,8 +209,10 @@ class Role(models.Model):
         ordering = ["role_group", "order_key"]
 
 
-class LeagueQuerySet(models.QuerySet["League"]):
-    def visible(self, user: User | AnonymousUser) -> models.QuerySet["League"]:
+class LeagueFilters:
+    def visible(
+        self: "LeagueManager | LeagueQuerySet", user: User | AnonymousUser
+    ) -> "LeagueManager | LeagueQuerySet":
         if isinstance(user, User):
             return self.filter(
                 Q(enabled=True)
@@ -212,13 +225,17 @@ class LeagueQuerySet(models.QuerySet["League"]):
         else:
             return self.filter(enabled=True)
 
-    def event_manageable(self, user: User) -> models.QuerySet["League"]:
+    def event_manageable(
+        self: "LeagueManager | LeagueQuerySet", user: User
+    ) -> "LeagueManager | LeagueQuerySet":
         return self.filter(
             user_permissions__permission=UserPermission.EVENT_MANAGER,
             user_permissions__user=user,
         ).distinct()
 
-    def manageable(self, user: User | AnonymousUser) -> models.QuerySet["League"]:
+    def manageable(
+        self: "LeagueManager | LeagueQuerySet", user: User | AnonymousUser
+    ) -> "LeagueManager | LeagueQuerySet":
         if isinstance(user, AnonymousUser):
             return self.none()
 
@@ -227,13 +244,24 @@ class LeagueQuerySet(models.QuerySet["League"]):
             user_permissions__user=user,
         ).distinct()
 
-    def subscribed(self, user: User) -> models.QuerySet["League"]:
+    def subscribed(
+        self: "LeagueManager | LeagueQuerySet", user: User
+    ) -> "LeagueManager | LeagueQuerySet":
         return self.filter(
             league_groups__group__in=LeagueGroup.objects.subscribed(user)
         ).distinct()
 
 
+class LeagueQuerySet(LeagueFilters, models.QuerySet["League"]):
+    pass
+
+
+class LeagueManager(LeagueFilters, models.Manager["League"]):
+    pass
+
+
 def upload_to(instance: models.Model, filename: str) -> str:
+    assert isinstance(instance, League | Event)
     return f"{instance.id}/{filename}"
 
 
@@ -257,8 +285,11 @@ class League(models.Model):
     events: models.Manager["Event"]
     event_templates: models.Manager["EventTemplate"]
     user_permissions: models.Manager["LeagueUserPermission"]
+    role_groups: models.Manager["RoleGroup"]
+    application_form_templates: models.Manager["ApplicationFormTemplate"]
+    message_templates: models.Manager["MessageTemplate"]
 
-    objects = LeagueQuerySet.as_manager()
+    objects: ClassVar[LeagueManager] = LeagueManager()
 
     def __str__(self) -> str:
         return self.name
@@ -382,8 +413,8 @@ class EventTemplate(models.Model):
     )
     name = models.CharField(max_length=256)
     description = models.TextField()
-    role_groups: models.ManyToManyField["EventTemplate", RoleGroup] = (
-        models.ManyToManyField(RoleGroup, blank=True)
+    role_groups = models.ManyToManyField(
+        RoleGroup, blank=True
     )  # TODO: validate that Role Groups are associated to the same
     # League or League Template we are.
     application_form_templates: models.ManyToManyField[
@@ -398,6 +429,9 @@ class EventTemplate(models.Model):
     location = models.TextField(blank=True, null=True)
 
     game_templates: models.Manager["GameTemplate"]
+    application_form_template_assignments: models.Manager[
+        "ApplicationFormTemplateAssignment"
+    ]
 
     class Meta:
         constraints = [
@@ -414,7 +448,7 @@ class EventTemplate(models.Model):
         self, league: League, role_group_map: dict[uuid.UUID, uuid.UUID]
     ) -> "EventTemplate":
         new_object = copy.copy(self)
-        new_object.id = new_object.pk = None
+        new_object.id = new_object.pk = uuid.uuid4()
         new_object._state.adding = True
         new_object.league = league
         new_object.league_template = None
@@ -424,7 +458,7 @@ class EventTemplate(models.Model):
         new_role_group_ids = {
             role_group_map[role_group.id] for role_group in self.role_groups.all()
         }
-        new_object.role_groups.set(new_role_group_ids)
+        new_object.role_groups.set(RoleGroup.objects.filter(id__in=new_role_group_ids))
 
         # Copy Game Templates
         for game_template in self.game_templates.prefetch_related("role_groups").all():
@@ -435,8 +469,8 @@ class EventTemplate(models.Model):
 
         return new_object
 
-    def clone(self, game_kwargs: list[dict] = None, **kwargs) -> "Event":
-        values = {
+    def clone(self, game_kwargs: list[dict] | None = None, **kwargs) -> "Event":
+        values: dict[str, Any] = {
             "league": self.league,
             "location": self.location,
         }
@@ -501,9 +535,7 @@ class GameTemplate(models.Model):
     kind = models.CharField(max_length=32, choices=GameKind, null=True, blank=True)
     start_time = models.TimeField(null=True, blank=True)
     end_time = models.TimeField(null=True, blank=True)
-    role_groups: models.ManyToManyField["GameTemplate", RoleGroup] = (
-        models.ManyToManyField(RoleGroup, blank=True)
-    )
+    role_groups = models.ManyToManyField(RoleGroup, blank=True)
     # TODO: validate that Role Groups have the same League as we do.
     # TODO: validate that Role Groups assigned to us are a strict subset
     # of those assigned to our Event
@@ -513,7 +545,7 @@ class GameTemplate(models.Model):
         self, event_template: EventTemplate, role_group_map: dict[uuid.UUID, uuid.UUID]
     ) -> "GameTemplate":
         new_object = copy.copy(self)
-        new_object.id = new_object.pk = None
+        new_object.id = new_object.pk = uuid.uuid4()
         new_object._state.adding = True
         new_object.event_template = event_template
         new_object.save()
@@ -528,7 +560,7 @@ class GameTemplate(models.Model):
 
     def clone(self, event: "Event", **kwargs) -> "Game":
         timezone = ZoneInfo(event.league.time_zone)
-        values = {
+        values: dict[str, Any] = {
             "event": event,
         }
         if self.start_time:
@@ -561,14 +593,24 @@ class CrewKind(models.IntegerChoices):
     OVERRIDE_CREW = 3, _("Override Crew")
 
 
-class CrewQuerySet(models.QuerySet["Crew"]):
-    def prefetch_assignments(self) -> models.QuerySet["Crew"]:
+class CrewFilters:
+    def prefetch_assignments(
+        self: "CrewQuerySet | CrewManager",
+    ) -> models.QuerySet["Crew"]:
         return self.prefetch_related(
             "assignments",
             "assignments__user",
             "assignments__role",
             "assignments__role__role_group",
         )
+
+
+class CrewQuerySet(CrewFilters, models.QuerySet["Crew"]):
+    pass
+
+
+class CrewManager(CrewFilters, models.Manager["Crew"]):
+    pass
 
 
 class Crew(models.Model):
@@ -586,7 +628,7 @@ class Crew(models.Model):
         choices=CrewKind.choices, blank=False, null=False, default=CrewKind.GAME_CREW
     )
     # TODO: validate that this field is consistent with our other data.
-    objects = CrewQuerySet.as_manager()
+    objects: ClassVar[CrewManager] = CrewManager()
     assignments: models.Manager["CrewAssignment"]
     event_role_group_assignments: models.Manager["EventRoleGroupCrewAssignment"]
     role_group_assignments: models.Manager["RoleGroupCrewAssignment"]
@@ -609,11 +651,24 @@ class Crew(models.Model):
         return self.name
 
 
-class CrewAssignmentQuerySet(models.QuerySet["CrewAssignment"]):
-    def concrete_for_user(self, user: User) -> models.QuerySet["CrewAssignment"]:
+class CrewAssignmentFilters:
+    def concrete_for_user(
+        self: "CrewAssignmentQuerySet | CrewAssignmentManager",
+        user: User | AnonymousUser,
+    ) -> "CrewAssignmentQuerySet | CrewAssignmentManager":
+        if not user.is_authenticated:
+            return self.none()
         return self.filter(
             user=user, crew__kind__in=[CrewKind.OVERRIDE_CREW, CrewKind.EVENT_CREW]
         )
+
+
+class CrewAssignmentQuerySet(CrewAssignmentFilters, models.QuerySet["CrewAssignment"]):
+    pass
+
+
+class CrewAssignmentManager(CrewAssignmentFilters, models.Manager["CrewAssignment"]):
+    pass
 
 
 class CrewAssignment(models.Model):
@@ -625,7 +680,7 @@ class CrewAssignment(models.Model):
     )
     # TODO: validate that our Role is a member of the Role Group for our Crew
 
-    objects = CrewAssignmentQuerySet.as_manager()
+    objects: ClassVar[CrewAssignmentManager] = CrewAssignmentManager()
 
     class Meta:
         constraints = [
@@ -645,8 +700,10 @@ class EventStatus(models.IntegerChoices):
     CANCELED = 5, _("Canceled")
 
 
-class EventQuerySet(models.QuerySet["Event"]):
-    def visible(self, user: User | AnonymousUser | None) -> models.QuerySet["Event"]:
+class EventFilters:
+    def visible(
+        self: "EventQuerySet | EventManager", user: User | AnonymousUser | None
+    ) -> "EventQuerySet | EventManager":
         if isinstance(user, User):
             return self.filter(
                 ~Q(status=EventStatus.DRAFTING)
@@ -661,7 +718,9 @@ class EventQuerySet(models.QuerySet["Event"]):
                 status=EventStatus.DRAFTING,
             )
 
-    def listed(self, user: User | AnonymousUser | None) -> models.QuerySet["Event"]:
+    def listed(
+        self: "EventQuerySet | EventManager", user: User | AnonymousUser | None
+    ) -> "EventQuerySet | EventManager":
         if isinstance(user, User):
             return (
                 self.visible(user)
@@ -684,15 +743,21 @@ class EventQuerySet(models.QuerySet["Event"]):
                 ]
             )
 
-    def subscribed(self, user: User) -> models.QuerySet["Event"]:
+    def subscribed(
+        self: "EventQuerySet | EventManager", user: User
+    ) -> models.QuerySet["Event"]:
         return self.listed(user).filter(league__in=League.objects.subscribed(user))
 
-    def in_league_group(self, league_group: "LeagueGroup") -> models.QuerySet["Event"]:
+    def in_league_group(
+        self: "EventQuerySet | EventManager", league_group: "LeagueGroup"
+    ) -> models.QuerySet["Event"]:
         return self.filter(
             league__in=League.objects.filter(league_groups__group=league_group)
         )
 
-    def manageable(self, user: User | AnonymousUser) -> models.QuerySet["Event"]:
+    def manageable(
+        self: "EventQuerySet | EventManager", user: User | AnonymousUser
+    ) -> "EventQuerySet | EventManager":
         if isinstance(user, AnonymousUser):
             return self.none()
 
@@ -702,7 +767,7 @@ class EventQuerySet(models.QuerySet["Event"]):
         ).distinct()
 
     def open_applications_grouped_by_subscription(
-        self, user: User | AnonymousUser
+        self: "EventQuerySet | EventManager", user: User | AnonymousUser
     ) -> models.QuerySet["Event"]:
         application_form_queryset = (
             Event.objects.filter(
@@ -716,6 +781,7 @@ class EventQuerySet(models.QuerySet["Event"]):
         )
 
         if user.is_authenticated:
+            assert isinstance(user, User)
             application_form_queryset = (
                 (
                     application_form_queryset.exclude(
@@ -728,10 +794,14 @@ class EventQuerySet(models.QuerySet["Event"]):
 
         return application_form_queryset
 
-    def prefetch_for_display(self) -> models.QuerySet["Event"]:
+    def prefetch_for_display(
+        self: "EventQuerySet | EventManager",
+    ) -> "EventQuerySet | EventManager":
         return self.select_related("league").prefetch_related("games")
 
-    def staffing_for_user(self, user: User) -> models.QuerySet["Event"]:
+    def staffing_for_user(
+        self: "EventQuerySet | EventManager", user: User | AnonymousUser
+    ) -> "EventQuerySet | EventManager":
         if not user.is_authenticated:
             return self.none()
         return (
@@ -748,7 +818,9 @@ class EventQuerySet(models.QuerySet["Event"]):
             .prefetch_related("application_forms__role_groups")
         )
 
-    def open_for_user(self, user: User) -> models.QuerySet["Event"]:
+    def open_for_user(
+        self: "EventQuerySet | EventManager", user: User | AnonymousUser
+    ) -> "EventQuerySet | EventManager":
         if not user.is_authenticated:
             return self.none()
         application_queryset = Application.objects.open_for_user(user)
@@ -766,7 +838,9 @@ class EventQuerySet(models.QuerySet["Event"]):
             .distinct()
         )
 
-    def staffed_for_user(self, user: User) -> models.QuerySet["Event"]:
+    def staffed_for_user(
+        self: "EventQuerySet | EventManager", user: User | AnonymousUser
+    ) -> "EventQuerySet | EventManager":
         if not user.is_authenticated:
             return self.none()
 
@@ -776,7 +850,9 @@ class EventQuerySet(models.QuerySet["Event"]):
             application_forms__applications__in=application_queryset,
         ).distinct()
 
-    def prefetch_for_applied_card(self, user: User) -> models.QuerySet["Event"]:
+    def prefetch_for_applied_card(
+        self: "EventQuerySet | EventManager", user: User | AnonymousUser
+    ) -> "EventQuerySet | EventManager":
         if not user.is_authenticated:
             return self.none()
         crew_assignment_queryset = CrewAssignment.objects.concrete_for_user(user)
@@ -799,7 +875,9 @@ class EventQuerySet(models.QuerySet["Event"]):
             .prefetch_related("crews__assignments__role")
         )
 
-    def prefetch_for_management(self) -> models.QuerySet["Event"]:
+    def prefetch_for_management(
+        self: "EventQuerySet | EventManager",
+    ) -> "EventQuerySet | EventManager":
         return self.select_related("league").prefetch_related(
             "application_forms",
             "application_forms__role_groups",
@@ -817,6 +895,14 @@ class EventQuerySet(models.QuerySet["Event"]):
         )
 
 
+class EventQuerySet(EventFilters, models.QuerySet["Event"]):
+    pass
+
+
+class EventManager(EventFilters, models.Manager["Event"]):
+    pass
+
+
 class Event(models.Model):
     EventStatus = EventStatus
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -825,9 +911,7 @@ class Event(models.Model):
         choices=EventStatus.choices, default=EventStatus.DRAFTING
     )
 
-    role_groups: models.ManyToManyField["Event", RoleGroup] = models.ManyToManyField(
-        RoleGroup, blank=True
-    )
+    role_groups = models.ManyToManyField(RoleGroup, blank=True)
     # TODO: validate that our Role Groups are assigned to our League
     name = models.CharField(max_length=256)
     slug = models.SlugField(
@@ -841,8 +925,10 @@ class Event(models.Model):
     location = models.TextField()
 
     games: models.Manager["Game"]
+    crews: models.Manager["Crew"]
+    application_forms: models.Manager["ApplicationForm"]
 
-    objects = EventQuerySet.as_manager()
+    objects: ClassVar[EventManager] = EventManager()
 
     def __str__(self) -> str:
         return self.name
@@ -938,8 +1024,10 @@ class RoleGroupCrewAssignment(models.Model):
         return list(self.effective_crew_by_role_id().values())
 
 
-class GameQuerySet(models.QuerySet["Game"]):
-    def manageable(self, user: User | AnonymousUser) -> models.QuerySet["Game"]:
+class GameFilters:
+    def manageable(
+        self: "GameQuerySet | GameManager", user: User | AnonymousUser
+    ) -> "GameQuerySet | GameManager":
         if isinstance(user, AnonymousUser):
             return self.none()
 
@@ -947,6 +1035,14 @@ class GameQuerySet(models.QuerySet["Game"]):
             event__league__user_permissions__permission=UserPermission.EVENT_MANAGER,
             event__league__user_permissions__user=user,
         ).distinct()
+
+
+class GameQuerySet(GameFilters, models.QuerySet["Game"]):
+    pass
+
+
+class GameManager(GameFilters, models.Manager["Game"]):
+    pass
 
 
 class Game(models.Model):
@@ -964,8 +1060,8 @@ class Game(models.Model):
     end_time = models.DateTimeField()
 
     role_groups = models.ManyToManyField(RoleGroup, through=RoleGroupCrewAssignment)
-
-    objects = GameQuerySet.as_manager()
+    role_group_crew_assignments: models.Manager["RoleGroupCrewAssignment"]
+    objects: ClassVar[GameManager] = GameManager()
 
     def get_crew_assignments_by_role_group(
         self,
@@ -1094,7 +1190,7 @@ class MessageTemplate(models.Model):
 
     def clone_as_template(self, league: League) -> "MessageTemplate":
         new_object = copy.copy(self)
-        new_object.id = new_object.pk = None
+        new_object.id = new_object.pk = uuid.uuid4()
         new_object._state.adding = True
         new_object.league = league
         new_object.league_template = None
@@ -1192,13 +1288,11 @@ class ApplicationFormTemplate(models.Model):
             "You can request availability at the level of the whole event, whole days, or by individual game. Single-game events must use Entire Event."
         ),
     )
-    role_groups: models.ManyToManyField["ApplicationFormTemplate", RoleGroup] = (
-        models.ManyToManyField(
-            RoleGroup,
-            help_text=_(
-                "The role groups covered by this form. You can select any or all of the role groups assigned to the event. Each role group can appear on only one form."
-            ),
-        )
+    role_groups = models.ManyToManyField(
+        RoleGroup,
+        help_text=_(
+            "The role groups covered by this form. You can select any or all of the role groups assigned to the event. Each role group can appear on only one form."
+        ),
     )
     intro_text = models.TextField(
         null=True,
@@ -1236,6 +1330,8 @@ class ApplicationFormTemplate(models.Model):
         on_delete=models.SET_NULL,
     )
 
+    template_questions: models.Manager["Question"]
+
     def __str__(self):
         return f"{self.name} ({self.get_application_kind_display()}, {self.get_application_availability_kind_display()})"
 
@@ -1263,7 +1359,7 @@ class ApplicationFormTemplate(models.Model):
         # Questions
         for question in self.template_questions.all():
             new_question = copy.copy(question)
-            new_question.id = new_question.pk = None
+            new_question.id = new_question.pk = uuid.uuid4()
             new_question._state.adding = True
             new_question.application_form = new_object
             new_question.application_form_template = None
@@ -1278,39 +1374,45 @@ class ApplicationFormTemplate(models.Model):
         role_group_map: dict[uuid.UUID, uuid.UUID],
     ) -> "ApplicationFormTemplate":
         new_object = copy.copy(self)
-        new_object.id = new_object.pk = None
+        new_object.id = new_object.pk = uuid.uuid4()
         new_object._state.adding = True
         new_object.league = league
         new_object.league_template = None
 
-        new_object.invitation_email_template_id = email_template_map[
-            new_object.invitation_email_template_id
-        ]
-        new_object.assigned_email_template_id = email_template_map[
-            new_object.assigned_email_template_id
-        ]
-        new_object.rejected_email_template_id = email_template_map[
-            new_object.rejected_email_template_id
-        ]
+        if new_object.invitation_email_template_id:
+            new_object.invitation_email_template_id = email_template_map[
+                new_object.invitation_email_template_id
+            ]
+        if new_object.assigned_email_template_id:
+            new_object.assigned_email_template_id = email_template_map[
+                new_object.assigned_email_template_id
+            ]
+        if new_object.rejected_email_template_id:
+            new_object.rejected_email_template_id = email_template_map[
+                new_object.rejected_email_template_id
+            ]
+
         new_object.save()
 
         for question in self.template_questions.all():
             new_question = copy.copy(question)
-            new_question.id = new_question.pk = None
+            new_question.id = new_question.pk = uuid.uuid4()
             new_question._state.adding = True
             new_question.application_form_template = new_object
             new_question.save()
 
         new_object.role_groups.set(
-            [role_group_map.get(rg.id) for rg in self.role_groups.all()]
+            RoleGroup.objects.filter(
+                id__in=[role_group_map.get(rg.id) for rg in self.role_groups.all()]
+            )
         )
 
         return new_object
 
-    def save(self, **kwargs):
+    def save(self, *args, **kwargs):
         if "preferred_name" not in self.requires_profile_fields:
             self.requires_profile_fields.insert(0, "preferred_name")
-        super().save(**kwargs)
+        super().save(*args, **kwargs)
 
     class Meta:
         ordering = ["name"]
@@ -1344,8 +1446,11 @@ class ApplicationFormTemplateAssignment(models.Model):
     )
 
 
-class ApplicationFormQuerySet(models.QuerySet["ApplicationForm"]):
-    def listed(self, user: User | AnonymousUser) -> models.QuerySet["ApplicationForm"]:
+class ApplicationFormFilters:
+    def listed(
+        self: "ApplicationFormQuerySet | ApplicationFormManager",
+        user: User | AnonymousUser,
+    ) -> "ApplicationFormQuerySet | ApplicationFormManager":
         """ApplicationForms that are listed on the homepage and other timelines"""
         return (
             self.manageable(user)
@@ -1357,20 +1462,24 @@ class ApplicationFormQuerySet(models.QuerySet["ApplicationForm"]):
             ).distinct()
         ).order_by("close_date", "event__start_date")  # TODO: make this a CASE()
 
-    def subscribed(self, user: User) -> models.QuerySet["ApplicationForm"]:
+    def subscribed(
+        self: "ApplicationFormQuerySet | ApplicationFormManager", user: User
+    ) -> "ApplicationFormQuerySet | ApplicationFormManager":
         return self.filter(event__in=Event.objects.subscribed(user))
 
     def accessible(
-        self, user: User | AnonymousUser
-    ) -> models.QuerySet["ApplicationForm"]:
+        self: "ApplicationFormQuerySet | ApplicationFormManager",
+        user: User | AnonymousUser,
+    ) -> "ApplicationFormQuerySet | ApplicationFormManager":
         """ApplicationForms that can be accessed by a user who knows the URL"""
         return self.filter(
             event__league__enabled=True,
         ).exclude(event__status=EventStatus.DRAFTING).distinct() | self.manageable(user)
 
     def submittable(
-        self, user: User | AnonymousUser
-    ) -> models.QuerySet["ApplicationForm"]:
+        self: "ApplicationFormQuerySet | ApplicationFormManager",
+        user: User | AnonymousUser,
+    ) -> "ApplicationFormQuerySet | ApplicationFormManager":
         return (
             self.filter(
                 event__status__in=[EventStatus.OPEN, EventStatus.LINK_ONLY],
@@ -1380,8 +1489,9 @@ class ApplicationFormQuerySet(models.QuerySet["ApplicationForm"]):
         ).exclude(closed=True)
 
     def manageable(
-        self, user: User | AnonymousUser
-    ) -> models.QuerySet["ApplicationForm"]:
+        self: "ApplicationFormQuerySet | ApplicationFormManager",
+        user: User | AnonymousUser,
+    ) -> "ApplicationFormQuerySet | ApplicationFormManager":
         if isinstance(user, AnonymousUser):
             return self.none()
         else:
@@ -1394,7 +1504,9 @@ class ApplicationFormQuerySet(models.QuerySet["ApplicationForm"]):
                 .exclude(event__status__in=[EventStatus.CANCELED, EventStatus.COMPLETE])
             )
 
-    def prefetch_applications(self) -> models.QuerySet["ApplicationForm"]:
+    def prefetch_applications(
+        self: "ApplicationFormQuerySet | ApplicationFormManager",
+    ) -> "ApplicationFormQuerySet | ApplicationFormManager":
         return self.select_related(
             "event",
             "event__league",
@@ -1409,12 +1521,24 @@ class ApplicationFormQuerySet(models.QuerySet["ApplicationForm"]):
             "form_questions",
         )
 
-    def prefetch_crews(self) -> models.QuerySet["ApplicationForm"]:
+    def prefetch_crews(
+        self: "ApplicationFormQuerySet | ApplicationFormManager",
+    ) -> "ApplicationFormQuerySet | ApplicationFormManager":
         return self.select_related("event").prefetch_related(
             "event__crews",
             "event__crews__assignments",
             "event__crews__assignments__user",
         )
+
+
+class ApplicationFormQuerySet(
+    ApplicationFormFilters, models.QuerySet["ApplicationForm"]
+):
+    pass
+
+
+class ApplicationFormManager(ApplicationFormFilters, models.Manager["ApplicationForm"]):
+    pass
 
 
 class SendEmailContextType(enum.Enum):
@@ -1456,13 +1580,11 @@ class ApplicationForm(models.Model):
             "You can request availability at the level of the whole event, whole days, or by individual game. Single-game events must use Entire Event."
         ),
     )
-    role_groups: models.ManyToManyField["ApplicationForm", RoleGroup] = (
-        models.ManyToManyField(
-            RoleGroup,
-            help_text=_(
-                "The role groups covered by this form. You can select any or all of the role groups assigned to the event. Each role group can appear on only one form."
-            ),
-        )
+    role_groups = models.ManyToManyField(
+        RoleGroup,
+        help_text=_(
+            "The role groups covered by this form. You can select any or all of the role groups assigned to the event. Each role group can appear on only one form."
+        ),
     )
     closed = models.BooleanField(default=False)
     close_date = models.DateField(null=True, blank=True)
@@ -1484,7 +1606,7 @@ class ApplicationForm(models.Model):
             "You can accept standard fields from the user's profile without requiring them to re-type their information. You always receive the Derby Name field."
         ),
     )
-    objects = ApplicationFormQuerySet().as_manager()
+    objects: ClassVar[ApplicationFormManager] = ApplicationFormManager()
     invitation_email_template = models.ForeignKey(
         MessageTemplate,
         related_name="application_form_invitation",
@@ -1538,10 +1660,10 @@ class ApplicationForm(models.Model):
     def __str__(self) -> str:
         return f"{self.event.name} ({self.role_group_names})"
 
-    def save(self, **kwargs):
+    def save(self, *args, **kwargs):
         if "preferred_name" not in self.requires_profile_fields:
             self.requires_profile_fields.insert(0, "preferred_name")
-        super().save(**kwargs)
+        super().save(*args, **kwargs)
 
     def get_absolute_url(self) -> str:
         return reverse(
@@ -1597,6 +1719,8 @@ class ApplicationForm(models.Model):
                 return self.schedule_email_template
             case SendEmailContextType.REJECTION:
                 return self.rejection_email_template
+            case SendEmailContextType.CREW:
+                return None
 
     def get_user_queryset_for_context_type(
         self, context: SendEmailContextType
@@ -1700,8 +1824,10 @@ class Question(models.Model):
         ]
 
 
-class ApplicationQuerySet(models.QuerySet["Application"]):
-    def visible(self, user: User) -> models.QuerySet["Application"]:
+class ApplicationFilters:
+    def visible(
+        self: "ApplicationQuerySet | ApplicationManager", user: User
+    ) -> "ApplicationQuerySet | ApplicationManager":
         return self.filter(
             Q(user=user)
             | Q(
@@ -1710,7 +1836,9 @@ class ApplicationQuerySet(models.QuerySet["Application"]):
             ),
         ).distinct()
 
-    def prefetch_for_display(self) -> models.QuerySet["Application"]:
+    def prefetch_for_display(
+        self: "ApplicationQuerySet | ApplicationManager",
+    ) -> "ApplicationQuerySet | ApplicationManager":
         return self.select_related(
             "form", "form__event", "form__event__league"
         ).prefetch_related(
@@ -1723,22 +1851,37 @@ class ApplicationQuerySet(models.QuerySet["Application"]):
             "roles__role_group",
         )
 
-    def open(self):
+    def open(
+        self: "ApplicationQuerySet | ApplicationManager",
+    ) -> "ApplicationQuerySet | ApplicationManager":
         return self.filter(status__in=OPEN_STATUSES)
 
-    def in_progress(self):
+    def in_progress(
+        self: "ApplicationQuerySet | ApplicationManager",
+    ) -> "ApplicationQuerySet | ApplicationManager":
         return self.filter(status__in=IN_PROGRESS_STATUSES)
 
-    def staffed(self):
+    def staffed(
+        self: "ApplicationQuerySet | ApplicationManager",
+    ) -> "ApplicationQuerySet | ApplicationManager":
         return self.filter(status__in=STAFFED_STATUSES)
 
-    def closed(self):
+    def closed(
+        self: "ApplicationQuerySet | ApplicationManager",
+    ) -> "ApplicationQuerySet | ApplicationManager":
         return self.filter(status__in=CLOSED_STATUSES)
 
-    def pending(self):
+    def pending(
+        self: "ApplicationQuerySet | ApplicationManager",
+    ) -> "ApplicationQuerySet | ApplicationManager":
         return self.filter(status__in=PENDING_STATUSES)
 
-    def open_for_user(self, user: User):
+    def open_for_user(
+        self: "ApplicationQuerySet | ApplicationManager", user: User | AnonymousUser
+    ) -> "ApplicationQuerySet | ApplicationManager":
+        if not user.is_authenticated:
+            return self.none()
+
         return self.filter(
             user=user,
         ).filter(
@@ -1752,7 +1895,12 @@ class ApplicationQuerySet(models.QuerySet["Application"]):
             )
         )
 
-    def staffed_for_user(self, user: User):
+    def staffed_for_user(
+        self: "ApplicationQuerySet | ApplicationManager", user: User | AnonymousUser
+    ) -> "ApplicationQuerySet | ApplicationManager":
+        if not user.is_authenticated:
+            return self.none()
+
         return self.filter(
             user=user,
         ).filter(
@@ -1767,6 +1915,14 @@ class ApplicationQuerySet(models.QuerySet["Application"]):
         )
 
 
+class ApplicationQuerySet(ApplicationFilters, models.QuerySet["Application"]):
+    pass
+
+
+class ApplicationManager(ApplicationFilters, models.Manager["Application"]):
+    pass
+
+
 class Application(models.Model):
     ApplicationStatus = ApplicationStatus
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -1779,10 +1935,8 @@ class Application(models.Model):
     availability_by_day: models.JSONField[list[str]] = models.JSONField(
         default=list, blank=True
     )
-    availability_by_game: models.ManyToManyField["Application", Game] = (
-        models.ManyToManyField(Game)
-    )
-    roles: models.ManyToManyField["Application", Role] = models.ManyToManyField(Role)
+    availability_by_game = models.ManyToManyField(Game)
+    roles = models.ManyToManyField(Role)
     status = models.IntegerField(choices=ApplicationStatus.choices)
 
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
@@ -1806,7 +1960,7 @@ class Application(models.Model):
 
     responses: models.Manager["ApplicationResponse"]
 
-    objects = ApplicationQuerySet.as_manager()
+    objects: ClassVar[ApplicationManager] = ApplicationManager()
 
     class Meta:
         # TODO: require population of the relevant availability type for the form.
@@ -1826,7 +1980,7 @@ class Application(models.Model):
     def responses_by_question(self) -> dict[uuid.UUID, "ApplicationResponse"]:
         return {response.question_id: response for response in self.responses.all()}
 
-    def role_names_by_role_group_id(self) -> dict[str, set[str]]:
+    def role_names_by_role_group_id(self) -> dict[uuid.UUID, set[str]]:
         names = defaultdict(set)
         for r in self.roles.all():
             names[r.role_group_id].add(r.name)
@@ -1991,14 +2145,12 @@ class ApplicationResponse(models.Model):
             if len(self.content) == 0:
                 return ""
             elif len(self.content) == 1:
-                return str(self.content[0])
+                return self.content[0]
             elif len(self.content) == 2:
-                return " and ".join(str(a) for a in self.content)
+                return " and ".join(a for a in self.content)
             else:
                 return (
-                    ", ".join(str(a) for a in self.content[:-1])
-                    + " and "
-                    + str(self.content[-1])
+                    ", ".join(a for a in self.content[:-1]) + " and " + self.content[-1]
                 )
         else:
             return self.content
@@ -2028,8 +2180,10 @@ class ApplicationResponse(models.Model):
         ]
 
 
-class LeagueGroupQuerySet(models.QuerySet["LeagueGroup"]):
-    def visible(self, user: User | AnonymousUser) -> "LeagueGroupQuerySet":
+class LeagueGroupFilters:
+    def visible(
+        self: "LeagueGroupQuerySet | LeagueGroupManager", user: User | AnonymousUser
+    ) -> "LeagueGroupQuerySet | LeagueGroupManager":
         # Note that this deliberately excludes the user's subscription group.
         visible = self.exclude(private=True)
         if isinstance(user, User):
@@ -2037,13 +2191,25 @@ class LeagueGroupQuerySet(models.QuerySet["LeagueGroup"]):
 
         return visible.distinct()
 
-    def owned(self, user: User) -> "LeagueGroupQuerySet":
+    def owned(
+        self: "LeagueGroupQuerySet | LeagueGroupManager", user: User
+    ) -> "LeagueGroupQuerySet | LeagueGroupManager":
         return self.filter(owner=user, is_subscriptions_group=False)
 
-    def subscribed(self, user: User) -> "LeagueGroupQuerySet":
+    def subscribed(
+        self: "LeagueGroupQuerySet | LeagueGroupManager", user: User
+    ) -> "LeagueGroupQuerySet | LeagueGroupManager":
         return self.filter(subscriptions__user=user) | self.filter(
             owner=user, is_subscriptions_group=True
         )
+
+
+class LeagueGroupQuerySet(LeagueGroupFilters, models.QuerySet["LeagueGroup"]):
+    pass
+
+
+class LeagueGroupManager(LeagueGroupFilters, models.Manager["LeagueGroup"]):
+    pass
 
 
 class LeagueGroup(models.Model):
@@ -2057,12 +2223,13 @@ class LeagueGroup(models.Model):
     is_subscriptions_group = models.BooleanField(default=False)
     private = models.BooleanField(default=True)
 
-    objects = LeagueGroupQuerySet.as_manager()
+    objects: ClassVar[LeagueGroupManager] = LeagueGroupManager()
+    group_memberships: models.Manager["LeagueGroupMember"]
 
     @classmethod
     def get_subscriptions_group_for_user(cls, user: User) -> "LeagueGroup":
         with transaction.atomic():
-            user = User.objects.filter(id=user.id).select_for_update().first()
+            user = User.objects.select_for_update().get(id=user.id)
             group, _ = cls.objects.get_or_create(
                 name="Subscriptions", is_subscriptions_group=True, owner=user
             )

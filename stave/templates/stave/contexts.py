@@ -1,9 +1,8 @@
 from dataclasses import dataclass, fields
-from typing import Tuple, Type
+from typing import Tuple, Type, Iterable
 from uuid import UUID
 
 from django.core.paginator import Page
-from django.db.models import QuerySet
 from django.http import HttpRequest
 
 from stave import forms, models
@@ -60,8 +59,8 @@ class CrewBuilderDetailInputs:
 class CrewBuilderInputs:
     event: models.Event
     form: models.ApplicationForm | None  # Not required for schedule view only
-    role_groups: QuerySet[models.RoleGroup]
-    games: QuerySet[models.Game]
+    role_groups: Iterable[models.RoleGroup]
+    games: Iterable[models.Game]
     focus_user_id: UUID | None
     static_crews: dict[UUID, models.Crew]
     event_crews: dict[UUID, models.Crew]
@@ -73,7 +72,7 @@ class CrewBuilderInputs:
 
 @dataclass
 class LeagueDetailViewInputs:
-    events: QuerySet[models.Event]
+    events: Iterable[models.Event]
 
 
 @dataclass
@@ -88,10 +87,10 @@ class ViewApplicationContext:
 @dataclass
 class FormApplicationsInputs:
     form: models.ApplicationForm
-    applications_action: QuerySet[models.Application]
-    applications_inprogress: QuerySet[models.Application]
-    applications_staffed: QuerySet[models.Application]
-    applications_closed: QuerySet[models.Application]
+    applications_action: Iterable[models.Application]
+    applications_inprogress: Iterable[models.Application]
+    applications_staffed: Iterable[models.Application]
+    applications_closed: Iterable[models.Application]
     game_counts: dict[UUID, int]
     ApplicationStatus: type
 
@@ -115,7 +114,7 @@ class MessageTemplateEditInputs:
 
 @dataclass
 class TemplateSelectorInputs:
-    templates: QuerySet[models.LeagueTemplate] | QuerySet[models.EventTemplate]
+    templates: Iterable[models.LeagueTemplate] | Iterable[models.EventTemplate]
     object_type: str
     require_template_selection_first: bool
     selected_template: models.LeagueTemplate | models.EventTemplate | None = None
@@ -125,7 +124,7 @@ class TemplateSelectorInputs:
 @dataclass
 class EventDetailInputs:
     event: models.Event
-    application_forms: QuerySet[models.ApplicationForm] | None
+    application_forms: Iterable[models.ApplicationForm] | None
 
 
 @dataclass
@@ -151,7 +150,7 @@ class ApplicationFormCreateUpdateInputs(ParentChildCreateUpdateTimezoneInputs):
 
 @dataclass
 class StaffListInputs:
-    users: list[models.User]
+    users: Iterable[models.User]
     event: models.Event
 
 
@@ -162,9 +161,9 @@ class CalendarInputs:
 
 @dataclass
 class CommCenterInputs:
-    pending_invitation: QuerySet[models.Application]
-    pending_rejection: QuerySet[models.Application]
-    pending_assignment: QuerySet[models.Application]
+    pending_invitation: Iterable[models.Application]
+    pending_rejection: Iterable[models.Application]
+    pending_assignment: Iterable[models.Application]
     application_form: models.ApplicationForm
     redirect_url: str
 
