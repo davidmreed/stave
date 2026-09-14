@@ -1,0 +1,25 @@
+{{ errors }}
+{% if errors and not fields %}
+  <div>{% for field in hidden_fields %}{{ field }}{% endfor %}</div>
+{% endif %}
+{% for field, errors in fields %}
+{% for group in groups %}
+{% if group|first == field.name %}
+<div class="form-group">
+{% endif %}
+{% endfor %}
+  <div{% with classes=field.css_classes %}{% if classes %} class="{{ classes }}"{% endif %}{% endwith %}>
+    {{ field.as_field_group }}
+    {% if forloop.last %}
+      {% for field in hidden_fields %}{{ field }}{% endfor %}
+    {% endif %}
+</div>
+{% for group in groups %}
+{% if group|last == field.name %}
+</div>
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% if not fields and not errors %}
+  {% for field in hidden_fields %}{{ field }}{% endfor %}
+{% endif %}

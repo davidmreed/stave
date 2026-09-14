@@ -1,6 +1,6 @@
 import copy
 import datetime
-from typing import Tuple
+from typing import Tuple, Any
 import zoneinfo
 
 from django import forms
@@ -136,7 +136,30 @@ class MultipleChoiceOrOtherField(forms.MultiValueField):
             return values[0]
 
 
-class ParentChildForm(forms.Form):
+class StaveForm(forms.Form):
+    template_name = "stave/form-div-with-groups.html"
+    groups: list[list[str]] = []
+
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
+
+class StaveModelForm(forms.ModelForm):
+    template_name = "stave/form-div-with-groups.html"
+    groups: list[list[str]] = []
+
+    def __init__(self, *args, **kwargs):
+        kwargs["label_suffix"] = ""
+        super().__init__(*args, **kwargs)
+
+    def get_context(self, *args, **kwargs) -> dict[str, Any]:
+        ret = super().get_context(*args, **kwargs)
+        ret["groups"] = self.groups
+        return ret
+
+
+class ParentChildForm(StaveForm):
     parent_form_class: type[forms.ModelForm]
     child_form_class: type[forms.ModelForm]
     relation_name: str
@@ -263,7 +286,7 @@ class ParentChildForm(forms.Form):
         return self.parent_form.instance.get_absolute_url()
 
 
-class ApplicationForm(forms.Form):
+class ApplicationForm(StaveForm):
     """This is a compound form class that represents the content of a
     user-designed models.ApplicationForm"""
 
@@ -520,7 +543,7 @@ class ApplicationForm(forms.Form):
             return self.instance
 
 
-class QuestionForm(forms.ModelForm):
+class QuestionForm(StaveModelForm):
     class Meta:
         model = models.Question
         fields = ["content", "kind", "required", "options", "allow_other"]
@@ -538,7 +561,6 @@ class QuestionForm(forms.ModelForm):
     kind: models.QuestionKind
 
     def __init__(self, *args, **kwargs):
-        kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
         if self.data.get(kwargs["prefix"] + "-" + DELETION_FIELD_NAME) == "on":
@@ -604,7 +626,7 @@ QuestionFormSet = forms.modelformset_factory(
 )
 
 
-class ApplicationFormForm(forms.ModelForm):
+class ApplicationFormForm(StaveModelForm):
     application_kind = forms.TypedChoiceField(
         empty_value=None,
         choices=models.ApplicationKind,
@@ -664,7 +686,6 @@ class ApplicationFormForm(forms.ModelForm):
         widgets = {"role_groups": forms.CheckboxSelectMultiple}
 
     def __init__(self, event: models.Event | None = None, *args, **kwargs):
-        kwargs["label_suffix"] = ""
         if instance := kwargs.get("instance"):
             # preferred_name is always selected, and is added by save()
             # in the model class. We don't display it on the frontend.
@@ -710,7 +731,7 @@ class ApplicationFormForm(forms.ModelForm):
             self.fields["requires_profile_fields"].disabled = True
 
 
-class ApplicationFormTemplateForm(forms.ModelForm):
+class ApplicationFormTemplateForm(StaveModelForm):
     application_kind = forms.TypedChoiceField(
         empty_value=None,
         choices=models.ApplicationKind,
@@ -771,7 +792,6 @@ class ApplicationFormTemplateForm(forms.ModelForm):
         widgets = {"role_groups": forms.CheckboxSelectMultiple}
 
     def __init__(self, league: models.League | None = None, *args, **kwargs):
-        kwargs["label_suffix"] = ""
         if instance := kwargs.get("instance"):
             # preferred_name is always selected, and is added by save()
             # in the model class. We don't display it on the frontend.
@@ -792,37 +812,25 @@ class ApplicationFormTemplateForm(forms.ModelForm):
         )
 
 
-class LeagueForm(forms.ModelForm):
+class LeagueForm(StaveModelForm):
     class Meta:
         model = models.League
         fields = ["name", "slug", "description", "logo", "website", "time_zone"]
 
-    def __init__(self, *args, **kwargs):
-        kwargs["label_suffix"] = ""
-        super().__init__(*args, **kwargs)
 
-
-class RoleGroupForm(forms.ModelForm):
+class RoleGroupForm(StaveModelForm):
     class Meta:
         model = models.RoleGroup
         fields = ["name", "event_only"]
 
-    def __init__(self, *args, **kwargs):
-        kwargs["label_suffix"] = ""
-        super().__init__(*args, **kwargs)
 
-
-class RoleForm(forms.ModelForm):
+class RoleForm(StaveModelForm):
     class Meta:
         model = models.Role
         fields = ["name", "nonexclusive"]
 
-    def __init__(self, *args, **kwargs):
-        kwargs["label_suffix"] = ""
-        super().__init__(*args, **kwargs)
 
-
-class EventTemplateForm(forms.ModelForm):
+class EventTemplateForm(StaveModelForm):
     league: models.League | None
 
     class Meta:
@@ -842,7 +850,6 @@ class EventTemplateForm(forms.ModelForm):
         }
 
     def __init__(self, *args, league: models.League | None = None, **kwargs):
-        kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
         league = league or self.instance.league
@@ -895,8 +902,15 @@ class EventTemplateForm(forms.ModelForm):
             )
 
 
-class GameTemplateForm(forms.ModelForm):
+class GameTemplateForm(StaveModelForm):
     league: models.League
+
+    groups = [
+        ["home_league", "home_team"],
+        ["visiting_league", "visiting_team"],
+        ["association", "kind"],
+        ["start_time", "end_time"],
+    ]
 
     class Meta:
         model = models.GameTemplate
@@ -918,12 +932,6 @@ class GameTemplateForm(forms.ModelForm):
             "end_time": forms.DateInput(attrs={"type": "time"}),
             "role_groups": forms.CheckboxSelectMultiple,
         }
-
-    def __init__(self, league: models.League | None = None, *args, **kwargs):
-        kwargs["label_suffix"] = ""
-        super().__init__(*args, **kwargs)
-
-        # queryset on role_groups is set by our controlling ParentChildForm
 
 
 class EventTemplateCreateUpdateForm(ParentChildForm):
@@ -1059,33 +1067,27 @@ class ApplicationFormCreateUpdateForm(BaseApplicationFormCreateUpdateForm):
         return self.event.get_absolute_url()
 
 
-class MessageTemplateForm(forms.ModelForm):
+class MessageTemplateForm(StaveModelForm):
     class Meta:
         model = models.MessageTemplate
         fields = ["name", "subject", "content"]
         widgets = {"subject": forms.TextInput}
 
-    def __init__(self, *args, **kwargs):
-        kwargs["label_suffix"] = ""
-        super().__init__(*args, **kwargs)
 
-
-class CrewForm(forms.ModelForm):
+class CrewForm(StaveModelForm):
     class Meta:
         model = models.Crew
         fields = ["name"]
 
-    def __init__(self, *args, **kwargs):
-        kwargs["label_suffix"] = ""
-        super().__init__(*args, **kwargs)
 
-
-class EventForm(forms.ModelForm):
+class EventForm(StaveModelForm):
     template = forms.ModelChoiceField(
         required=False,
         queryset=models.EventTemplate.objects.none(),
         widget=forms.HiddenInput,
     )
+
+    groups = [["start_date", "end_date"]]
 
     class Meta:
         model = models.Event
@@ -1106,7 +1108,6 @@ class EventForm(forms.ModelForm):
         }
 
     def __init__(self, *args, league: models.League | None = None, **kwargs):
-        kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
         league = league or self.instance.league
@@ -1116,7 +1117,7 @@ class EventForm(forms.ModelForm):
         self.fields["template"].queryset = league.event_templates.all()
 
 
-class EventFromTemplateForm(forms.ModelForm):
+class EventFromTemplateForm(StaveModelForm):
     class Meta:
         model = models.Event
         fields = [
@@ -1126,11 +1127,17 @@ class EventFromTemplateForm(forms.ModelForm):
         widgets = {"start_date": forms.DateInput(attrs={"type": "date"})}
 
     def __init__(self, *args, league: models.League, **kwargs):
-        kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
 
-class GameForm(forms.ModelForm):
+class GameForm(StaveModelForm):
+    groups = [
+        ["home_league", "home_team"],
+        ["visiting_league", "visiting_team"],
+        ["association", "kind"],
+        ["start_time", "end_time"],
+    ]
+
     class Meta:
         model = models.Game
         fields = [
@@ -1154,10 +1161,6 @@ class GameForm(forms.ModelForm):
             ),
             "role_groups": forms.CheckboxSelectMultiple,
         }
-
-    def __init__(self, *args, **kwargs):
-        kwargs["label_suffix"] = ""
-        super().__init__(*args, **kwargs)
 
 
 class RoleGroupCreateUpdateForm(ParentChildForm):
@@ -1379,7 +1382,6 @@ class SendEmailRecipientsForm(forms.Form):
     )
 
     def __init__(self, queryset: QuerySet[models.User], *args, **kwargs):
-        kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
         self.fields["recipients"].queryset = queryset
 
@@ -1389,28 +1391,19 @@ class SendEmailForm(forms.Form):
     reply_to = forms.EmailField(max_length=256)
     content = forms.CharField(max_length=10240, widget=forms.Textarea)  # TODO
 
-    def __init__(self, *args, **kwargs):
-        kwargs["label_suffix"] = ""
-        super().__init__(*args, **kwargs)
 
-
-class LeagueGroupForm(forms.ModelForm):
+class LeagueGroupForm(StaveModelForm):
     class Meta:
         model = models.LeagueGroup
         fields = ["name", "description", "private"]
 
-    def __init__(self, *args, **kwargs):
-        kwargs["label_suffix"] = ""
-        super().__init__(*args, **kwargs)
 
-
-class LeagueGroupMemberForm(forms.ModelForm):
+class LeagueGroupMemberForm(StaveModelForm):
     class Meta:
         model = models.LeagueGroupMember
         fields = ["league"]
 
     def __init__(self, *args, **kwargs):
-        kwargs["label_suffix"] = ""
         super().__init__(*args, **kwargs)
 
         if not self.instance._state.adding:
@@ -1477,7 +1470,6 @@ class LeagueGroupCreateUpdateForm(ParentChildForm):
 
 class LeaguePermissionForm(forms.Form):
     def __init__(self, *args, **kwargs):
-        kwargs["label_suffix"] = ""
         # Dynamically add fields for the permissions we have defined.
         super().__init__(*args, **kwargs)
         helps = {
