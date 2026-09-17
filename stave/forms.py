@@ -1141,7 +1141,6 @@ class GameForm(StaveModelForm):
     class Meta:
         model = models.Game
         fields = [
-            "name",
             "home_league",
             "home_team",
             "visiting_league",

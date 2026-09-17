@@ -952,7 +952,7 @@ class GameQuerySet(models.QuerySet["Game"]):
 class Game(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event = models.ForeignKey(Event, related_name="games", on_delete=models.CASCADE)
-    name = models.CharField(max_length=256)
+    name = models.CharField(max_length=256, blank=True, null=True)
     home_league = models.CharField(max_length=256)
     home_team = models.CharField(max_length=256)
     visiting_league = models.CharField(max_length=256)
@@ -975,7 +975,7 @@ class Game(models.Model):
         }
 
     def __str__(self) -> str:
-        return self.name
+        return self.name or f"{_('Game')} {self.order_key}"
 
     class Meta:
         constraints = [

@@ -6,7 +6,7 @@
 {% block content %}
 <header>
     <h1>
-        Assigning {{ role.name }} for {% if game %}{{ game.event }}{% if game.event.games.all|length != 1 %} (Game {{ game.order_key }}){% endif %}{% else %}{{ event }}{% endif %}
+        Assigning {{ role.name }} for {% if game %}{{ game.event }}{% if game.event.games.all|length != 1 %} ({{ game }}){% endif %}{% else %}{{ event }}{% endif %}
     </h1>
 </header>
 
